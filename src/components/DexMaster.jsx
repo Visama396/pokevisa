@@ -1,0 +1,170 @@
+import { useEffect, useMemo, useState } from "react";
+import PokeTypeBadge from "./PokeTypeBadge";
+
+export default function DexMaster() {
+  const [pokemons, setPokemons] = useState([]);
+  const [guess, setGuess] = useState("");
+
+  const [running, setRunning] = useState(false);
+  const [startTime, setStartTime] = useState(null);
+  const [elapsed, setElapsed] = useState(0);
+
+  const [guessedPokemons, setGuessedPokemons] = useState(new Set());
+
+  useEffect(() => {
+    async function loadPokedex() {
+      const res = await fetch("/pokedex.json");
+      const data = await res.json();
+      setPokemons(data);
+    }
+
+    loadPokedex();
+  }, []);
+
+  useEffect(() => {
+    if (!running) return;
+
+    const interval = setInterval(() => {
+      setElapsed(Date.now() - startTime);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [running, startTime]);
+
+  useEffect(() => {
+    if (
+      pokemons.length > 0 &&
+      guessedPokemons.size === pokemons.length
+    ) {
+      setRunning(false);
+    }
+  }, [guessedPokemons, pokemons]);
+
+  function handleGuess(e) {
+    e.preventDefault();
+
+    const pokemon = pokemons.find(
+      (p) => p.name.toLowerCase() === guess.trim().toLowerCase()
+    );
+
+    if (!pokemon) return;
+
+    if (!running) {
+      setRunning(true);
+      setStartTime(Date.now());
+    }
+
+    if (!guessedPokemons.has(pokemon.id)) {
+      setGuessedPokemons((prev) => {
+        const next = new Set(prev);
+        next.add(pokemon.id);
+        return next;
+      });
+    }
+
+    setGuess("");
+  }
+
+  function formatTime(ms) {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    const centiseconds = Math.floor((ms % 1000) / 10);
+
+    return `${minutes.toString().padStart(2, "0")}:${seconds
+      .toString()
+      .padStart(2, "0")}.${centiseconds
+      .toString()
+      .padStart(2, "0")}`;
+  }
+
+  const displayStats = useMemo(() => {
+    const stats = {};
+
+    for (const pokemon of pokemons) {
+      const types = [...pokemon.types].sort();
+      const key = types.join("/");
+
+      if (!stats[key]) {
+        stats[key] = {
+          types,
+          total: 0,
+          guessed: 0,
+        };
+      }
+
+      stats[key].total++;
+
+      if (guessedPokemons.has(pokemon.id)) {
+        stats[key].guessed++;
+      }
+    }
+
+    return Object.values(stats).sort((a, b) => {
+      const progressA = a.guessed / a.total;
+      const progressB = b.guessed / b.total;
+
+      if (progressA !== progressB) {
+        return progressA - progressB;
+      }
+
+      return a.types.join("/").localeCompare(b.types.join("/"));
+    });
+  }, [pokemons, guessedPokemons]);
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 space-y-6">
+      <header className="flex justify-between items-center">
+        <div className="font-mono text-3xl">
+          ⏱ {formatTime(elapsed)}
+        </div>
+
+        <div className="text-xl font-bold">
+          {guessedPokemons.size} / {pokemons.length}
+        </div>
+      </header>
+
+      <form onSubmit={handleGuess}>
+        <input
+          className="w-full rounded-lg border px-4 py-3"
+          placeholder="Type a Pokémon..."
+          value={guess}
+          onChange={(e) => setGuess(e.target.value)}
+          autoFocus
+        />
+      </form>
+
+      <section className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {displayStats.map((data) => (
+          <div
+            key={data.types.join("/")}
+            className="rounded-lg border p-3"
+          >
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex gap-2 flex-wrap">
+                {data.types.map((type) => (
+                  <PokeTypeBadge
+                    key={type}
+                    type={type.toLowerCase()}
+                  />
+                ))}
+              </div>
+
+              <span className="font-semibold">
+                {data.guessed} / {data.total}
+              </span>
+            </div>
+
+            <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+              <div
+                className="h-full bg-green-500 transition-all"
+                style={{
+                  width: `${(data.guessed / data.total) * 100}%`,
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
