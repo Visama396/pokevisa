@@ -13,6 +13,7 @@ export default function DexMaster() {
   const [elapsed, setElapsed] = useState(0);
 
   const [guessedPokemons, setGuessedPokemons] = useState(new Set());
+  const [flash, setFlash] = useState(null);
 
   useEffect(() => {
     async function loadPokedex() {
@@ -54,20 +55,25 @@ export default function DexMaster() {
       )
     );
 
-    if (!pokemon) return;
+    if (!pokemon || guessedPokemons.has(pokemon.id)) {
+      setFlash("incorrect");
+      setTimeout(() => setFlash(null), 400);
+      return;
+    }
+
+    setFlash("correct");
+    setTimeout(() => setFlash(null), 400);
 
     if (!running) {
       setRunning(true);
       setStartTime(Date.now());
     }
 
-    if (!guessedPokemons.has(pokemon.id)) {
-      setGuessedPokemons((prev) => {
-        const next = new Set(prev);
-        next.add(pokemon.id);
-        return next;
-      });
-    }
+    setGuessedPokemons((prev) => {
+      const next = new Set(prev);
+      next.add(pokemon.id);
+      return next;
+    });
 
     setGuess("");
   }
@@ -106,16 +112,10 @@ export default function DexMaster() {
       }
     }
 
-    return Object.values(stats).sort((a, b) => {
-      const progressA = a.guessed / a.total;
-      const progressB = b.guessed / b.total;
-
-      if (progressA !== progressB) {
-        return progressA - progressB;
-      }
-
-      return a.types.join("/").localeCompare(b.types.join("/"));
-    });
+    const entries = Object.values(stats);
+    const incomplete = entries.filter((s) => s.guessed < s.total);
+    const complete = entries.filter((s) => s.guessed === s.total);
+    return [...incomplete, ...complete];
   }, [pokemons, guessedPokemons]);
 
   return (
@@ -137,6 +137,14 @@ export default function DexMaster() {
           value={guess}
           onChange={(e) => setGuess(e.target.value)}
           autoFocus
+          style={{
+            boxShadow: flash === "correct"
+              ? "0 0 0 3px #22c55e"
+              : flash === "incorrect"
+              ? "0 0 0 3px #ef4444"
+              : undefined,
+            transition: "box-shadow 0.1s",
+          }}
         />
       </form>
 
@@ -163,9 +171,10 @@ export default function DexMaster() {
 
             <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
               <div
-                className="h-full bg-green-500 transition-all"
+                className="h-full transition-all"
                 style={{
                   width: `${(data.guessed / data.total) * 100}%`,
+                  backgroundColor: `hsl(${(data.guessed / data.total) * 120}, 80%, 40%)`,
                 }}
               />
             </div>
