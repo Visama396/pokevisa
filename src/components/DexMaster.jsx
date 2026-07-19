@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { normalize } from "../utils/normalize";
+
 import PokeTypeBadge from "./PokeTypeBadge";
 
 export default function DexMaster() {
   const [pokemons, setPokemons] = useState([]);
   const [guess, setGuess] = useState("");
+  const [language, setLanguage] = useState("es")
 
   const [running, setRunning] = useState(false);
   const [startTime, setStartTime] = useState(null);
@@ -43,8 +46,12 @@ export default function DexMaster() {
   function handleGuess(e) {
     e.preventDefault();
 
-    const pokemon = pokemons.find(
-      (p) => p.name.toLowerCase() === guess.trim().toLowerCase()
+    const normalizedGuess = normalize(guess);
+
+    const pokemon = pokemons.find((p) =>
+      Object.values(p.names).some(
+        (name) => normalize(name) === normalizedGuess
+      )
     );
 
     if (!pokemon) return;

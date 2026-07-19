@@ -99,7 +99,10 @@ async function main() {
 
       return {
         id: entry.entry_number,
-        name: pokemon.name,
+        slug: pokemon.name,
+        names: Object.fromEntries(
+          species.names.map((n) => [n.language.name, n.name])
+        ),
         sprite: pokemon.sprites.other.home.front_default,
 
         types: pokemon.types.map((t) => t.type.name),
