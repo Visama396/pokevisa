@@ -277,6 +277,30 @@ const ui = {
     en: "The Pokémon was", es: "El Pokémon era", fr: "Le Pokémon était", de: "Das Pokémon war", it: "Il Pokémon era",
     ja: "ポケモンは", ko: "포켓몬은", "zh-hans": "宝可梦是", "zh-hant": "寶可夢是",
   },
+  "Streak": {
+    en: "Streak", es: "Racha", fr: "Série", de: "Serie", it: "Serie",
+    ja: "連勝", ko: "연승", "zh-hans": "连胜", "zh-hant": "連勝",
+  },
+  "Correct": {
+    en: "Correct", es: "Acertados", fr: "Trouvés", de: "Richtig", it: "Corretti",
+    ja: "正解数", ko: "정답 수", "zh-hans": "正确", "zh-hant": "正確",
+  },
+  "Continue in Arcade": {
+    en: "Continue in Arcade", es: "Continuar en Arcade", fr: "Continuer en Arcade", de: "Im Arcade-Modus weitermachen", it: "Continua in Arcade",
+    ja: "アーケードを続ける", ko: "아케이드 계속하기", "zh-hans": "继续街机模式", "zh-hant": "繼續街機模式",
+  },
+  "Play Again": {
+    en: "Play Again", es: "Jugar de nuevo", fr: "Rejouer", de: "Nochmal spielen", it: "Gioca ancora",
+    ja: "もう一度プレイ", ko: "다시 플레이", "zh-hans": "再玩一次", "zh-hant": "再玩一次",
+  },
+  "Back to Classic": {
+    en: "Back to Classic", es: "Volver al Clásico", fr: "Retour au Classique", de: "Zurück zum Klassik", it: "Torna al Classico",
+    ja: "クラシックに戻る", ko: "클래식으로 돌아가기", "zh-hans": "返回经典模式", "zh-hant": "返回經典模式",
+  },
+  "Arcade mode": {
+    en: "Arcade mode", es: "Modo Arcade", fr: "Mode Arcade", de: "Arcade-Modus", it: "Modalità Arcade",
+    ja: "アーケードモード", ko: "아케이드 모드", "zh-hans": "街机模式", "zh-hant": "街機模式",
+  },
   "black": { en: "Black", es: "Negro", fr: "Noir", de: "Schwarz", it: "Nero", ja: "黒", ko: "검정", "zh-hans": "黑色", "zh-hant": "黑色" },
   "blue": { en: "Blue", es: "Azul", fr: "Bleu", de: "Blau", it: "Blu", ja: "青", ko: "파랑", "zh-hans": "蓝色", "zh-hant": "藍色" },
   "brown": { en: "Brown", es: "Marrón", fr: "Brun", de: "Braun", it: "Marrone", ja: "茶", ko: "갈색", "zh-hans": "棕色", "zh-hant": "棕色" },
