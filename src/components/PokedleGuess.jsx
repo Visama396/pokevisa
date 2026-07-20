@@ -3,6 +3,11 @@ import NumberCell from "./NumberCell";
 import GenerationCell from "./GenerationCell";
 import PokeTypeBadge from "./PokeTypeBadge";
 import { t } from "../stores/translations";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 export default function PokedleGuess({ todayPokemon, pokemon, abilities, language }) {
   const typeMatch = pokemon.types.some((type) =>
@@ -49,7 +54,9 @@ export default function PokedleGuess({ todayPokemon, pokemon, abilities, languag
             const localized =
               abilities[ability.name]?.[language] ?? ability.name;
             const matched = todayAbilityNames.includes(ability.name);
-            return (
+            const effectEntry = abilities[ability.name]?.effect_entries?.[language] || abilities[ability.name]?.effect_entries?.en;
+            const effect = effectEntry?.short_effect || effectEntry?.effect;
+            const pill = (
               <span
                 key={ability.name}
                 className={`rounded px-1 py-0.5 text-[11px] font-medium leading-tight text-center ${
@@ -61,6 +68,15 @@ export default function PokedleGuess({ todayPokemon, pokemon, abilities, languag
                   <span className="text-[10px] opacity-60"> ({t("Hidden", language)})</span>
                 )}
               </span>
+            );
+            if (!effect) return pill;
+            return (
+              <Tooltip key={ability.name}>
+                <TooltipTrigger>{pill}</TooltipTrigger>
+                <TooltipContent className="max-w-xs bg-slate-700 text-slate-200 border border-slate-600 text-xs leading-relaxed p-2">
+                  {effect}
+                </TooltipContent>
+              </Tooltip>
             );
           })}
         </div>

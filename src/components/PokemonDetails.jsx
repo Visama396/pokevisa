@@ -5,6 +5,11 @@ import { getLanguage, subscribe } from "../stores/language";
 import { t, getStatLabel, getTypeName } from "../stores/translations";
 import LanguageSelector from "./LanguageSelector";
 import PokeTypeBadge from "./PokeTypeBadge";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 const typeChart = {
   normal:   { rock: 0.5, ghost: 0, steel: 0.5 },
@@ -141,6 +146,7 @@ function MoveIcon({ name, moveData }) {
 
 export default function PokemonDetails({ pokemon }) {
   const [moveData, setMoveData] = useState(null);
+  const [abilityData, setAbilityData] = useState(null);
   const [language, setLanguage] = useState(getLanguage());
 
   useEffect(() => subscribe(setLanguage), []);
@@ -149,6 +155,13 @@ export default function PokemonDetails({ pokemon }) {
     fetch("/moves.json")
       .then((r) => r.json())
       .then(setMoveData)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/abilities.json")
+      .then((r) => r.json())
+      .then(setAbilityData)
       .catch(() => {});
   }, []);
   const effectiveness = getEffectiveness(pokemon.types);
@@ -273,21 +286,35 @@ export default function PokemonDetails({ pokemon }) {
             <div className="border-b border-slate-700/50 pb-2">
               <dt className="text-slate-400 mb-1">{t("Abilities", language)}</dt>
               <dd className="flex flex-wrap gap-1">
-                {(pokemon.abilities || []).map((ability) => (
-                  <span
-                    key={ability.name}
-                    className={`rounded-full px-3 py-0.5 text-xs ${
-                      ability.hidden
-                        ? "border border-dashed border-slate-500 text-slate-400"
-                        : "bg-slate-700 text-slate-200"
-                    }`}
-                  >
-                    {capitalize(ability.name.replace(/-/g, " "))}
-                    {ability.hidden && (
-                      <span className="text-xs text-slate-500 ml-1">({t("Hidden", language)})</span>
-                    )}
-                  </span>
-                ))}
+                {(pokemon.abilities || []).map((ability) => {
+                  const abilityInfo = abilityData?.[ability.name];
+                  const effectEntry = abilityInfo?.effect_entries?.[language] || abilityInfo?.effect_entries?.en;
+                  const effect = effectEntry?.short_effect || effectEntry?.effect;
+                  const label = (
+                    <span
+                      key={ability.name}
+                      className={`rounded-full px-3 py-0.5 text-xs ${
+                        ability.hidden
+                          ? "border border-dashed border-slate-500 text-slate-400"
+                          : "bg-slate-700 text-slate-200"
+                      }`}
+                    >
+                      {abilityInfo?.[language] || capitalize(ability.name.replace(/-/g, " "))}
+                      {ability.hidden && (
+                        <span className="text-xs text-slate-500 ml-1">({t("Hidden", language)})</span>
+                      )}
+                    </span>
+                  );
+                  if (!effect) return label;
+                  return (
+                    <Tooltip key={ability.name}>
+                      <TooltipTrigger>{label}</TooltipTrigger>
+                      <TooltipContent className="max-w-xs bg-slate-700 text-slate-200 border border-slate-600 text-xs leading-relaxed p-2">
+                        {effect}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
               </dd>
             </div>
             {localDexEntries.length > 0 && (

@@ -143,12 +143,50 @@ function organizeMoves(moves) {
   return { levelUp, tm, egg, tutor };
 }
 
+async function buildAbilitiesJSON(abilityNames) {
+  console.log(`Fetching ${abilityNames.size} abilities...`);
+
+  const namesArray = Array.from(abilityNames);
+  const abilityData = await mapLimit(namesArray, 20, async (name) => {
+    const res = await fetchJSON(`https://pokeapi.co/api/v2/ability/${name}`);
+    const names = {};
+    for (const n of res.names || []) {
+      names[n.language.name] = n.name;
+    }
+    const effectEntries = {};
+    for (const e of res.effect_entries || []) {
+      effectEntries[e.language.name] = {
+        effect: e.effect,
+        short_effect: e.short_effect,
+      };
+    }
+    return {
+      name,
+      names,
+      effect_entries: effectEntries,
+    };
+  });
+
+  const abilities = {};
+  for (const ability of abilityData) {
+    abilities[ability.name] = {
+      ...ability.names,
+      effect_entries: ability.effect_entries,
+    };
+  }
+
+  await fs.writeFile("public/abilities.json", JSON.stringify(abilities, null, 2));
+  console.log(`Wrote ${Object.keys(abilities).length} abilities`);
+}
+
 async function main() {
   console.log("Fetching National Pokédex...");
 
   const pokedex = await fetchJSON(POKEDEX_URL);
 
   console.log(`Found ${pokedex.pokemon_entries.length} Pokémon`);
+
+  const abilityNames = new Set();
 
   const data = await mapLimit(
     pokedex.pokemon_entries.slice(0, POKEMON_LIMIT),
@@ -194,10 +232,13 @@ async function main() {
         height: pokemonRes.height,
         weight: pokemonRes.weight,
 
-        abilities: pokemonRes.abilities.map((a) => ({
-          name: a.ability.name,
-          hidden: a.is_hidden,
-        })),
+        abilities: pokemonRes.abilities.map((a) => {
+          abilityNames.add(a.ability.name);
+          return {
+            name: a.ability.name,
+            hidden: a.is_hidden,
+          };
+        }),
 
         baseStats: pokemonRes.stats.map((s) => ({
           name: s.stat.name,
