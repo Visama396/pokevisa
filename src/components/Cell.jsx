@@ -5,7 +5,15 @@ export default function Cell({ children, correct, partial }) {
   else if (partial) bg = "bg-yellow-500";
 
   return (
-    <div className={`${bg} rounded p-2 text-center text-white`}>
+    <div
+      className={`rounded border-2 p-2 ${
+        correct
+          ? "border-green-500"
+          : partial
+          ? "border-yellow-500"
+          : "border-red-500"
+      }`}
+    >
       {children}
     </div>
   );

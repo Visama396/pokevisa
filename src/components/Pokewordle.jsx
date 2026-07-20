@@ -7,6 +7,7 @@ import PokedleGuess from "./PokedleGuess";
 
 export default function Pokewordle() {
   const [pokemons, setPokemons] = useState([])
+  const [abilities, setAbilities] = useState({})
   const [todayPokemon, setTodayPokemon] = useState(null)
   const [guess, setGuess] = useState("")
   const [guesses, setGuesses] = useState([])
@@ -21,6 +22,14 @@ export default function Pokewordle() {
         const num = randomEntryNumber()
         setTodayPokemon(data[num])
         console.log(data[num])
+      })
+  }, [])
+
+  useEffect(() => {
+    fetch("/abilities.json")
+      .then((res) => res.json())
+      .then((data) => {
+        setAbilities(data)
       })
   }, [])
 
@@ -65,8 +74,8 @@ export default function Pokewordle() {
           <div>Weight</div>
           <div>Color</div>
         </div>
-        {guesses.map((guess, index) => (
-          <PokedleGuess key={index} todayPokemon={todayPokemon} pokemon={guess} />
+        {guesses.map((guess) => (
+          <PokedleGuess key={guess.id} todayPokemon={todayPokemon} pokemon={guess} abilities={abilities} language={"es"} />
         ))}
       </section>
     </div>

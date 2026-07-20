@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 
 const POKEDEX_URL = "https://pokeapi.co/api/v2/pokedex/1/";
+const abilityNames = new Set()
 
 async function fetchJSON(url) {
   const res = await fetch(url);
@@ -75,6 +76,25 @@ async function getEvolutionStage(species) {
   };
 }
 
+async function buildAbilitiesJSON(abilityNames) {
+  const abilities = {};
+
+  await mapLimit([...abilityNames], 20, async (name) => {
+    const data = await fetchJSON(
+      `https://pokeapi.co/api/v2/ability/${name}`
+    );
+
+    abilities[name] = Object.fromEntries(
+      data.names.map((n) => [n.language.name, n.name])
+    );
+  });
+
+  await fs.writeFile(
+    "public/abilities.json",
+    JSON.stringify(abilities, null, 2)
+  );
+}
+
 async function main() {
   console.log("Fetching National Pokédex...");
 
@@ -110,10 +130,14 @@ async function main() {
         height: pokemon.height,
         weight: pokemon.weight,
 
-        abilities: pokemon.abilities.map((a) => ({
-          name: a.ability.name,
-          hidden: a.is_hidden,
-        })),
+        abilities: pokemon.abilities.map((a) => {
+          abilityNames.add(a.ability.name);
+
+          return {
+            name: a.ability.name,
+            hidden: a.is_hidden,
+          };
+        }),
 
         generation: species.generation.name,
 
@@ -133,6 +157,7 @@ async function main() {
 
   await fs.writeFile("public/pokedex.json", JSON.stringify(data, null, 2));
 
+  await buildAbilitiesJSON(abilityNames);
   console.log("Done!");
 }
 

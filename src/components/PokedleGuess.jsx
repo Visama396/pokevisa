@@ -4,7 +4,7 @@ import Cell from "./Cell"
 import NumberCell from "./NumberCell"
 import GenerationCell from "./GenerationCell"
 
-export default function PokedleGuess({ todayPokemon, pokemon }) {
+export default function PokedleGuess({ todayPokemon, pokemon, abilities, language }) {
   const match = (a, b) => a === b;
 
   const typeMatch = pokemon.types.some(type =>
@@ -14,6 +14,12 @@ export default function PokedleGuess({ todayPokemon, pokemon }) {
   const abilityMatch = pokemon.abilities.some(a =>
     todayPokemon.abilities.some(b => b.name === a.name)
   );
+
+  const localizedAbilities = pokemon.abilities.map((ability) => {
+    return abilities[ability.name]?.[language] ?? ability.name
+  })
+
+  const todayAbilities = todayPokemon.abilities.map((a) => a.name)
 
   return (
     <div className="grid grid-cols-7 gap-2 items-center border-b py-2">
@@ -43,14 +49,30 @@ export default function PokedleGuess({ todayPokemon, pokemon }) {
       {/* Abilities */}
       <Cell
         correct={
-          pokemon.abilities.every(a =>
-            todayPokemon.abilities.some(b => b.name === a.name)
-          ) &&
-          pokemon.abilities.length === todayPokemon.abilities.length
+          pokemon.abilities.length === todayPokemon.abilities.length &&
+          pokemon.abilities.every((a) => todayAbilities.includes(a.name))
         }
         partial={abilityMatch}
       >
-        {pokemon.abilities.map(a => a.name).join(", ")}
+        <div className="flex flex-col gap-1">
+          {pokemon.abilities.map((ability) => {
+            const localized =
+              abilities[ability.name]?.[language] ?? ability.name;
+
+            const matched = todayAbilities.includes(ability.name);
+
+            return (
+              <span
+                key={ability.name}
+                className={`rounded px-2 py-1 text-white ${
+                  matched ? "bg-green-600" : "bg-red-600"
+                }`}
+              >
+                {localized}
+              </span>
+            );
+          })}
+        </div>
       </Cell>
 
       {/* Height */}
