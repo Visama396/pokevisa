@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
 import { randomEntryNumber } from "../utils/randomEntryNumber";
+import { normalize } from "../utils/normalize";
 
 import PokedleGuess from "./PokedleGuess";
 
@@ -25,15 +26,22 @@ export default function Pokewordle() {
 
   const submitGuess = () => {
     if (!guess || guess == "") return
-    const normalizedGuess = guess.toLowerCase()
-    const pokemon = pokemons.find((p) => p.name.toLowerCase() === normalizedGuess)
+    const normalizedGuess = normalize(guess);
+
+    const pokemon = pokemons.find((p) =>
+      Object.values(p.names).some(
+        (name) => normalize(name) === normalizedGuess
+      )
+    );
+
     if (pokemon) {
       setGuesses([...guesses, pokemon])
     }
-    if (todayPokemon.name.toLowerCase() === normalizedGuess) {
+    if (todayPokemon.slug.toLowerCase() === normalizedGuess.toLowerCase()) {
       setCorrect(true)
     }
     setGuess("")
+    console.log(guesses)
   }
 
   return (
@@ -43,10 +51,20 @@ export default function Pokewordle() {
         {correct && <h2>Correct! The Pokemon was {todayPokemon.name}</h2>}
       </header>
       <section className="flex gap-2">
-        <input type="text" placeholder="Enter your guess" className="outline-0" value={guess} onChange={(e) => setGuess(e.target.value)} />
-        <input type="submit" value="Guess" className="bg-slate-700 px-2 py-1 rounded-sm" onClick={() => submitGuess()}/>
+        <form onSubmit={(e) => { e.preventDefault(); submitGuess(); }}>
+          <input type="text" placeholder="Enter your guess" className="outline-0" value={guess} onChange={(e) => setGuess(e.target.value)} />
+        </form>
       </section>
       <section>
+        <div className="grid grid-cols-7 gap-2 font-bold text-center mb-2">
+          <div>Pokémon</div>
+          <div>Generation</div>
+          <div>Types</div>
+          <div>Abilities</div>
+          <div>Height</div>
+          <div>Weight</div>
+          <div>Color</div>
+        </div>
         {guesses.map((guess, index) => (
           <PokedleGuess key={index} todayPokemon={todayPokemon} pokemon={guess} />
         ))}
