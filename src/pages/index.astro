@@ -3,8 +3,10 @@ import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
-    <div class="flex flex-col items-center justify-center min-h-[80vh] gap-12 px-4">
-        <h1 class="text-5xl font-bold tracking-tight">PokeVisa</h1>
+    <div
+        class="flex flex-col items-center justify-center min-h-[80vh] gap-12 px-4"
+    >
+        <h1 class="text-5xl font-bold tracking-tight">Visadex</h1>
         <p class="text-xl text-slate-400 -mt-8">Choose your adventure</p>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
             <a
@@ -12,24 +14,40 @@ import Layout from "../layouts/Layout.astro";
                 class="group flex flex-col items-center gap-4 rounded-2xl border border-slate-700 bg-slate-800/50 p-8 text-center transition-all duration-300 hover:border-red-500 hover:bg-slate-800 hover:shadow-lg hover:shadow-red-500/10 hover:-translate-y-1"
             >
                 <img src="/pokedex.png" alt="Pokedex" class="h-12 w-auto" />
-                <span class="text-2xl font-semibold group-hover:text-red-400 transition-colors">Pokedex</span>
-                <span class="text-sm text-slate-400">Search and explore Pokemon by name, type, generation, stats, and more</span>
+                <span
+                    class="text-2xl font-semibold group-hover:text-red-400 transition-colors"
+                    >Pokedex</span
+                >
+                <span class="text-sm text-slate-400"
+                    >Search and explore Pokemon by name, type, generation,
+                    stats, and more</span
+                >
             </a>
             <a
                 href="/pokedle"
                 class="group flex flex-col items-center gap-4 rounded-2xl border border-slate-700 bg-slate-800/50 p-8 text-center transition-all duration-300 hover:border-yellow-500 hover:bg-slate-800 hover:shadow-lg hover:shadow-yellow-500/10 hover:-translate-y-1"
             >
                 <span class="text-5xl">🎯</span>
-                <span class="text-2xl font-semibold group-hover:text-yellow-400 transition-colors">Pokedle</span>
-                <span class="text-sm text-slate-400">Daily Pokemon guessing game — test your knowledge</span>
+                <span
+                    class="text-2xl font-semibold group-hover:text-yellow-400 transition-colors"
+                    >Pokedle</span
+                >
+                <span class="text-sm text-slate-400"
+                    >Daily Pokemon guessing game — test your knowledge</span
+                >
             </a>
             <a
                 href="/pokedexmaster"
                 class="group flex flex-col items-center gap-4 rounded-2xl border border-slate-700 bg-slate-800/50 p-8 text-center transition-all duration-300 hover:border-blue-500 hover:bg-slate-800 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1"
             >
                 <span class="text-5xl">⏱️</span>
-                <span class="text-2xl font-semibold group-hover:text-blue-400 transition-colors">Dexmaster</span>
-                <span class="text-sm text-slate-400">Track your progress and master the Pokedex</span>
+                <span
+                    class="text-2xl font-semibold group-hover:text-blue-400 transition-colors"
+                    >Dexmaster</span
+                >
+                <span class="text-sm text-slate-400"
+                    >Track your progress and master the Pokedex</span
+                >
             </a>
         </div>
     </div>

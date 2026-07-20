@@ -2,7 +2,7 @@ import { formatDexEntryNumber } from "../utils/dexentrynumber";
 import { capitalize } from "../utils/capitalize";
 import PokeTypeBadge from "./PokeTypeBadge";
 
-export default function DexItem({ pokemon }) {
+export default function DexItem({ pokemon, language = "en" }) {
   return (
     <a
       href={`/pokedex/${pokemon.id}`}
@@ -17,7 +17,7 @@ export default function DexItem({ pokemon }) {
         alt={pokemon.names.en}
       />
       <h2 className="text-sm font-semibold text-slate-200">
-        {capitalize(pokemon.names.en)}
+        {capitalize(pokemon.names[language] || pokemon.names.en)}
       </h2>
       <div className="flex flex-wrap justify-center gap-1">
         {pokemon.types.map((type) => (

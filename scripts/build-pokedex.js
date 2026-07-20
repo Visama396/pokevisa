@@ -1,11 +1,7 @@
 import fs from "fs/promises";
 
 const POKEDEX_URL = "https://pokeapi.co/api/v2/pokedex/1/";
-<<<<<<< HEAD
-const abilityNames = new Set()
-=======
 const POKEMON_LIMIT = 1025;
->>>>>>> 70fb3a0 (Fixed pokedex, pokemon details)
 
 async function fetchJSON(url) {
   const res = await fetch(url);
@@ -83,25 +79,6 @@ async function getEvolutionStage(species) {
   };
 }
 
-<<<<<<< HEAD
-async function buildAbilitiesJSON(abilityNames) {
-  const abilities = {};
-
-  await mapLimit([...abilityNames], 20, async (name) => {
-    const data = await fetchJSON(
-      `https://pokeapi.co/api/v2/ability/${name}`
-    );
-
-    abilities[name] = Object.fromEntries(
-      data.names.map((n) => [n.language.name, n.name])
-    );
-  });
-
-  await fs.writeFile(
-    "public/abilities.json",
-    JSON.stringify(abilities, null, 2)
-  );
-=======
 async function getEvolutionChart(evolutionChainUrl) {
   if (!evolutionCache.has(evolutionChainUrl)) {
     const chain = await fetchJSON(evolutionChainUrl);
@@ -164,7 +141,6 @@ function organizeMoves(moves) {
   levelUp.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 
   return { levelUp, tm, egg, tutor };
->>>>>>> 70fb3a0 (Fixed pokedex, pokemon details)
 }
 
 async function main() {
@@ -218,21 +194,10 @@ async function main() {
         height: pokemonRes.height,
         weight: pokemonRes.weight,
 
-<<<<<<< HEAD
-        abilities: pokemon.abilities.map((a) => {
-          abilityNames.add(a.ability.name);
-
-          return {
-            name: a.ability.name,
-            hidden: a.is_hidden,
-          };
-        }),
-=======
         abilities: pokemonRes.abilities.map((a) => ({
           name: a.ability.name,
           hidden: a.is_hidden,
         })),
->>>>>>> 70fb3a0 (Fixed pokedex, pokemon details)
 
         baseStats: pokemonRes.stats.map((s) => ({
           name: s.stat.name,

@@ -1,19 +1,10 @@
 export default function Cell({ children, correct, partial }) {
-  let bg = "bg-red-500";
-
-  if (correct) bg = "bg-green-500";
-  else if (partial) bg = "bg-yellow-500";
+  let styles = "border-red-800 bg-red-900/20";
+  if (correct) styles = "border-green-600 bg-green-900/20";
+  else if (partial) styles = "border-yellow-600 bg-yellow-900/20";
 
   return (
-    <div
-      className={`rounded border-2 p-2 ${
-        correct
-          ? "border-green-500"
-          : partial
-          ? "border-yellow-500"
-          : "border-red-500"
-      }`}
-    >
+    <div className={`rounded-lg border px-2 py-1.5 text-center text-xs h-full flex flex-col items-center justify-center ${styles}`}>
       {children}
     </div>
   );

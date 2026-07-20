@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { normalize } from "../utils/normalize";
-
+import { getLanguage, subscribe } from "../stores/language";
+import LanguageSelector from "./LanguageSelector";
 import PokeTypeBadge from "./PokeTypeBadge";
 
 export default function DexMaster() {
   const [pokemons, setPokemons] = useState([]);
   const [guess, setGuess] = useState("");
-  const [language, setLanguage] = useState("es")
+  const [language, setLanguage] = useState(getLanguage());
 
   const [running, setRunning] = useState(false);
   const [startTime, setStartTime] = useState(null);
@@ -14,6 +15,8 @@ export default function DexMaster() {
 
   const [guessedPokemons, setGuessedPokemons] = useState(new Set());
   const [flash, setFlash] = useState(null);
+
+  useEffect(() => subscribe(setLanguage), []);
 
   useEffect(() => {
     async function loadPokedex() {
@@ -120,20 +123,22 @@ export default function DexMaster() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-6">
-      <header className="flex justify-between items-center">
-        <div className="font-mono text-3xl">
+      <header className="flex items-center justify-between gap-4">
+        <div className="font-mono text-3xl font-bold text-slate-200">
           ⏱ {formatTime(elapsed)}
         </div>
 
-        <div className="text-xl font-bold">
+        <div className="text-xl font-bold text-slate-200">
           {guessedPokemons.size} / {pokemons.length}
         </div>
+
+        <LanguageSelector />
       </header>
 
       <form onSubmit={handleGuess}>
         <input
-          className="w-full rounded-lg border px-4 py-3"
-          placeholder="Type a Pokémon..."
+          className="w-full rounded-xl border border-slate-700 bg-slate-800 py-3 px-4 text-sm text-slate-200 placeholder-slate-500 outline-none transition-all focus:border-slate-500"
+          placeholder="Type a Pokémon name in any language..."
           value={guess}
           onChange={(e) => setGuess(e.target.value)}
           autoFocus
@@ -143,7 +148,7 @@ export default function DexMaster() {
               : flash === "incorrect"
               ? "0 0 0 3px #ef4444"
               : undefined,
-            transition: "box-shadow 0.1s",
+            transition: "box-shadow 0.1s, border-color 0.15s",
           }}
         />
       </form>
@@ -152,26 +157,27 @@ export default function DexMaster() {
         {displayStats.map((data) => (
           <div
             key={data.types.join("/")}
-            className="rounded-lg border p-3"
+            className={`rounded-xl border p-4 transition-colors ${
+              data.guessed === data.total
+                ? "border-green-700 bg-green-900/10"
+                : "border-slate-700 bg-slate-800/60"
+            }`}
           >
             <div className="flex justify-between items-center mb-2">
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-1.5 flex-wrap">
                 {data.types.map((type) => (
-                  <PokeTypeBadge
-                    key={type}
-                    type={type.toLowerCase()}
-                  />
+                  <PokeTypeBadge key={type} type={type.toLowerCase()} />
                 ))}
               </div>
 
-              <span className="font-semibold">
+              <span className="font-semibold text-sm text-slate-300">
                 {data.guessed} / {data.total}
               </span>
             </div>
 
-            <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+            <div className="h-2 rounded-full bg-slate-700 overflow-hidden">
               <div
-                className="h-full transition-all"
+                className="h-full rounded-full transition-all duration-300"
                 style={{
                   width: `${(data.guessed / data.total) * 100}%`,
                   backgroundColor: `hsl(${(data.guessed / data.total) * 120}, 80%, 40%)`,

@@ -1,13 +1,18 @@
 import { useState, useEffect } from "react";
 
 import DexItem from "./DexItem";
+import LanguageSelector from "./LanguageSelector";
 import { formatDexEntryNumber } from "../utils/dexentrynumber";
+import { getLanguage, subscribe } from "../stores/language";
 
 export default function Dex() {
   const [filteredPokemons, setFilteredPokemons] = useState([]);
   const [pokemons, setPokemons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [language, setLanguage] = useState(getLanguage());
+
+  useEffect(() => subscribe(setLanguage), []);
 
   useEffect(() => {
     async function loadPokedex() {
@@ -33,11 +38,11 @@ export default function Dex() {
       return;
     }
     const filtered = pokemons.filter((pokemon) => {
-      const name = pokemon.names.en.toLowerCase();
+      const names = Object.values(pokemon.names).join(" ").toLowerCase();
       const types = pokemon.types.join(" ");
       const id = pokemon.id.toString();
       const formattedId = formatDexEntryNumber(pokemon.id);
-      return name.includes(q) || types.includes(q) || id.includes(q) || formattedId.includes(q);
+      return names.includes(q) || types.includes(q) || id.includes(q) || formattedId.includes(q);
     });
     setFilteredPokemons(filtered);
   }, [query, pokemons]);
@@ -71,6 +76,9 @@ export default function Dex() {
             className="w-full rounded-xl border border-slate-700 bg-slate-800 py-3 pl-10 pr-4 text-sm text-slate-200 placeholder-slate-500 outline-none transition-colors focus:border-slate-500"
           />
         </div>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <LanguageSelector />
+        </div>
       </header>
 
       {loading ? (
@@ -90,7 +98,7 @@ export default function Dex() {
           </p>
           <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {filteredPokemons.map((pokemon) => (
-              <DexItem key={pokemon.id} pokemon={pokemon} />
+              <DexItem key={pokemon.id} pokemon={pokemon} language={language} />
             ))}
           </section>
         </>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { capitalize } from "../utils/capitalize";
 import { formatDexEntryNumber } from "../utils/dexentrynumber";
+import { getLanguage, subscribe } from "../stores/language";
+import LanguageSelector from "./LanguageSelector";
 import PokeTypeBadge from "./PokeTypeBadge";
 
 const typeChart = {
@@ -139,6 +141,9 @@ function MoveIcon({ name, moveData }) {
 
 export default function PokemonDetails({ pokemon }) {
   const [moveData, setMoveData] = useState(null);
+  const [language, setLanguage] = useState(getLanguage());
+
+  useEffect(() => subscribe(setLanguage), []);
 
   useEffect(() => {
     fetch("/moves.json")
@@ -182,6 +187,7 @@ export default function PokemonDetails({ pokemon }) {
         </a>
 
         <div className="flex items-center gap-2">
+          <LanguageSelector />
           {pokemon.id > 1 && (
             <a
               href={`/pokedex/${pokemon.id - 1}`}
@@ -218,7 +224,7 @@ export default function PokemonDetails({ pokemon }) {
             src={pokemon.sprite}
             alt={pokemon.names.en}
           />
-          <h1 className="text-3xl font-bold">{capitalize(pokemon.names.en)}</h1>
+          <h1 className="text-3xl font-bold">{capitalize(pokemon.names[language] || pokemon.names.en)}</h1>
           <div className="flex flex-wrap justify-center gap-2">
             {pokemon.types.map((type) => (
               <PokeTypeBadge key={type} type={type} />
@@ -582,7 +588,11 @@ export default function PokemonDetails({ pokemon }) {
             {Object.entries(pokemon.names).map(([lang, name]) => (
               <div
                 key={lang}
-                className="rounded-lg bg-slate-700/30 px-3 py-2 text-sm"
+                className={`rounded-lg px-3 py-2 text-sm ${
+                  lang === language
+                    ? "bg-slate-600/60 ring-1 ring-slate-500"
+                    : "bg-slate-700/30"
+                }`}
               >
                 <span className="block text-xs text-slate-500">
                   {languageNames[lang] || capitalize(lang.replace(/-/g, " "))}
