@@ -1,43 +1,33 @@
-# Astro Starter Kit: Minimal
+# PokeVisa
 
-```sh
-bun create astro@latest -- --template minimal
-```
+A multi-feature Pokémon web app with three main tools:
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+- **Pokedex** — Search and explore Pokémon by name, type, generation, stats, abilities, and more.
+- **Pokedle** — A daily Pokémon guessing game to test your knowledge.
+- **Dexmaster** — Track your progress and master the Pokédex.
 
-## 🚀 Project Structure
+Built with [Astro](https://astro.build), React, and Tailwind CSS.
 
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
-
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
+## Commands
 
 | Command                   | Action                                           |
 | :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
+| `bun install`             | Install dependencies                             |
+| `bun dev`                 | Start local dev server at `localhost:4321`        |
+| `bun build`               | Build production site to `./dist/`                |
+| `bun build:pokedex`       | Build the Pokédex data JSON                       |
+| `bun preview`             | Preview the production build locally              |
+| `bun astro ...`           | Run Astro CLI commands                            |
 
-## 👀 Want to learn more?
+## Project Structure
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+```
+/
+├── public/            # Static assets (images, data)
+├── src/
+│   ├── components/    # React components (Dex, Pokewordle, etc.)
+│   ├── layouts/       # Astro layout components
+│   ├── pages/         # Route pages (index, pokedex, pokedle, pokedexmaster)
+│   └── styles/        # Global CSS (Tailwind)
+└── package.json
+```

@@ -9,6 +9,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "build:pokedex": "node scripts/build-pokedex.js",
+    "build:moves": "node scripts/build-moves.js",
     "preview": "astro preview",
     "astro": "astro"
   },

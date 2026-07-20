@@ -1,0 +1,52 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import PokemonDetails from "../../components/PokemonDetails.jsx";
+
+export async function getStaticPaths() {
+  const fs = await import("node:fs/promises");
+  const pokedex = JSON.parse(await fs.readFile("public/pokedex.json", "utf-8"));
+
+  function toSlug(name) {
+    return name
+      .normalize("NFC")
+      .toLowerCase()
+      .replace(/[''’]/g, "")
+      .replace(/[^\p{L}\p{N}\s-]/gu, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
+  const allRoutes = [];
+
+  for (const pokemon of pokedex) {
+    const routes = [{ params: { id: pokemon.id.toString() }, props: { pokemon } }];
+
+    if (pokemon.slug) {
+      routes.push({ params: { id: pokemon.slug }, props: { pokemon } });
+    }
+
+    for (const name of Object.values(pokemon.names)) {
+      const slug = toSlug(name);
+      if (slug) {
+        routes.push({ params: { id: slug }, props: { pokemon } });
+      }
+    }
+
+    allRoutes.push(...routes);
+  }
+
+  const seen = new Set();
+  return allRoutes.filter((route) => {
+    if (seen.has(route.params.id)) return false;
+    seen.add(route.params.id);
+    return true;
+  });
+}
+
+const { pokemon } = Astro.props;
+---
+
+<Layout>
+    <PokemonDetails client:load pokemon={pokemon} />
+</Layout>

@@ -1,7 +1,11 @@
 import fs from "fs/promises";
 
 const POKEDEX_URL = "https://pokeapi.co/api/v2/pokedex/1/";
+<<<<<<< HEAD
 const abilityNames = new Set()
+=======
+const POKEMON_LIMIT = 1025;
+>>>>>>> 70fb3a0 (Fixed pokedex, pokemon details)
 
 async function fetchJSON(url) {
   const res = await fetch(url);
@@ -42,9 +46,11 @@ async function getEvolutionStage(species) {
     const members = [];
 
     function walk(node, stage) {
+      const detail = node.species.url ? { url: node.species.url } : {};
       members.push({
         name: node.species.name,
         stage,
+        ...detail,
       });
 
       node.evolves_to.forEach((next) => walk(next, stage + 1));
@@ -57,7 +63,8 @@ async function getEvolutionStage(species) {
     evolutionCache.set(
       chainUrl,
       members.map((m) => ({
-        ...m,
+        name: m.name,
+        stage: m.stage,
         unique,
       })),
     );
@@ -76,6 +83,7 @@ async function getEvolutionStage(species) {
   };
 }
 
+<<<<<<< HEAD
 async function buildAbilitiesJSON(abilityNames) {
   const abilities = {};
 
@@ -93,6 +101,70 @@ async function buildAbilitiesJSON(abilityNames) {
     "public/abilities.json",
     JSON.stringify(abilities, null, 2)
   );
+=======
+async function getEvolutionChart(evolutionChainUrl) {
+  if (!evolutionCache.has(evolutionChainUrl)) {
+    const chain = await fetchJSON(evolutionChainUrl);
+    const members = [];
+    function walk(node, stage) {
+      members.push({
+        name: node.species.name,
+        stage,
+      });
+      node.evolves_to.forEach((next) => walk(next, stage + 1));
+    }
+    walk(chain.chain, 1);
+    const unique = members.length === 1;
+    evolutionCache.set(evolutionChainUrl, members.map((m) => ({ ...m, unique })));
+  }
+  return evolutionCache.get(evolutionChainUrl);
+}
+
+const versionPriority = [
+  "scarlet-violet", "legends-arceus", "brilliant-diamond-and-shining-pearl",
+  "sword-shield", "ultra-sun-ultra-moon", "sun-moon",
+  "omega-ruby-alpha-sapphire", "x-y", "black-2-white-2", "black-white",
+  "heartgold-soulsilver", "platinum", "diamond-pearl",
+  "fire-red-leaf-green", "ruby-sapphire", "crystal", "gold-silver",
+  "yellow", "red-blue",
+];
+
+function pickLatestVersion(details) {
+  for (const vg of versionPriority) {
+    const found = details.find((d) => d.version_group.name === vg);
+    if (found) return found;
+  }
+  return details[0];
+}
+
+function organizeMoves(moves) {
+  const levelUp = [];
+  const tm = [];
+  const egg = [];
+  const tutor = [];
+
+  for (const m of moves) {
+    const detail = pickLatestVersion(m.version_group_details);
+    if (!detail) continue;
+
+    const method = detail.move_learn_method.name;
+    const moveName = m.move.name;
+
+    if (method === "level-up") {
+      levelUp.push({ name: moveName, level: detail.level_learned_at });
+    } else if (method === "machine") {
+      tm.push(moveName);
+    } else if (method === "egg") {
+      egg.push(moveName);
+    } else if (method === "tutor") {
+      tutor.push(moveName);
+    }
+  }
+
+  levelUp.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+
+  return { levelUp, tm, egg, tutor };
+>>>>>>> 70fb3a0 (Fixed pokedex, pokemon details)
 }
 
 async function main() {
@@ -103,33 +175,50 @@ async function main() {
   console.log(`Found ${pokedex.pokemon_entries.length} Pokémon`);
 
   const data = await mapLimit(
-    pokedex.pokemon_entries,
-    20, // 20 concurrent requests
+    pokedex.pokemon_entries.slice(0, POKEMON_LIMIT),
+    20,
     async (entry) => {
       console.log(
         `Loading #${entry.entry_number} ${entry.pokemon_species.name}`,
       );
 
-      const [pokemon, species] = await Promise.all([
+      const [pokemonRes, species] = await Promise.all([
         fetchJSON(`https://pokeapi.co/api/v2/pokemon/${entry.entry_number}`),
         fetchJSON(entry.pokemon_species.url),
       ]);
 
       const evolution = await getEvolutionStage(species);
+      const evolutionChart = await getEvolutionChart(species.evolution_chain.url);
+
+      const genus = species.genera?.find((g) => g.language.name === "en")?.genus ?? null;
+
+      const genderRate = species.gender_rate;
+      let gender = null;
+      if (genderRate === -1) {
+        gender = "Genderless";
+      } else if (genderRate === 0) {
+        gender = "100% Male / 0% Female";
+      } else if (genderRate === 8) {
+        gender = "0% Male / 100% Female";
+      } else {
+        const femalePct = (genderRate / 8) * 100;
+        gender = `${100 - femalePct}% Male / ${femalePct}% Female`;
+      }
 
       return {
         id: entry.entry_number,
-        slug: pokemon.name,
+        slug: pokemonRes.name,
         names: Object.fromEntries(
           species.names.map((n) => [n.language.name, n.name])
         ),
-        sprite: pokemon.sprites.other.home.front_default,
+        sprite: pokemonRes.sprites.other.home.front_default,
 
-        types: pokemon.types.map((t) => t.type.name),
+        types: pokemonRes.types.map((t) => t.type.name),
 
-        height: pokemon.height,
-        weight: pokemon.weight,
+        height: pokemonRes.height,
+        weight: pokemonRes.weight,
 
+<<<<<<< HEAD
         abilities: pokemon.abilities.map((a) => {
           abilityNames.add(a.ability.name);
 
@@ -138,6 +227,22 @@ async function main() {
             hidden: a.is_hidden,
           };
         }),
+=======
+        abilities: pokemonRes.abilities.map((a) => ({
+          name: a.ability.name,
+          hidden: a.is_hidden,
+        })),
+>>>>>>> 70fb3a0 (Fixed pokedex, pokemon details)
+
+        baseStats: pokemonRes.stats.map((s) => ({
+          name: s.stat.name,
+          value: s.base_stat,
+          effort: s.effort,
+        })),
+
+        baseExperience: pokemonRes.base_experience,
+
+        genus,
 
         generation: species.generation.name,
 
@@ -149,6 +254,40 @@ async function main() {
         mythical: species.is_mythical,
 
         evolution,
+        evolutionChart: evolutionChart.map((m) => ({
+          name: m.name,
+          stage: m.stage,
+        })),
+
+        evYield: pokemonRes.stats
+          .filter((s) => s.effort > 0)
+          .map((s) => ({ name: s.stat.name, value: s.effort })),
+
+        catchRate: species.capture_rate,
+
+        baseFriendship: species.base_happiness,
+
+        growthRate: species.growth_rate?.name ?? null,
+
+        eggGroups: species.egg_groups?.map((g) => g.name) ?? [],
+
+        gender,
+
+        eggCycles: species.hatch_counter,
+
+        pokedexNumbers: species.pokedex_numbers?.map((n) => ({
+          entry: n.entry_number,
+          pokedex: n.pokedex.name,
+        })) ?? [],
+
+        flavorTexts: species.flavor_text_entries
+          ?.filter((f) => f.language.name === "en")
+          .map((f) => ({
+            text: f.flavor_text.replace(/[\n\f]/g, " "),
+            version: f.version.name,
+          })) ?? [],
+
+        moves: organizeMoves(pokemonRes.moves),
       };
     },
   );

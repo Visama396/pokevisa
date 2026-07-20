@@ -1,3 +1,3 @@
 export function formatDexEntryNumber(num) {
-  return num.toString().padStart(3, "0");
+  return num.toString().padStart(4, "0");
 }

@@ -1,29 +1,29 @@
 import { capitalize } from "../utils/capitalize";
 
 const typeToColor = {
-  normal: "bg-slate-700",
-  fire: "bg-red-700",
-  water: "bg-blue-700",
-  electric: "bg-yellow-700",
-  grass: "bg-green-700",
-  ice: "bg-cyan-700",
-  fighting: "bg-orange-700",
-  poison: "bg-purple-700",
-  ground: "bg-orange-700",
-  flying: "bg-indigo-700",
-  psychic: "bg-pink-700",
-  bug: "bg-green-700",
-  rock: "bg-slate-700",
-  ghost: "bg-indigo-700",
-  dragon: "bg-indigo-700",
-  dark: "bg-slate-700",
-  steel: "bg-slate-700",
-  fairy: "bg-pink-700",
+  normal: "bg-gray-400 text-gray-900",
+  fire: "bg-orange-500 text-white",
+  water: "bg-blue-500 text-white",
+  electric: "bg-yellow-400 text-yellow-900",
+  grass: "bg-green-500 text-white",
+  ice: "bg-cyan-300 text-cyan-900",
+  fighting: "bg-red-600 text-white",
+  poison: "bg-purple-600 text-white",
+  ground: "bg-amber-600 text-white",
+  flying: "bg-indigo-400 text-white",
+  psychic: "bg-pink-500 text-white",
+  bug: "bg-lime-500 text-white",
+  rock: "bg-yellow-700 text-white",
+  ghost: "bg-purple-700 text-white",
+  dragon: "bg-indigo-600 text-white",
+  dark: "bg-gray-700 text-white",
+  steel: "bg-gray-400 text-gray-900",
+  fairy: "bg-pink-400 text-white",
 };
 
 export default function PokeTypeBadge({ type }) {
   return (
-    <span className={`${typeToColor[type]} rounded-full px-2 py-1 text-sm`}>
+    <span className={`${typeToColor[type] || "bg-slate-600 text-white"} rounded-full px-3 py-0.5 text-xs font-semibold uppercase tracking-wide`}>
       {capitalize(type)}
     </span>
   );
