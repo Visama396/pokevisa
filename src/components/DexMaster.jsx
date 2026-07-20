@@ -80,7 +80,13 @@ export default function DexMaster() {
       }
     }
 
-    return Object.values(stats);
+    return Object.values(stats).sort((a, b) => {
+      const aDone = a.guessed === a.total;
+      const bDone = b.guessed === b.total;
+      if (aDone && !bDone) return 1;
+      if (!aDone && bDone) return -1;
+      return 0;
+    });
   }, [pokemons, guessedPokemons]);
 
   function getUnguessed() {
@@ -132,17 +138,9 @@ export default function DexMaster() {
 
   function giveFullNameHint() {
     const unguessed = getUnguessed();
-    if (unguessed.length === 0) return;
+    if (unguessed.length === 0) return null;
 
-    const pick = unguessed[Math.floor(Math.random() * unguessed.length)];
-    toast(
-      <span>
-        ✨ <strong>{pick.names.en}</strong>
-        <br />
-        <span className="text-xs text-slate-400">A new Pokémon revealed!</span>
-      </span>,
-      { duration: 6000 },
-    );
+    return unguessed[Math.floor(Math.random() * unguessed.length)];
   }
 
   function giveCategoryCompleteHint(completedKey) {
@@ -165,21 +163,13 @@ export default function DexMaster() {
     const pick =
       unguessedInTarget[Math.floor(Math.random() * unguessedInTarget.length)];
 
-    const typeLabel = target.types.join("/");
-    toast(
-      <span>
-        🏆 <strong>{typeLabel}</strong> complete!
-        <br />
-        <span className="text-xs text-slate-400">
-          Hint: <strong>{pick.names.en}</strong>
-        </span>
-      </span>,
-      { duration: 7000 },
-    );
+    return pick
   }
 
   useEffect(() => {
     if (pokemons.length === 0) return;
+
+    const bonusPokemon = []
 
     const currentCount = guessedPokemons.size;
     const prevCount = prevGuessedCount.current;
@@ -190,28 +180,62 @@ export default function DexMaster() {
     const currentComplete = new Set(
       displayStats
         .filter((s) => s.guessed === s.total)
-        .map((s) => s.types.join("/")),
+        .map((s) => s.types.join("/"))
     );
+
     const newlyComplete = [...currentComplete].filter(
-      (k) => !prevCompleteKeys.current.has(k),
+      (k) => !prevCompleteKeys.current.has(k)
     );
+
     prevCompleteKeys.current = currentComplete;
 
-    for (const key of newlyComplete) {
-      giveCategoryCompleteHint(key);
-    }
+    // Decide rewards BEFORE any state changes happen.
+    const hit10 = currentCount > 0 && currentCount % 10 === 0;
+    const hit25 = currentCount > 0 && currentCount % 25 === 0;
 
-    if (newlyComplete.length > 0) return;
+    // Execute category rewards.
+    newlyComplete.forEach((key) => {
+      const pick = giveCategoryCompleteHint(key);
+      if (pick) bonusPokemon.push({
+        pokemon: pick,
+        reason: "category",
+        category: key,
+      });
+    });
 
-    if (currentCount > 0 && currentCount % 10 === 0) {
+    // Execute 10-guess reward.
+    if (hit10) {
       if (
         activeHintRef.current &&
         !guessedPokemons.has(activeHintRef.current.id)
       ) {
         hintRevealedRef.current += 1;
-        showHintToast(activeHintRef.current, hintRevealedRef.current);
+
+        const pokemon = activeHintRef.current;
+        const name = pokemon.names.en;
+
+        if (hintRevealedRef.current >= name.length) {
+          setGuessedPokemons((prev) => new Set([...prev, pokemon.id]));
+
+          activeHintRef.current = null;
+          hintRevealedRef.current = 1;
+
+          toast(
+            <span>
+              🎉 <strong>{name}</strong>
+              <br />
+              <span className="text-xs text-slate-400">
+                Hint fully revealed — automatically added!
+              </span>
+            </span>,
+            { duration: 6000 }
+          );
+        } else {
+          showHintToast(pokemon, hintRevealedRef.current);
+        }
       } else {
         const pick = pickNextHintPokemon();
+
         if (pick) {
           activeHintRef.current = pick;
           hintRevealedRef.current = 1;
@@ -220,8 +244,51 @@ export default function DexMaster() {
       }
     }
 
-    if (currentCount > 0 && currentCount % 25 === 0) {
-      giveFullNameHint();
+    // Execute 25-guess reward.
+    if (hit25) {
+      const pick = giveFullNameHint();
+      if (pick) bonusPokemon.push({
+        pokemon: pick,
+        reason: "25",
+      });
+    }
+
+    if (bonusPokemon.length > 0) {
+      setGuessedPokemons((prev) => {
+        const next = new Set(prev);
+
+        bonusPokemon.forEach(({ pokemon }) => {
+          next.add(pokemon.id);
+        });
+
+        return next;
+      });
+
+      bonusPokemon.forEach((reward) => {
+        if (reward.reason === "category") {
+          toast(
+            <span>
+              🏆 <strong>{reward.category}</strong> complete!
+              <br />
+              <span className="text-xs text-slate-400">
+                Bonus: <strong>{reward.pokemon.names.en}</strong> auto-added!
+              </span>
+            </span>,
+            { duration: 7000 }
+          );
+        } else {
+          toast(
+            <span>
+              ✨ <strong>{reward.pokemon.names.en}</strong>
+              <br />
+              <span className="text-xs text-slate-400">
+                Automatically added!
+              </span>
+            </span>,
+            { duration: 6000 }
+          );
+        }
+      });
     }
   }, [guessedPokemons, displayStats, pokemons]);
 
@@ -298,26 +365,26 @@ export default function DexMaster() {
         }}
       />
       <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm pb-4 space-y-4">
-        <header className="flex items-center justify-between gap-4">
-          <a
-            href="/"
-            className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
-          >
-            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            {t("Home", language)}
-          </a>
-
-          <div className="font-mono text-3xl font-bold text-slate-200">
-            ⏱ {formatTime(elapsed)}
+        <header className="space-y-2">
+          <div className="flex items-center justify-between">
+            <a
+              href="/"
+              className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+            >
+              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              {t("Home", language)}
+            </a>
+            <LanguageSelector />
           </div>
-
-          <div className="flex items-center gap-4">
-            <span className="text-xl font-bold text-slate-200">
+          <div className="flex items-center justify-between">
+            <div className="font-mono text-2xl font-bold text-slate-200">
+              ⏱ {formatTime(elapsed)}
+            </div>
+            <span className="text-lg font-bold text-slate-200">
               {guessedPokemons.size} / {pokemons.length}
             </span>
-            <LanguageSelector />
           </div>
         </header>
 
