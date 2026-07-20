@@ -4,6 +4,7 @@ import DexItem from "./DexItem";
 import LanguageSelector from "./LanguageSelector";
 import { formatDexEntryNumber } from "../utils/dexentrynumber";
 import { getLanguage, subscribe } from "../stores/language";
+import { t } from "../stores/translations";
 
 export default function Dex() {
   const [filteredPokemons, setFilteredPokemons] = useState([]);
@@ -57,7 +58,7 @@ export default function Dex() {
           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
-          Home
+          {t("Home", language)}
         </a>
         <div className="relative max-w-md mx-auto">
           <svg
@@ -70,7 +71,7 @@ export default function Dex() {
           </svg>
           <input
             type="text"
-            placeholder="Search by name, type, or number..."
+            placeholder={t("Search by name, type, or number...", language)}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full rounded-xl border border-slate-700 bg-slate-800 py-3 pl-10 pr-4 text-sm text-slate-200 placeholder-slate-500 outline-none transition-colors focus:border-slate-500"
@@ -88,13 +89,13 @@ export default function Dex() {
       ) : filteredPokemons.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-20 text-slate-500">
           <span className="text-4xl">🔍</span>
-          <p className="text-lg">No Pokémon found</p>
-          <p className="text-sm">Try a different search term</p>
+          <p className="text-lg">{t("No Pokémon found", language)}</p>
+          <p className="text-sm">{t("Try a different search term", language)}</p>
         </div>
       ) : (
         <>
           <p className="text-sm text-slate-500 text-center">
-            Showing {filteredPokemons.length} of {pokemons.length} Pokémon
+            {t("Showing", language)} {filteredPokemons.length} {t("of", language)} {pokemons.length} {t("Pokémon", language)}
           </p>
           <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {filteredPokemons.map((pokemon) => (

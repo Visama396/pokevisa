@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { normalize } from "../utils/normalize";
 import { getLanguage, subscribe } from "../stores/language";
+import { t } from "../stores/translations";
 import LanguageSelector from "./LanguageSelector";
 import PokeTypeBadge from "./PokeTypeBadge";
 
@@ -138,7 +139,7 @@ export default function DexMaster() {
       <form onSubmit={handleGuess}>
         <input
           className="w-full rounded-xl border border-slate-700 bg-slate-800 py-3 px-4 text-sm text-slate-200 placeholder-slate-500 outline-none transition-all focus:border-slate-500"
-          placeholder="Type a Pokémon name in any language..."
+          placeholder={t("Type a Pokémon name in any language...", language)}
           value={guess}
           onChange={(e) => setGuess(e.target.value)}
           autoFocus
@@ -166,7 +167,7 @@ export default function DexMaster() {
             <div className="flex justify-between items-center mb-2">
               <div className="flex gap-1.5 flex-wrap">
                 {data.types.map((type) => (
-                  <PokeTypeBadge key={type} type={type.toLowerCase()} />
+                  <PokeTypeBadge key={type} type={type.toLowerCase()} language={language} />
                 ))}
               </div>
 

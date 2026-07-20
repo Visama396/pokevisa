@@ -1,4 +1,4 @@
-import { capitalize } from "../utils/capitalize";
+import { getTypeName } from "../stores/translations";
 
 const typeToColor = {
   normal: "bg-gray-400 text-gray-900",
@@ -21,10 +21,10 @@ const typeToColor = {
   fairy: "bg-pink-400 text-white",
 };
 
-export default function PokeTypeBadge({ type }) {
+export default function PokeTypeBadge({ type, language }) {
   return (
     <span className={`${typeToColor[type] || "bg-slate-600 text-white"} rounded-full px-3 py-0.5 text-xs font-semibold uppercase tracking-wide`}>
-      {capitalize(type)}
+      {getTypeName(type, language)}
     </span>
   );
 }

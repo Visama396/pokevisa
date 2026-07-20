@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { randomEntryNumber } from "../utils/randomEntryNumber";
 import { normalize } from "../utils/normalize";
 import { getLanguage, subscribe } from "../stores/language";
+import { t, getTypeName } from "../stores/translations";
 import LanguageSelector from "./LanguageSelector";
 import PokedleGuess from "./PokedleGuess";
 
-const MAX_GUESSES = 8;
+const MAX_GUESSES = 12;
 
 export default function Pokewordle() {
   const [pokemons, setPokemons] = useState([]);
@@ -91,14 +92,25 @@ export default function Pokewordle() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-center flex-1 space-y-2">
+      <div className="relative flex items-center justify-center gap-4">
+        <a
+          href="/"
+          className="absolute left-0 inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+        >
+          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          {t("Home", language)}
+        </a>
+        <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold">PokéWordle</h1>
           <p className="text-sm text-slate-400">
-            Guess today's Pokémon — {guesses.length}/{MAX_GUESSES}
+            {t("Guess today's Pokémon —", language)} {guesses.length}/{MAX_GUESSES}
           </p>
         </div>
-        <LanguageSelector />
+        <div className="absolute right-0">
+          <LanguageSelector />
+        </div>
       </div>
 
       {!gameOver && (
@@ -112,7 +124,7 @@ export default function Pokewordle() {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Type a Pokémon name..."
+              placeholder={t("Type a Pokémon name...", language)}
               value={guess}
               onChange={(e) => {
                 setGuess(e.target.value);
@@ -153,13 +165,13 @@ export default function Pokewordle() {
         <div className="overflow-x-auto">
           <div className="min-w-[640px]">
             <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 px-1">
-              <div>Pokémon</div>
-              <div>Gen</div>
-              <div>Types</div>
-              <div>Abilities</div>
-              <div>Height</div>
-              <div>Weight</div>
-              <div>Color</div>
+              <div>{t("Pokémon (header)", language)}</div>
+              <div>{t("Gen (header)", language)}</div>
+              <div>{t("Types (header)", language)}</div>
+              <div>{t("Abilities (header)", language)}</div>
+              <div>{t("Height (header)", language)}</div>
+              <div>{t("Weight (header)", language)}</div>
+              <div>{t("Color (header)", language)}</div>
             </div>
             <div className="space-y-2">
               {guesses.map((g, i) => (
@@ -181,17 +193,17 @@ export default function Pokewordle() {
           {won ? (
             <>
               <p className="text-2xl">🎉</p>
-              <h2 className="text-2xl font-bold text-green-400">Correct!</h2>
+              <h2 className="text-2xl font-bold text-green-400">{t("Correct!", language)}</h2>
               <p className="text-slate-300">
-                You guessed it in {guesses.length} attempt{guesses.length > 1 ? "s" : ""}.
+                {t("You guessed it in", language)} {guesses.length} {t(guesses.length > 1 ? "attempts" : "attempt", language)}.
               </p>
             </>
           ) : (
             <>
               <p className="text-2xl">😔</p>
-              <h2 className="text-2xl font-bold text-red-400">Game Over</h2>
+              <h2 className="text-2xl font-bold text-red-400">{t("Game Over", language)}</h2>
               <p className="text-slate-300">
-                The Pokémon was{" "}
+                {t("The Pokémon was", language)}{" "}
                 <span className="font-bold text-white">
                   {todayPokemon?.names?.[language] || todayPokemon?.names?.en}
                 </span>
@@ -200,9 +212,9 @@ export default function Pokewordle() {
             </>
           )}
           <div className="flex justify-center gap-2">
-            {todayPokemon?.types?.map((t) => (
-              <span key={t} className="rounded-full bg-slate-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-200">
-                {t}
+            {todayPokemon?.types?.map((type) => (
+              <span key={type} className="rounded-full bg-slate-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-200">
+                {getTypeName(type, language)}
               </span>
             ))}
           </div>

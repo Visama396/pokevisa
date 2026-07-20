@@ -2,6 +2,7 @@ import Cell from "./Cell";
 import NumberCell from "./NumberCell";
 import GenerationCell from "./GenerationCell";
 import PokeTypeBadge from "./PokeTypeBadge";
+import { t } from "../stores/translations";
 
 export default function PokedleGuess({ todayPokemon, pokemon, abilities, language }) {
   const typeMatch = pokemon.types.some((type) =>
@@ -31,7 +32,7 @@ export default function PokedleGuess({ todayPokemon, pokemon, abilities, languag
       >
         <div className="flex flex-col items-center gap-0.5">
           {pokemon.types.map((type) => (
-            <PokeTypeBadge key={type} type={type} />
+            <PokeTypeBadge key={type} type={type} language={language} />
           ))}
         </div>
       </Cell>
@@ -43,7 +44,7 @@ export default function PokedleGuess({ todayPokemon, pokemon, abilities, languag
         }
         partial={abilityMatch}
       >
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-0.5 w-full">
           {pokemon.abilities.map((ability) => {
             const localized =
               abilities[ability.name]?.[language] ?? ability.name;
@@ -51,15 +52,13 @@ export default function PokedleGuess({ todayPokemon, pokemon, abilities, languag
             return (
               <span
                 key={ability.name}
-                className={`rounded px-1.5 py-0.5 text-[11px] font-medium leading-tight ${
+                className={`rounded px-1 py-0.5 text-[11px] font-medium leading-tight text-center ${
                   matched ? "bg-green-600/60 text-green-100" : "bg-red-600/60 text-red-100"
                 }`}
               >
                 {localized}
                 {ability.hidden && (
-                  <span className="text-[10px] opacity-60 ml-0.5">
-                    {language === "es" ? "(Oculta)" : language === "fr" ? "(Cachée)" : language === "de" ? "(Versteckt)" : language === "it" ? "(Nascosta)" : "(Hidden)"}
-                  </span>
+                  <span className="text-[10px] opacity-60"> ({t("Hidden", language)})</span>
                 )}
               </span>
             );
@@ -85,7 +84,7 @@ export default function PokedleGuess({ todayPokemon, pokemon, abilities, languag
             className="inline-block size-4 rounded-full ring-1 ring-slate-600"
             style={{ backgroundColor: pokemon.color }}
           />
-          <span className="text-[11px] capitalize">{pokemon.color}</span>
+          <span className="text-[11px] capitalize">{t(pokemon.color, language)}</span>
         </div>
       </Cell>
     </div>

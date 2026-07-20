@@ -21,7 +21,7 @@ export default function DexItem({ pokemon, language = "en" }) {
       </h2>
       <div className="flex flex-wrap justify-center gap-1">
         {pokemon.types.map((type) => (
-          <PokeTypeBadge key={type} type={type} />
+          <PokeTypeBadge key={type} type={type} language={language} />
         ))}
       </div>
     </a>

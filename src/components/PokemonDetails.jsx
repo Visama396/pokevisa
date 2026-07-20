@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { capitalize } from "../utils/capitalize";
 import { formatDexEntryNumber } from "../utils/dexentrynumber";
 import { getLanguage, subscribe } from "../stores/language";
+import { t, getStatLabel, getTypeName } from "../stores/translations";
 import LanguageSelector from "./LanguageSelector";
 import PokeTypeBadge from "./PokeTypeBadge";
 
@@ -92,7 +93,6 @@ const versionToGen = {
 };
 
 const allTypes = Object.keys(typeChart);
-const statLabels = { hp: "HP", attack: "Attack", defense: "Defense", "special-attack": "Sp. Atk", "special-defense": "Sp. Def", speed: "Speed" };
 
 function getEffectiveness(types) {
   return allTypes.map((attackType) => {
@@ -183,7 +183,7 @@ export default function PokemonDetails({ pokemon }) {
           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Pokédex
+          {t("Back to Pokédex", language)}
         </a>
 
         <div className="flex items-center gap-2">
@@ -196,7 +196,7 @@ export default function PokemonDetails({ pokemon }) {
               <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Previous
+              {t("Previous", language)}
             </a>
           )}
           {pokemon.id < 1025 && (
@@ -204,7 +204,7 @@ export default function PokemonDetails({ pokemon }) {
               href={`/pokedex/${pokemon.id + 1}`}
               className="inline-flex items-center gap-1 rounded-lg bg-slate-700/60 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
             >
-              Next
+              {t("Next", language)}
               <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -227,19 +227,19 @@ export default function PokemonDetails({ pokemon }) {
           <h1 className="text-3xl font-bold">{capitalize(pokemon.names[language] || pokemon.names.en)}</h1>
           <div className="flex flex-wrap justify-center gap-2">
             {pokemon.types.map((type) => (
-              <PokeTypeBadge key={type} type={type} />
+              <PokeTypeBadge key={type} type={type} language={language} />
             ))}
           </div>
           {(pokemon.legendary || pokemon.mythical) && (
             <div className="flex gap-2">
               {pokemon.legendary && (
                 <span className="rounded-full bg-yellow-600/30 text-yellow-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
-                  Legendary
+                  {t("Legendary", language)}
                 </span>
               )}
               {pokemon.mythical && (
                 <span className="rounded-full bg-purple-600/30 text-purple-400 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
-                  Mythical
+                  {t("Mythical", language)}
                 </span>
               )}
             </div>
@@ -252,26 +252,26 @@ export default function PokemonDetails({ pokemon }) {
         </div>
 
         <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-          <h2 className="text-xl font-bold mb-4">Pokédex</h2>
+          <h2 className="text-xl font-bold mb-4">{t("Pokédex", language)}</h2>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">National №</dt>
+              <dt className="text-slate-400">{t("National №", language)}</dt>
               <dd className="font-mono font-semibold">#{formatDexEntryNumber(pokemon.id)}</dd>
             </div>
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">Species</dt>
+              <dt className="text-slate-400">{t("Species", language)}</dt>
               <dd className="font-semibold">{pokemon.genus || "—"}</dd>
             </div>
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">Height</dt>
+              <dt className="text-slate-400">{t("Height", language)}</dt>
               <dd className="font-semibold">{(pokemon.height / 10).toFixed(1)} m</dd>
             </div>
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">Weight</dt>
+              <dt className="text-slate-400">{t("Weight", language)}</dt>
               <dd className="font-semibold">{(pokemon.weight / 10).toFixed(1)} kg</dd>
             </div>
             <div className="border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400 mb-1">Abilities</dt>
+              <dt className="text-slate-400 mb-1">{t("Abilities", language)}</dt>
               <dd className="flex flex-wrap gap-1">
                 {(pokemon.abilities || []).map((ability) => (
                   <span
@@ -284,7 +284,7 @@ export default function PokemonDetails({ pokemon }) {
                   >
                     {capitalize(ability.name.replace(/-/g, " "))}
                     {ability.hidden && (
-                      <span className="text-xs text-slate-500 ml-1">(Hidden)</span>
+                      <span className="text-xs text-slate-500 ml-1">({t("Hidden", language)})</span>
                     )}
                   </span>
                 ))}
@@ -292,7 +292,7 @@ export default function PokemonDetails({ pokemon }) {
             </div>
             {localDexEntries.length > 0 && (
               <div className="pb-2">
-                <dt className="text-slate-400 mb-1">Local Entries</dt>
+                <dt className="text-slate-400 mb-1">{t("Local Entries", language)}</dt>
                 <dd className="space-y-1">
                   {localDexEntries.map((entry) => (
                     <div key={entry.pokedex} className="flex justify-between text-xs">
@@ -314,34 +314,34 @@ export default function PokemonDetails({ pokemon }) {
       {/* Row 2: Training | Breeding */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-          <h2 className="text-xl font-bold mb-4">Training</h2>
+          <h2 className="text-xl font-bold mb-4">{t("Training", language)}</h2>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">EV Yield</dt>
+              <dt className="text-slate-400">{t("EV Yield", language)}</dt>
               <dd className="font-semibold text-right">
                 {(pokemon.evYield || []).length > 0
                   ? (pokemon.evYield || []).map((ev) => (
                       <span key={ev.name} className="ml-2">
-                        {statLabels[ev.name] || capitalize(ev.name)} +{ev.value}
+                        {getStatLabel(ev.name, language)} +{ev.value}
                       </span>
                     ))
                   : "—"}
               </dd>
             </div>
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">Catch Rate</dt>
+              <dt className="text-slate-400">{t("Catch Rate", language)}</dt>
               <dd className="font-semibold">{pokemon.catchRate ?? "—"}</dd>
             </div>
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">Base Friendship</dt>
+              <dt className="text-slate-400">{t("Base Friendship", language)}</dt>
               <dd className="font-semibold">{pokemon.baseFriendship ?? "—"}</dd>
             </div>
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">Base Exp.</dt>
+              <dt className="text-slate-400">{t("Base Exp.", language)}</dt>
               <dd className="font-semibold">{pokemon.baseExperience ?? "—"}</dd>
             </div>
             <div className="flex justify-between pb-2">
-              <dt className="text-slate-400">Growth Rate</dt>
+              <dt className="text-slate-400">{t("Growth Rate", language)}</dt>
               <dd className="font-semibold">
                 {pokemon.growthRate ? capitalize(pokemon.growthRate.replace(/-/g, " ")) : "—"}
               </dd>
@@ -350,10 +350,10 @@ export default function PokemonDetails({ pokemon }) {
         </div>
 
         <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-          <h2 className="text-xl font-bold mb-4">Breeding</h2>
+          <h2 className="text-xl font-bold mb-4">{t("Breeding", language)}</h2>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">Egg Groups</dt>
+              <dt className="text-slate-400">{t("Egg Groups", language)}</dt>
               <dd className="font-semibold text-right">
                 {(pokemon.eggGroups || []).length > 0
                   ? (pokemon.eggGroups || []).map((g) => capitalize(g)).join(", ")
@@ -361,11 +361,11 @@ export default function PokemonDetails({ pokemon }) {
               </dd>
             </div>
             <div className="flex justify-between border-b border-slate-700/50 pb-2">
-              <dt className="text-slate-400">Gender</dt>
-              <dd className="font-semibold">{pokemon.gender || "Genderless"}</dd>
+              <dt className="text-slate-400">{t("Gender", language)}</dt>
+              <dd className="font-semibold">{pokemon.gender || t("Genderless", language)}</dd>
             </div>
             <div className="flex justify-between pb-2">
-              <dt className="text-slate-400">Egg Cycles</dt>
+              <dt className="text-slate-400">{t("Egg Cycles", language)}</dt>
               <dd className="font-semibold">{pokemon.eggCycles ?? "—"}</dd>
             </div>
           </dl>
@@ -374,7 +374,7 @@ export default function PokemonDetails({ pokemon }) {
 
       {/* Row 3: Base Stats */}
       <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-        <h2 className="text-xl font-bold mb-4">Base Stats</h2>
+        <h2 className="text-xl font-bold mb-4">{t("Base Stats", language)}</h2>
         <div className="space-y-2">
           {(pokemon.baseStats || []).map((stat) => {
             const pct = Math.min((stat.value / maxStat) * 100, 100);
@@ -391,7 +391,7 @@ export default function PokemonDetails({ pokemon }) {
             return (
               <div key={stat.name} className="grid grid-cols-[6rem_2.5rem_1fr_2.5rem] items-center gap-2 text-sm">
                 <span className="text-slate-300 font-medium text-right">
-                  {statLabels[stat.name] || capitalize(stat.name)}
+                  {getStatLabel(stat.name, language)}
                 </span>
                 <span className="font-mono font-bold text-slate-200 text-right">{stat.value}</span>
                 <div className="h-2 rounded-full bg-slate-700 overflow-hidden">
@@ -407,7 +407,7 @@ export default function PokemonDetails({ pokemon }) {
             );
           })}
           <div className="flex items-center gap-2 pt-2 border-t border-slate-700/50 text-sm font-bold">
-            <span className="text-slate-300">Total</span>
+            <span className="text-slate-300">{t("Total", language)}</span>
             <span className="font-mono text-slate-200">
               {(pokemon.baseStats || []).reduce((s, st) => s + st.value, 0)}
             </span>
@@ -417,7 +417,7 @@ export default function PokemonDetails({ pokemon }) {
 
       {/* Row 4: Type Effectiveness */}
       <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-        <h2 className="text-xl font-bold mb-4">Type Effectiveness</h2>
+        <h2 className="text-xl font-bold mb-4">{t("Type Effectiveness", language)}</h2>
         <div className="flex flex-wrap gap-1.5">
           {effectiveness.map(({ type, multiplier }) => (
             <span
@@ -434,7 +434,7 @@ export default function PokemonDetails({ pokemon }) {
                         : "bg-green-700/30 text-green-200"
               }`}
             >
-              {capitalize(type)}
+              {getTypeName(type, language)}
               <span className="font-mono">
                 {multiplier === 0 ? "0×" : multiplier < 1 ? "½×" : multiplier === 1 ? "" : multiplier === 2 ? "2×" : "4×"}
               </span>
@@ -446,7 +446,7 @@ export default function PokemonDetails({ pokemon }) {
       {/* Row 5: Evolution Chart */}
       {(pokemon.evolutionChart || []).length > 0 && (
         <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-          <h2 className="text-xl font-bold mb-4">Evolution Chart</h2>
+          <h2 className="text-xl font-bold mb-4">{t("Evolution Chart", language)}</h2>
           <div className="flex flex-wrap items-center justify-center gap-2">
             {pokemon.evolutionChart.map((evo, idx) => (
               <span key={evo.name} className="flex items-center gap-2">
@@ -461,7 +461,7 @@ export default function PokemonDetails({ pokemon }) {
                 >
                   {capitalize(evo.name.replace(/-/g, " "))}
                   <span className="text-xs text-slate-500 ml-1 font-mono">
-                    (Stage {evo.stage})
+                    {t("Stage", language)} {evo.stage}
                   </span>
                 </a>
               </span>
@@ -475,7 +475,7 @@ export default function PokemonDetails({ pokemon }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {(pokemon.moves?.levelUp || []).length > 0 && (
             <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-              <h2 className="text-xl font-bold mb-4">Moves by Level</h2>
+              <h2 className="text-xl font-bold mb-4">{t("Moves by Level", language)}</h2>
               <div className="max-h-80 overflow-y-auto space-y-1 pr-1">
                 {[...(pokemon.moves?.levelUp || [])]
                   .sort((a, b) => a.level - b.level)
@@ -489,7 +489,7 @@ export default function PokemonDetails({ pokemon }) {
                         {formatMoveName(move.name)}
                       </span>
                       <span className="font-mono text-xs text-slate-400">
-                        Lv. {move.level}
+                        {t("Lv.", language)} {move.level}
                       </span>
                     </div>
                   ))}
@@ -498,7 +498,7 @@ export default function PokemonDetails({ pokemon }) {
           )}
           {(pokemon.moves?.tm || []).length > 0 && (
             <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-              <h2 className="text-xl font-bold mb-4">Moves by TM</h2>
+              <h2 className="text-xl font-bold mb-4">{t("Moves by TM", language)}</h2>
               <div className="max-h-80 overflow-y-auto flex flex-wrap gap-1.5 pr-1">
                 {(pokemon.moves?.tm || []).map((move) => (
                   <span
@@ -520,7 +520,7 @@ export default function PokemonDetails({ pokemon }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {(pokemon.moves?.egg || []).length > 0 && (
             <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-              <h2 className="text-xl font-bold mb-4">Moves by Breeding</h2>
+              <h2 className="text-xl font-bold mb-4">{t("Moves by Breeding", language)}</h2>
               <div className="flex flex-wrap gap-1.5">
                 {(pokemon.moves?.egg || []).map((move) => (
                   <span
@@ -536,7 +536,7 @@ export default function PokemonDetails({ pokemon }) {
           )}
           {(pokemon.moves?.tutor || []).length > 0 && (
             <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-              <h2 className="text-xl font-bold mb-4">Moves by Tutor</h2>
+              <h2 className="text-xl font-bold mb-4">{t("Moves by Tutor", language)}</h2>
               <div className="flex flex-wrap gap-1.5">
                 {(pokemon.moves?.tutor || []).map((move) => (
                   <span
@@ -556,7 +556,7 @@ export default function PokemonDetails({ pokemon }) {
       {/* Row 8: Flavor Texts by Generation */}
       {Object.keys(flavorTextsByText).length > 0 && (
         <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-          <h2 className="text-xl font-bold mb-4">Pokédex Entries</h2>
+          <h2 className="text-xl font-bold mb-4">{t("Pokédex Entries", language)}</h2>
           <div className="space-y-4">
             {Object.values(flavorTextsByText).map((entry) => (
               <div key={entry.text} className="rounded-lg bg-slate-700/30 p-4">
@@ -566,7 +566,7 @@ export default function PokemonDetails({ pokemon }) {
                       key={v.gen + v.names.join(",")}
                       className="rounded bg-slate-600/50 px-2 py-0.5 text-xs font-mono text-slate-300"
                     >
-                      Gen {v.gen}
+                      {t("Gen", language)} {v.gen}
                       <span className="text-slate-500 ml-1">
                         ({v.names.map((n) => formatMoveName(n)).join(", ")})
                       </span>
@@ -583,7 +583,7 @@ export default function PokemonDetails({ pokemon }) {
       {/* Row 9: Names in Other Languages */}
       {pokemon.names && (
         <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-          <h2 className="text-xl font-bold mb-4">Other Languages</h2>
+          <h2 className="text-xl font-bold mb-4">{t("Other Languages", language)}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {Object.entries(pokemon.names).map(([lang, name]) => (
               <div

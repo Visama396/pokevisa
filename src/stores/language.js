@@ -1,6 +1,14 @@
 const listeners = new Set();
 
-let current = "en";
+function getStored() {
+  try {
+    return localStorage.getItem("pokevisa_lang") || "en";
+  } catch {
+    return "en";
+  }
+}
+
+let current = getStored();
 
 export function getLanguage() {
   return current;
@@ -8,6 +16,7 @@ export function getLanguage() {
 
 export function setLanguage(lang) {
   current = lang;
+  try { localStorage.setItem("pokevisa_lang", lang); } catch {}
   listeners.forEach((fn) => fn(lang));
 }
 
@@ -23,7 +32,6 @@ export const LANGUAGES = [
   { code: "de", label: "Deutsch" },
   { code: "it", label: "Italiano" },
   { code: "ja", label: "日本語" },
-  { code: "ja-roma", label: "日本語 (Romaji)" },
   { code: "ko", label: "한국어" },
   { code: "zh-hans", label: "简体中文" },
   { code: "zh-hant", label: "繁體中文" },
