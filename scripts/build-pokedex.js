@@ -42,11 +42,11 @@ async function getEvolutionStage(species) {
     const members = [];
 
     function walk(node, stage) {
-      const detail = node.species.url ? { url: node.species.url } : {};
+      const id = Number(node.species.url.match(/\/(\d+)\/$/)[1]);
       members.push({
         name: node.species.name,
         stage,
-        ...detail,
+        id,
       });
 
       node.evolves_to.forEach((next) => walk(next, stage + 1));
@@ -61,6 +61,7 @@ async function getEvolutionStage(species) {
       members.map((m) => ({
         name: m.name,
         stage: m.stage,
+        id: m.id,
         unique,
       })),
     );
@@ -84,9 +85,11 @@ async function getEvolutionChart(evolutionChainUrl) {
     const chain = await fetchJSON(evolutionChainUrl);
     const members = [];
     function walk(node, stage) {
+      const id = Number(node.species.url.match(/\/(\d+)\/$/)[1]);
       members.push({
         name: node.species.name,
         stage,
+        id,
       });
       node.evolves_to.forEach((next) => walk(next, stage + 1));
     }
@@ -263,6 +266,7 @@ async function main() {
         evolutionChart: evolutionChart.map((m) => ({
           name: m.name,
           stage: m.stage,
+          id: m.id,
         })),
 
         evYield: pokemonRes.stats

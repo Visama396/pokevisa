@@ -132,7 +132,7 @@ function EffBadge({ multiplier }) {
 }
 
 function MoveIcon({ name, moveData }) {
-  const category = moveData?.[name];
+  const category = moveData?.[name]?.category;
   if (!category) return null;
   return (
     <img
@@ -144,10 +144,71 @@ function MoveIcon({ name, moveData }) {
   );
 }
 
-export default function PokemonDetails({ pokemon }) {
+function moveName(name, language, moveData) {
+  const names = moveData?.[name]?.names;
+  if (names?.[language]) return names[language];
+  return formatMoveName(name);
+}
+
+function moveEffect(name, language, moveData) {
+  const effects = moveData?.[name]?.effect;
+  if (!effects) return null;
+  return effects[language] || effects.en || null;
+}
+
+const typeColor = {
+  normal: "bg-gray-400", fire: "bg-orange-500", water: "bg-blue-500",
+  electric: "bg-yellow-400", grass: "bg-green-500", ice: "bg-cyan-300",
+  fighting: "bg-red-600", poison: "bg-purple-600", ground: "bg-amber-600",
+  flying: "bg-indigo-400", psychic: "bg-pink-500", bug: "bg-lime-500",
+  rock: "bg-yellow-700", ghost: "bg-purple-700", dragon: "bg-indigo-600",
+  dark: "bg-gray-700", steel: "bg-gray-400", fairy: "bg-pink-400",
+};
+
+const typeBg = {
+  normal: "bg-gray-400/20", fire: "bg-orange-500/20", water: "bg-blue-500/20",
+  electric: "bg-yellow-400/20", grass: "bg-green-500/20", ice: "bg-cyan-300/20",
+  fighting: "bg-red-600/20", poison: "bg-purple-600/20", ground: "bg-amber-600/20",
+  flying: "bg-indigo-400/20", psychic: "bg-pink-500/20", bug: "bg-lime-500/20",
+  rock: "bg-yellow-700/20", ghost: "bg-purple-700/20", dragon: "bg-indigo-600/20",
+  dark: "bg-gray-700/20", steel: "bg-gray-400/20", fairy: "bg-pink-400/20",
+};
+
+function MoveTypeDot({ type }) {
+  if (!type) return null;
+  return (
+    <span className={`inline-block size-2 rounded-full ${typeColor[type] || "bg-slate-500"}`} title={type} />
+  );
+}
+
+function MoveTooltipContent({ name, moveData, language }) {
+  const info = moveData?.[name];
+  if (!info) return null;
+  return (
+    <TooltipContent className="max-w-xs bg-slate-700 text-slate-200 border border-slate-600 text-xs leading-relaxed p-3">
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-slate-300">
+          <PokeTypeBadge type={info.type} language={language} />
+          <MoveIcon name={name} moveData={moveData} />
+          {info.accuracy != null && <span>{t("Accuracy", language)}: {info.accuracy}</span>}
+          {info.pp != null && <span>PP: {info.pp}</span>}
+        </div>
+        {moveEffect(name, language, moveData) && (
+          <p className="text-slate-400">{moveEffect(name, language, moveData)}</p>
+        )}
+      </div>
+    </TooltipContent>
+  );
+}
+
+export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
   const [moveData, setMoveData] = useState(null);
   const [abilityData, setAbilityData] = useState(null);
   const [language, setLanguage] = useState(getLanguage());
+  const [sortLevelUp, setSortLevelUp] = useState("level");
+  const [sortTM, setSortTM] = useState("alpha");
+  const [sortEgg, setSortEgg] = useState("alpha");
+  const [sortTutor, setSortTutor] = useState("alpha");
 
   useEffect(() => subscribe(setLanguage), []);
 
@@ -201,26 +262,30 @@ export default function PokemonDetails({ pokemon }) {
 
         <div className="flex items-center gap-2">
           <LanguageSelector />
-          {pokemon.id > 1 && (
+          {prevPokemon && (
             <a
-              href={`/pokedex/${pokemon.id - 1}`}
-              className="inline-flex items-center gap-1 rounded-lg bg-slate-700/60 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+              href={`/pokedex/${prevPokemon.id}`}
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-700/60 pr-3 pl-1 py-1 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
             >
-              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              {t("Previous", language)}
+              <img
+                src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${prevPokemon.id}.png`}
+                alt=""
+                className="size-8 object-contain"
+              />
+              <span className="hidden sm:inline">{capitalize(prevPokemon.names[language] || prevPokemon.names.en)}</span>
             </a>
           )}
-          {pokemon.id < 1025 && (
+          {nextPokemon && (
             <a
-              href={`/pokedex/${pokemon.id + 1}`}
-              className="inline-flex items-center gap-1 rounded-lg bg-slate-700/60 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+              href={`/pokedex/${nextPokemon.id}`}
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-700/60 pl-3 pr-1 py-1 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
             >
-              {t("Next", language)}
-              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              <span className="hidden sm:inline">{capitalize(nextPokemon.names[language] || nextPokemon.names.en)}</span>
+              <img
+                src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${nextPokemon.id}.png`}
+                alt=""
+                className="size-8 object-contain"
+              />
             </a>
           )}
         </div>
@@ -474,20 +539,28 @@ export default function PokemonDetails({ pokemon }) {
       {(pokemon.evolutionChart || []).length > 0 && (
         <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
           <h2 className="text-xl font-bold mb-4">{t("Evolution Chart", language)}</h2>
-          <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             {pokemon.evolutionChart.map((evo, idx) => (
-              <span key={evo.name} className="flex items-center gap-2">
+              <span key={evo.name} className="flex items-center gap-4">
                 {idx > 0 && (
-                  <svg className="size-5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="size-6 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 )}
                 <a
                   href={`/pokedex/${evo.name}`}
-                  className="rounded-lg bg-slate-700/50 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
+                  className="flex flex-col items-center gap-1 rounded-xl bg-slate-700/40 px-4 py-3 hover:bg-slate-700/70 hover:scale-105 transition-all"
                 >
-                  {capitalize(evo.name.replace(/-/g, " "))}
-                  <span className="text-xs text-slate-500 ml-1 font-mono">
+                  <img
+                    src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${evo.id}.png`}
+                    alt={evo.name}
+                    className="size-16 object-contain"
+                    loading="lazy"
+                  />
+                  <span className="text-sm font-semibold text-slate-200">
+                    {capitalize(evo.name.replace(/-/g, " "))}
+                  </span>
+                  <span className="text-xs text-slate-500 font-mono">
                     {t("Stage", language)} {evo.stage}
                   </span>
                 </a>
@@ -497,86 +570,134 @@ export default function PokemonDetails({ pokemon }) {
         </div>
       )}
 
-      {/* Row 6: Moves by Level | Moves by TM */}
-      {(pokemon.moves?.levelUp?.length > 0 || pokemon.moves?.tm?.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {(pokemon.moves?.levelUp || []).length > 0 && (
-            <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-              <h2 className="text-xl font-bold mb-4">{t("Moves by Level", language)}</h2>
-              <div className="max-h-80 overflow-y-auto space-y-1 pr-1">
-                {[...(pokemon.moves?.levelUp || [])]
-                  .sort((a, b) => a.level - b.level)
-                  .map((move) => (
-                    <div
-                      key={move.name}
-                      className="flex justify-between items-center rounded bg-slate-700/30 px-3 py-1.5 text-sm"
-                    >
-                      <span className="flex items-center gap-1.5 text-slate-200">
-                        <MoveIcon name={move.name} moveData={moveData} />
-                        {formatMoveName(move.name)}
-                      </span>
-                      <span className="font-mono text-xs text-slate-400">
-                        {t("Lv.", language)} {move.level}
-                      </span>
-                    </div>
+      {/* Moves: Level Up | TM | Breeding | Tutor */}
+      {(pokemon.moves?.levelUp?.length > 0 || pokemon.moves?.tm?.length > 0 || pokemon.moves?.egg?.length > 0 || pokemon.moves?.tutor?.length > 0) && (
+        <div className="flex flex-wrap gap-6">
+          {((moves) => moves.length > 0 && (
+            <div className="max-md:w-full md:max-xl:w-1/2 xl:flex-1 rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold">{t("Moves by Level", language)}</h2>
+                <div className="flex gap-1 mt-2">
+                  {["level", "type", "power"].map((s) => (
+                    <button key={s} onClick={() => setSortLevelUp(s)}
+                      className={`px-2 py-0.5 rounded text-xs font-bold ${sortLevelUp === s ? "bg-yellow-500/30 text-yellow-300" : "bg-slate-700/50 text-slate-400 hover:text-slate-200"}`}
+                    >{s === "level" ? "Lv" : s === "type" ? t("Type", language) : t("Power", language)}</button>
                   ))}
+                </div>
+              </div>
+              <div className="max-h-80 overflow-y-auto space-y-1 pr-1">
+                {[...moves].sort((a, b) => {
+                  if (sortLevelUp === "level") return a.level - b.level;
+                  if (sortLevelUp === "type") return (moveData?.[a.name]?.type || "").localeCompare(moveData?.[b.name]?.type || "");
+                  return (moveData?.[b.name]?.power ?? -1) - (moveData?.[a.name]?.power ?? -1);
+                }).map((move) => (
+                  <Tooltip key={move.name}>
+                    <TooltipTrigger className={`flex justify-between items-center rounded ${typeBg[moveData?.[move.name]?.type] || "bg-slate-700/30"} px-3 py-1.5 text-sm w-full text-left cursor-pointer`}>
+                      <span className="flex items-center gap-1.5 text-slate-200 min-w-0">
+                        <MoveIcon name={move.name} moveData={moveData} />
+                        <span className="truncate">{moveName(move.name, language, moveData)}</span>
+                      </span>
+                      <span className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="font-mono text-xs text-slate-500">{moveData?.[move.name]?.power ?? "—"}</span>
+                        <span className="font-mono text-xs text-slate-400">{t("Lv.", language)} {move.level}</span>
+                      </span>
+                    </TooltipTrigger>
+                    <MoveTooltipContent name={move.name} moveData={moveData} language={language} />
+                  </Tooltip>
+                ))}
               </div>
             </div>
-          )}
-          {(pokemon.moves?.tm || []).length > 0 && (
-            <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-              <h2 className="text-xl font-bold mb-4">{t("Moves by TM", language)}</h2>
+          ))(pokemon.moves?.levelUp || [])}
+          {((moves) => moves.length > 0 && (
+            <div className="max-md:w-full md:max-xl:w-1/2 xl:flex-1 rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold">{t("Moves by TM", language)}</h2>
+                <div className="flex gap-1 mt-2">
+                  {["alpha", "type", "power"].map((s) => (
+                    <button key={s} onClick={() => setSortTM(s)}
+                      className={`px-2 py-0.5 rounded text-xs font-bold ${sortTM === s ? "bg-yellow-500/30 text-yellow-300" : "bg-slate-700/50 text-slate-400 hover:text-slate-200"}`}
+                    >{s === "alpha" ? "A-Z" : s === "type" ? t("Type", language) : t("Power", language)}</button>
+                  ))}
+                </div>
+              </div>
               <div className="max-h-80 overflow-y-auto flex flex-wrap gap-1.5 pr-1">
-                {(pokemon.moves?.tm || []).map((move) => (
-                  <span
-                    key={move}
-                    className="inline-flex items-center gap-1 rounded bg-slate-700/30 px-2.5 py-1 text-xs text-slate-200"
-                  >
-                    <MoveIcon name={move} moveData={moveData} />
-                    {formatMoveName(move)}
-                  </span>
+                {[...moves].sort((a, b) => {
+                  if (sortTM === "alpha") return a.localeCompare(b);
+                  if (sortTM === "type") return (moveData?.[a]?.type || "").localeCompare(moveData?.[b]?.type || "");
+                  return (moveData?.[b]?.power ?? -1) - (moveData?.[a]?.power ?? -1);
+                }).map((move) => (
+                  <Tooltip key={move}>
+                    <TooltipTrigger className={`inline-flex items-center gap-1 rounded ${typeBg[moveData?.[move]?.type] || "bg-slate-700/30"} px-2.5 py-1 text-xs text-slate-200 cursor-pointer`}>
+                      <MoveIcon name={move} moveData={moveData} />
+                      {moveName(move, language, moveData)}
+                      {moveData?.[move]?.power != null && <span className="font-mono text-slate-500">{moveData[move].power}</span>}
+                    </TooltipTrigger>
+                    <MoveTooltipContent name={move} moveData={moveData} language={language} />
+                  </Tooltip>
                 ))}
               </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Row 7: Moves by Breeding | Tutor */}
-      {((pokemon.moves?.egg || []).length > 0 || (pokemon.moves?.tutor || []).length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {(pokemon.moves?.egg || []).length > 0 && (
-            <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-              <h2 className="text-xl font-bold mb-4">{t("Moves by Breeding", language)}</h2>
+          ))(pokemon.moves?.tm || [])}
+          {((moves) => moves.length > 0 && (
+            <div className="max-md:w-full md:max-xl:w-1/2 xl:flex-1 rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold">{t("Moves by Breeding", language)}</h2>
+                <div className="flex gap-1 mt-2">
+                  {["alpha", "type", "power"].map((s) => (
+                    <button key={s} onClick={() => setSortEgg(s)}
+                      className={`px-2 py-0.5 rounded text-xs font-bold ${sortEgg === s ? "bg-yellow-500/30 text-yellow-300" : "bg-slate-700/50 text-slate-400 hover:text-slate-200"}`}
+                    >{s === "alpha" ? "A-Z" : s === "type" ? t("Type", language) : t("Power", language)}</button>
+                  ))}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-1.5">
-                {(pokemon.moves?.egg || []).map((move) => (
-                  <span
-                    key={move}
-                    className="inline-flex items-center gap-1 rounded bg-slate-700/30 px-2.5 py-1 text-xs text-slate-200"
-                  >
-                    <MoveIcon name={move} moveData={moveData} />
-                    {formatMoveName(move)}
-                  </span>
+                {[...moves].sort((a, b) => {
+                  if (sortEgg === "alpha") return a.localeCompare(b);
+                  if (sortEgg === "type") return (moveData?.[a]?.type || "").localeCompare(moveData?.[b]?.type || "");
+                  return (moveData?.[b]?.power ?? -1) - (moveData?.[a]?.power ?? -1);
+                }).map((move) => (
+                  <Tooltip key={move}>
+                    <TooltipTrigger className={`inline-flex items-center gap-1 rounded ${typeBg[moveData?.[move]?.type] || "bg-slate-700/30"} px-2.5 py-1 text-xs text-slate-200 cursor-pointer`}>
+                      <MoveIcon name={move} moveData={moveData} />
+                      {moveName(move, language, moveData)}
+                      {moveData?.[move]?.power != null && <span className="font-mono text-slate-500">{moveData[move].power}</span>}
+                    </TooltipTrigger>
+                    <MoveTooltipContent name={move} moveData={moveData} language={language} />
+                  </Tooltip>
                 ))}
               </div>
             </div>
-          )}
-          {(pokemon.moves?.tutor || []).length > 0 && (
-            <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-              <h2 className="text-xl font-bold mb-4">{t("Moves by Tutor", language)}</h2>
+          ))(pokemon.moves?.egg || [])}
+          {((moves) => moves.length > 0 && (
+            <div className="max-md:w-full md:max-xl:w-1/2 xl:flex-1 rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold">{t("Moves by Tutor", language)}</h2>
+                <div className="flex gap-1 mt-2">
+                  {["alpha", "type", "power"].map((s) => (
+                    <button key={s} onClick={() => setSortTutor(s)}
+                      className={`px-2 py-0.5 rounded text-xs font-bold ${sortTutor === s ? "bg-yellow-500/30 text-yellow-300" : "bg-slate-700/50 text-slate-400 hover:text-slate-200"}`}
+                    >{s === "alpha" ? "A-Z" : s === "type" ? t("Type", language) : t("Power", language)}</button>
+                  ))}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-1.5">
-                {(pokemon.moves?.tutor || []).map((move) => (
-                  <span
-                    key={move}
-                    className="inline-flex items-center gap-1 rounded bg-slate-700/30 px-2.5 py-1 text-xs text-slate-200"
-                  >
-                    <MoveIcon name={move} moveData={moveData} />
-                    {formatMoveName(move)}
-                  </span>
+                {[...moves].sort((a, b) => {
+                  if (sortTutor === "alpha") return a.localeCompare(b);
+                  if (sortTutor === "type") return (moveData?.[a]?.type || "").localeCompare(moveData?.[b]?.type || "");
+                  return (moveData?.[b]?.power ?? -1) - (moveData?.[a]?.power ?? -1);
+                }).map((move) => (
+                  <Tooltip key={move}>
+                    <TooltipTrigger className={`inline-flex items-center gap-1 rounded ${typeBg[moveData?.[move]?.type] || "bg-slate-700/30"} px-2.5 py-1 text-xs text-slate-200 cursor-pointer`}>
+                      <MoveIcon name={move} moveData={moveData} />
+                      {moveName(move, language, moveData)}
+                      {moveData?.[move]?.power != null && <span className="font-mono text-slate-500">{moveData[move].power}</span>}
+                    </TooltipTrigger>
+                    <MoveTooltipContent name={move} moveData={moveData} language={language} />
+                  </Tooltip>
                 ))}
               </div>
             </div>
-          )}
+          ))(pokemon.moves?.tutor || [])}
         </div>
       )}
 

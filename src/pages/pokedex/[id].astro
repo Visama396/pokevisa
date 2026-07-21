@@ -19,17 +19,20 @@ export async function getStaticPaths() {
 
   const allRoutes = [];
 
-  for (const pokemon of pokedex) {
-    const routes = [{ params: { id: pokemon.id.toString() }, props: { pokemon } }];
+  for (let i = 0; i < pokedex.length; i++) {
+    const pokemon = pokedex[i];
+    const prevPokemon = i > 0 ? pokedex[i - 1] : null;
+    const nextPokemon = i < pokedex.length - 1 ? pokedex[i + 1] : null;
+    const routes = [{ params: { id: pokemon.id.toString() }, props: { pokemon, prevPokemon, nextPokemon } }];
 
     if (pokemon.slug) {
-      routes.push({ params: { id: pokemon.slug }, props: { pokemon } });
+      routes.push({ params: { id: pokemon.slug }, props: { pokemon, prevPokemon, nextPokemon } });
     }
 
     for (const name of Object.values(pokemon.names)) {
       const slug = toSlug(name);
       if (slug) {
-        routes.push({ params: { id: slug }, props: { pokemon } });
+        routes.push({ params: { id: slug }, props: { pokemon, prevPokemon, nextPokemon } });
       }
     }
 
@@ -44,9 +47,9 @@ export async function getStaticPaths() {
   });
 }
 
-const { pokemon } = Astro.props;
+const { pokemon, prevPokemon, nextPokemon } = Astro.props;
 ---
 
 <Layout>
-    <PokemonDetails client:load pokemon={pokemon} />
+    <PokemonDetails client:load pokemon={pokemon} prevPokemon={prevPokemon} nextPokemon={nextPokemon} />
 </Layout>
