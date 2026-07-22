@@ -9,10 +9,20 @@ import PokedleGuess from "./PokedleGuess";
 const MAX_GUESSES = 12;
 const STORAGE_KEY = "pokevisa_arcade";
 
+function todayUTC() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function loadArcadeState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const state = JSON.parse(raw);
+    if (state.date !== todayUTC()) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return state;
   } catch {
     return null;
   }
@@ -102,6 +112,7 @@ export default function Pokewordle() {
       setGameOver(true);
       if (mode === "arcade") {
         saveArcadeState({
+          date: todayUTC(),
           streak,
           totalCorrect,
           totalRounds,
@@ -118,6 +129,7 @@ export default function Pokewordle() {
         setTotalRounds(newRounds);
         setStreak(0);
         saveArcadeState({
+          date: todayUTC(),
           streak: 0,
           totalCorrect,
           totalRounds: newRounds,
@@ -130,6 +142,7 @@ export default function Pokewordle() {
     } else {
       if (mode === "arcade") {
         saveArcadeState({
+          date: todayUTC(),
           streak,
           totalCorrect,
           totalRounds,
@@ -194,6 +207,7 @@ export default function Pokewordle() {
     const next = pickRandom(pokemons, currentPokemon?.id);
     setCurrentPokemon(next);
     saveArcadeState({
+      date: todayUTC(),
       streak: newStreak,
       totalCorrect: newCorrect,
       totalRounds: newRounds,
