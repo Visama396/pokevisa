@@ -50,16 +50,19 @@ export default function Dex() {
 
   return (
     <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto">
-      <header className="sticky top-0 z-10 -mx-4 px-4 py-3 bg-slate-900/95 backdrop-blur-sm">
-        <a
-          href="/"
-          className="absolute left-4 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
-        >
-          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          {t("Home", language)}
-        </a>
+      <header className="sticky top-0 z-10 -mx-4 px-4 py-3 bg-slate-900/95 backdrop-blur-sm space-y-2">
+        <div className="flex items-center justify-between">
+          <a
+            href="/"
+            className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            {t("Home", language)}
+          </a>
+          <LanguageSelector />
+        </div>
         <div className="relative max-w-md mx-auto">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-slate-400"
@@ -76,9 +79,6 @@ export default function Dex() {
             onChange={(e) => setQuery(e.target.value)}
             className="w-full rounded-xl border border-slate-700 bg-slate-800 py-3 pl-10 pr-4 text-sm text-slate-200 placeholder-slate-500 outline-none transition-colors focus:border-slate-500"
           />
-        </div>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-          <LanguageSelector />
         </div>
       </header>
 

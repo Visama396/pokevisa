@@ -229,16 +229,19 @@ export default function Pokewordle() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6">
-      <div className="relative flex items-center justify-center gap-4">
-        <a
-          href="/"
-          className="absolute left-0 inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
-        >
-          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          {t("Home", language)}
-        </a>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <a
+            href="/"
+            className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            {t("Home", language)}
+          </a>
+          <LanguageSelector />
+        </div>
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold">PokéWordle</h1>
           {mode === "arcade" ? (
@@ -250,9 +253,6 @@ export default function Pokewordle() {
               {t("Guess today's Pokémon —", language)} {guesses.length}/{MAX_GUESSES}
             </p>
           )}
-        </div>
-        <div className="absolute right-0">
-          <LanguageSelector />
         </div>
       </div>
 
