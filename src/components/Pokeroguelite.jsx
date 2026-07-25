@@ -1327,7 +1327,7 @@ export default function Pokeroguelite() {
                 const isTurn = msg.startsWith("---");
                 const isDmg = msg.includes(" dmg") || msg.includes("fainted") || msg.includes("enters");
                 return (
-                  <Bubble key={i} variant={isTurn ? "tinted" : "muted"} align={isDmg ? "end" : "start"}>
+                  <Bubble key={i} variant={isTurn ? "pokelite-turn" : "pokelite"} align={isDmg ? "end" : "start"}>
                     <BubbleContent className={isTurn ? "text-yellow-400 font-bold text-center text-xs" : "text-slate-200 text-xs"}>
                       {msg}
                     </BubbleContent>

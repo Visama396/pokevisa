@@ -34,6 +34,10 @@ const bubbleVariants = cva(
           "border-none *:data-[slot=bubble-content]:rounded-none *:data-[slot=bubble-content]:bg-transparent *:data-[slot=bubble-content]:p-0 [&>[data-slot=bubble-content]:is(button,a):hover]:bg-muted [&>[data-slot=bubble-content]:is(button,a):hover]:text-foreground dark:[&>[data-slot=bubble-content]:is(button,a):hover]:bg-muted/50",
         destructive:
           "*:data-[slot=bubble-content]:bg-destructive/10 *:data-[slot=bubble-content]:text-destructive dark:*:data-[slot=bubble-content]:bg-destructive/20 [&>[data-slot=bubble-content]:is(button,a):hover]:bg-destructive/20 dark:[&>[data-slot=bubble-content]:is(button,a):hover]:bg-destructive/30",
+        pokelite:
+          "*:data-[slot=bubble-content]:bg-slate-800 *:data-[slot=bubble-content]:text-slate-200 *:data-[slot=bubble-content]:border *:data-[slot=bubble-content]:border-slate-700 [&>[data-slot=bubble-content]:is(button,a):hover]:bg-slate-700",
+        "pokelite-turn":
+          "*:data-[slot=bubble-content]:bg-slate-800/90 *:data-[slot=bubble-content]:text-yellow-400 *:data-[slot=bubble-content]:border *:data-[slot=bubble-content]:border-yellow-500/40 *:data-[slot=bubble-content]:font-bold *:data-[slot=bubble-content]:text-center",
       },
     },
     defaultVariants: {
