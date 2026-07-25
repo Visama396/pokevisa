@@ -43,10 +43,21 @@ async function getEvolutionStage(species) {
 
     function walk(node, stage) {
       const id = Number(node.species.url.match(/\/(\d+)\/$/)[1]);
+      const evolvesTo = node.evolves_to.map(next => {
+        const detail = next.evolution_details?.[0] || {};
+        return {
+          name: next.species.name,
+          id: Number(next.species.url.match(/\/(\d+)\/$/)[1]),
+          minLevel: detail.min_level ?? null,
+          trigger: detail.trigger?.name ?? null,
+          item: detail.item?.name ?? null,
+        };
+      });
       members.push({
         name: node.species.name,
         stage,
         id,
+        evolvesTo: evolvesTo.length > 0 ? evolvesTo : undefined,
       });
 
       node.evolves_to.forEach((next) => walk(next, stage + 1));
@@ -62,6 +73,7 @@ async function getEvolutionStage(species) {
         name: m.name,
         stage: m.stage,
         id: m.id,
+        evolvesTo: m.evolvesTo,
         unique,
       })),
     );
@@ -86,10 +98,21 @@ async function getEvolutionChart(evolutionChainUrl) {
     const members = [];
     function walk(node, stage) {
       const id = Number(node.species.url.match(/\/(\d+)\/$/)[1]);
+      const evolvesTo = node.evolves_to.map(next => {
+        const detail = next.evolution_details?.[0] || {};
+        return {
+          name: next.species.name,
+          id: Number(next.species.url.match(/\/(\d+)\/$/)[1]),
+          minLevel: detail.min_level ?? null,
+          trigger: detail.trigger?.name ?? null,
+          item: detail.item?.name ?? null,
+        };
+      });
       members.push({
         name: node.species.name,
         stage,
         id,
+        evolvesTo: evolvesTo.length > 0 ? evolvesTo : undefined,
       });
       node.evolves_to.forEach((next) => walk(next, stage + 1));
     }
@@ -207,6 +230,7 @@ async function main() {
       const evolution = await getEvolutionStage(species);
       const evolutionChart = await getEvolutionChart(species.evolution_chain.url);
 
+
       const genus = species.genera?.find((g) => g.language.name === "en")?.genus ?? null;
 
       const genderRate = species.gender_rate;
@@ -267,6 +291,7 @@ async function main() {
           name: m.name,
           stage: m.stage,
           id: m.id,
+          evolvesTo: m.evolvesTo,
         })),
 
         evYield: pokemonRes.stats

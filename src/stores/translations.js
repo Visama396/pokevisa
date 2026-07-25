@@ -315,6 +315,259 @@ const ui = {
   "Power": { en: "Power", es: "Potencia", fr: "Puissance", de: "Stärke", it: "Potenza", ja: "威力", ko: "위력", "zh-hans": "威力", "zh-hant": "威力" },
   "Accuracy": { en: "Accuracy", es: "Precisión", fr: "Précision", de: "Genauigkeit", it: "Precisione", ja: "命中", ko: "명중률", "zh-hans": "命中", "zh-hant": "命中" },
   "Type": { en: "Type", es: "Tipo", fr: "Type", de: "Typ", it: "Tipo", ja: "タイプ", ko: "타입", "zh-hans": "属性", "zh-hant": "屬性" },
+
+  "A Roguelite Pokémon Journey": {
+    en: "A Roguelite Pokémon Journey", es: "Un Viaje Pokémon Roguelite", fr: "Un Voyage Pokémon Roguelite", de: "Eine Roguelite Pokémon-Reise", it: "Un Viaggio Pokémon Roguelite",
+    ja: "ローグライトポケモン旅", ko: "로그라이트 포켓몬 여행", "zh-hans": "肉鸽宝可梦之旅", "zh-hant": "肉鴿寶可夢之旅",
+  },
+  "Inspired by Slay the Spire": {
+    en: "Inspired by Slay the Spire", es: "Inspirado en Slay the Spire", fr: "Inspiré de Slay the Spire", de: "Inspiriert von Slay the Spire", it: "Ispirato a Slay the Spire",
+    ja: "Slay the Spireに影響を受けて", ko: "Slay the Spire에서 영감을 받음", "zh-hans": "灵感来自《杀戮尖塔》", "zh-hant": "靈感來自《殺戮尖塔》",
+  },
+  "Build your team. Battle trainers. Conquer the Gym Leaders.": {
+    en: "Build your team. Battle trainers. Conquer the Gym Leaders.", es: "Construye tu equipo. Combate entrenadores. Conquista a los Líderes de Gimnasio.", fr: "Constituez votre équipe. Affrontez les dresseurs. Vainquez les Champions d'Arène.", de: "Baue dein Team auf. Kämpfe gegen Trainer. Besiege die Arenaleiter.", it: "Costruisci la tua squadra. Combatti gli allenatori. Conquista i Capipalestra.",
+    ja: "チームを組め。トレーナーと戦え。ジムリーダーを倒せ。", ko: "팀을 구성하세요. 트레이너와 싸우세요. 체육관 관장을 정복하세요.", "zh-hans": "组建你的队伍。挑战训练家。征服道馆馆主。", "zh-hant": "組建你的隊伍。挑戰訓練家。征服道館館主。",
+  },
+  "Choose your starter to begin your run!": {
+    en: "Choose your starter to begin your run!", es: "¡Elige tu inicial para comenzar tu aventura!", fr: "Choisissez votre starter pour commencer votre run !", de: "Wähle dein Starter-Pokémon, um deinen Lauf zu beginnen!", it: "Scegli il tuo starter per iniziare la run!",
+    ja: "旅の始まりは最初の1匹を選べ！", ko: "스타터를 선택하여 여정을 시작하세요!", "zh-hans": "选择你的初始宝可梦开始冒险！", "zh-hant": "選擇你的初始寶可夢開始冒險！",
+  },
+  "Loading Pokédex...": {
+    en: "Loading Pokédex...", es: "Cargando Pokédex...", fr: "Chargement du Pokédex...", de: "Pokédex wird geladen...", it: "Caricamento Pokédex...",
+    ja: "ポケモン図鑑を読み込み中...", ko: "포켓몬도감 불러오는 중...", "zh-hans": "加载宝可梦图鉴...", "zh-hant": "載入寶可夢圖鑑...",
+  },
+  "Choose your path": {
+    en: "Choose your path", es: "Elige tu camino", fr: "Choisissez votre chemin", de: "Wähle deinen Weg", it: "Scegli il tuo percorso",
+    ja: "進路を選べ", ko: "경로를 선택하세요", "zh-hans": "选择你的路径", "zh-hant": "選擇你的路徑",
+  },
+  "Your Team": {
+    en: "Your Team", es: "Tu Equipo", fr: "Votre Équipe", de: "Dein Team", it: "La Tua Squadra",
+    ja: "あなたのチーム", ko: "당신의 팀", "zh-hans": "你的队伍", "zh-hant": "你的隊伍",
+  },
+  "Wild Pokémon": {
+    en: "Wild Pokémon", es: "Pokémon Salvaje", fr: "Pokémon Sauvage", de: "Wildes Pokémon", it: "Pokémon Selvatico",
+    ja: "野生ポケモン", ko: "야생 포켓몬", "zh-hans": "野生宝可梦", "zh-hant": "野生寶可夢",
+  },
+  "Trainer": {
+    en: "Trainer", es: "Entrenador", fr: "Dresseur", de: "Trainer", it: "Allenatore",
+    ja: "トレーナー", ko: "트레이너", "zh-hans": "训练家", "zh-hant": "訓練家",
+  },
+  "Team Rocket": {
+    en: "Team Rocket", es: "Team Rocket", fr: "Team Rocket", de: "Team Rocket", it: "Team Rocket",
+    ja: "ロケット団", ko: "로켓단", "zh-hans": "火箭队", "zh-hant": "火箭隊",
+  },
+  "Item": {
+    en: "Item", es: "Objeto", fr: "Objet", de: "Item", it: "Strumento",
+    ja: "どうぐ", ko: "도구", "zh-hans": "道具", "zh-hant": "道具",
+  },
+  "Change Move": {
+    en: "Change Move", es: "Cambiar Movimiento", fr: "Changer Capacité", de: "Attacke ändern", it: "Cambia Mossa",
+    ja: "わざを変える", ko: "기술 변경", "zh-hans": "更改招式", "zh-hant": "更改招式",
+  },
+  "Upgrade Move": {
+    en: "Upgrade Move", es: "Mejorar Movimiento", fr: "Améliorer Capacité", de: "Attacke verbessern", it: "Migliora Mossa",
+    ja: "わざを強化", ko: "기술 강화", "zh-hans": "强化招式", "zh-hant": "強化招式",
+  },
+  "Pokémon Center": {
+    en: "Pokémon Center", es: "Centro Pokémon", fr: "Centre Pokémon", de: "Pokémon-Center", it: "Centro Pokémon",
+    ja: "ポケモンセンター", ko: "포켓몬센터", "zh-hans": "宝可梦中心", "zh-hant": "寶可夢中心",
+  },
+  "Poké Trader": {
+    en: "Poké Trader", es: "Poké Mercado", fr: "Poké Marché", de: "Poké Händler", it: "Poké Mercato",
+    ja: "ポケモン交換", ko: "포켓몬 교환", "zh-hans": "宝可梦交换", "zh-hant": "寶可夢交換",
+  },
+  "Gym Leader": {
+    en: "Gym Leader", es: "Líder de Gimnasio", fr: "Champion d'Arène", de: "Arenaleiter", it: "Capopalestra",
+    ja: "ジムリーダー", ko: "체육관 관장", "zh-hans": "道馆馆主", "zh-hant": "道館館主",
+  },
+  "Champion": {
+    en: "Champion", es: "Campeón", fr: "Champion", de: "Champion", it: "Campione",
+    ja: "チャンピオン", ko: "챔피언", "zh-hans": "冠军", "zh-hant": "冠軍",
+  },
+  "wants to battle!": {
+    en: "wants to battle!", es: "quiere combatir!", fr: "veut se battre!", de: "fordert dich heraus!", it: "vuole lottare!",
+    ja: "勝負を挑んできた！", ko: "승부를 걸어왔다!", "zh-hans": "想要对战！", "zh-hant": "想要對戰！",
+  },
+  "Victory!": {
+    en: "Victory!", es: "¡Victoria!", fr: "Victoire !", de: "Sieg!", it: "Vittoria!",
+    ja: "勝利！", ko: "승리!", "zh-hans": "胜利！", "zh-hant": "勝利！",
+  },
+  "All Pokémon fainted!": {
+    en: "All Pokémon fainted!", es: "¡Todos los Pokémon se debilitaron!", fr: "Tous les Pokémon sont K.O. !", de: "Alle Pokémon sind kampfunfähig!", it: "Tutti i Pokémon sono esausti!",
+    ja: "全てのポケモンがたおれた！", ko: "모든 포켓몬이 쓰러졌다!", "zh-hans": "所有宝可梦都倒下了！", "zh-hant": "所有寶可夢都倒下了！",
+  },
+  "Continue": {
+    en: "Continue", es: "Continuar", fr: "Continuer", de: "Weiter", it: "Continua",
+    ja: "続ける", ko: "계속", "zh-hans": "继续", "zh-hant": "繼續",
+  },
+  "You conquered the Pokémon League!": {
+    en: "You conquered the Pokémon League!", es: "¡Conquistaste la Liga Pokémon!", fr: "Vous avez vaincu la Ligue Pokémon !", de: "Du hast die Pokémon-Liga bezwungen!", it: "Hai conquistato la Lega Pokémon!",
+    ja: "ポケモンリーグを制覇した！", ko: "포켓몬 리그를 정복했다!", "zh-hans": "你征服了宝可梦联盟！", "zh-hant": "你征服了寶可夢聯盟！",
+  },
+  "Final Team": {
+    en: "Final Team", es: "Equipo Final", fr: "Équipe Finale", de: "Endteam", it: "Squadra Finale",
+    ja: "最終チーム", ko: "최종 팀", "zh-hans": "最终队伍", "zh-hant": "最終隊伍",
+  },
+  "Floors Cleared": {
+    en: "Floors Cleared", es: "Rutas Completadas", fr: "Routes Terminées", de: "Abschnitte geschafft", it: "Percorsi Completati",
+    ja: "クリアしたルート", ko: "클리어한 루트", "zh-hans": "已通关路线", "zh-hant": "已通關路線",
+  },
+  "Play Again": {
+    en: "Play Again", es: "Jugar de nuevo", fr: "Rejouer", de: "Nochmal spielen", it: "Gioca ancora",
+    ja: "もう一度プレイ", ko: "다시 플레이", "zh-hans": "再玩一次", "zh-hant": "再玩一次",
+  },
+  "Try Again": {
+    en: "Try Again", es: "Intentar de nuevo", fr: "Réessayer", de: "Erneut versuchen", it: "Riprova",
+    ja: "もう一度挑戦", ko: "다시 도전", "zh-hans": "再试一次", "zh-hant": "再試一次",
+  },
+  "Your run ended on": {
+    en: "Your run ended on", es: "Tu aventura terminó en", fr: "Votre run s'est terminée sur", de: "Dein Lauf endete auf", it: "La tua run è terminata su",
+    ja: "挑戦はで終了", ko: "여정이에서 종료됨", "zh-hans": "你的冒险结束于", "zh-hant": "你的冒險結束於",
+  },
+  "Team size": {
+    en: "Team size", es: "Tamaño del equipo", fr: "Taille de l'équipe", de: "Teamgröße", it: "Dimensione squadra",
+    ja: "チーム数", ko: "팀 규모", "zh-hans": "队伍规模", "zh-hant": "隊伍規模",
+  },
+  "Choose a Pokémon to add to your team": {
+    en: "Choose a Pokémon to add to your team", es: "Elige un Pokémon para añadir a tu equipo", fr: "Choisissez un Pokémon à ajouter à votre équipe", de: "Wähle ein Pokémon für dein Team", it: "Scegli un Pokémon da aggiungere alla squadra",
+    ja: "チームに加えるポケモンを選べ", ko: "팀에 추가할 포켓몬을 선택하세요", "zh-hans": "选择一只宝可梦加入队伍", "zh-hant": "選擇一隻寶可夢加入隊伍",
+  },
+  "Skip": {
+    en: "Skip", es: "Saltar", fr: "Passer", de: "Überspringen", it: "Salta",
+    ja: "スキップ", ko: "건너뛰기", "zh-hans": "跳过", "zh-hant": "跳過",
+  },
+  "Found an Item!": {
+    en: "Found an Item!", es: "¡Has encontrado un Objeto!", fr: "Vous avez trouvé un Objet !", de: "Item gefunden!", it: "Hai trovato uno Strumento!",
+    ja: "どうぐをみつけた！", ko: "도구를 발견했다!", "zh-hans": "发现了一个道具！", "zh-hant": "發現了一個道具！",
+  },
+  "Choose a Pokémon to give it to:": {
+    en: "Choose a Pokémon to give it to:", es: "Elige un Pokémon para dárselo:", fr: "Choisissez un Pokémon à qui le donner :", de: "Wähle ein Pokémon, dem du es geben möchtest:", it: "Scegli un Pokémon a cui darlo:",
+    ja: "渡すポケモンを選べ:", ko: "줄 포켓몬을 선택하세요:", "zh-hans": "选择一只宝可梦给予:", "zh-hant": "選擇一隻寶可夢給予:",
+  },
+  "Change a Move": {
+    en: "Change a Move", es: "Cambiar un Movimiento", fr: "Changer une Capacité", de: "Eine Attacke ändern", it: "Cambia una Mossa",
+    ja: "わざを変える", ko: "기술 변경", "zh-hans": "更改招式", "zh-hant": "更改招式",
+  },
+  "Choose a Pokémon to change a move:": {
+    en: "Choose a Pokémon to change a move:", es: "Elige un Pokémon para cambiar un movimiento:", fr: "Choisissez un Pokémon pour changer une capacité :", de: "Wähle ein Pokémon, um eine Attacke zu ändern:", it: "Scegli un Pokémon per cambiare una mossa:",
+    ja: "わざを変えるポケモンを選べ:", ko: "기술을 변경할 포켓몬을 선택하세요:", "zh-hans": "选择要更改招式的宝可梦:", "zh-hant": "選擇要更改招式的寶可夢:",
+  },
+  "Choose a move to replace:": {
+    en: "Choose a move to replace:", es: "Elige un movimiento para reemplazar:", fr: "Choisissez une capacité à remplacer :", de: "Wähle eine zu ersetzende Attacke:", it: "Scegli una mossa da sostituire:",
+    ja: "入れ替えるわざを選べ:", ko: "교체할 기술을 선택하세요:", "zh-hans": "选择要替换的招式:", "zh-hant": "選擇要替換的招式:",
+  },
+  "Cancel": {
+    en: "Cancel", es: "Cancelar", fr: "Annuler", de: "Abbrechen", it: "Annulla",
+    ja: "キャンセル", ko: "취소", "zh-hans": "取消", "zh-hant": "取消",
+  },
+  "Upgrade a Move": {
+    en: "Upgrade a Move", es: "Mejorar un Movimiento", fr: "Améliorer une Capacité", de: "Eine Attacke verbessern", it: "Migliora una Mossa",
+    ja: "わざを強化", ko: "기술 강화", "zh-hans": "强化招式", "zh-hant": "強化招式",
+  },
+  "Choose a Pokémon to upgrade a move:": {
+    en: "Choose a Pokémon to upgrade a move:", es: "Elige un Pokémon para mejorar un movimiento:", fr: "Choisissez un Pokémon pour améliorer une capacité :", de: "Wähle ein Pokémon, um eine Attacke zu verbessern:", it: "Scegli un Pokémon per migliorare una mossa:",
+    ja: "わざを強化するポケモンを選べ:", ko: "기술을 강화할 포켓몬을 선택하세요:", "zh-hans": "选择要强化招式的宝可梦:", "zh-hant": "選擇要強化招式的寶可夢:",
+  },
+  "Choose a move to upgrade:": {
+    en: "Choose a move to upgrade:", es: "Elige un movimiento para mejorar:", fr: "Choisissez une capacité à améliorer :", de: "Wähle eine zu verbessernde Attacke:", it: "Scegli una mossa da migliorare:",
+    ja: "強化するわざを選べ:", ko: "강화할 기술을 선택하세요:", "zh-hans": "选择要强化的招式:", "zh-hant": "選擇要強化的招式:",
+  },
+  "Your Pokémon have been fully healed!": {
+    en: "Your Pokémon have been fully healed!", es: "¡Tus Pokémon han sido curados por completo!", fr: "Vos Pokémon ont été complètement soignés !", de: "Deine Pokémon wurden vollständig geheilt!", it: "I tuoi Pokémon sono stati completamente curati!",
+    ja: "ポケモンが完全に回復した！", ko: "포켓몬이 완전히 회복되었다!", "zh-hans": "你的宝可梦已完全恢复！", "zh-hant": "你的寶可夢已完全恢復！",
+  },
+  "Trade one of your Pokémon for a random one!": {
+    en: "Trade one of your Pokémon for a random one!", es: "¡Intercambia uno de tus Pokémon por uno aleatorio!", fr: "Échangez un de vos Pokémon contre un Pokémon aléatoire !", de: "Tausche eines deiner Pokémon gegen ein zufälliges!", it: "Scambia uno dei tuoi Pokémon con uno casuale!",
+    ja: "手持ちのポケモンをランダムなポケモンと交換！", ko: "네 포켓몬 중 하나를 랜덤 포켓몬과 교환!", "zh-hans": "用你的一只宝可梦交换一只随机宝可梦！", "zh-hant": "用你的一隻寶可夢交換一隻隨機寶可夢！",
+  },
+  "You will receive:": {
+    en: "You will receive:", es: "Recibirás:", fr: "Vous recevrez :", de: "Du erhältst:", it: "Riceverai:",
+    ja: "受け取る:", ko: "받을 포켓몬:", "zh-hans": "你将获得:", "zh-hant": "你將獲得:",
+  },
+  "Choose a Pokémon to trade away:": {
+    en: "Choose a Pokémon to trade away:", es: "Elige un Pokémon para intercambiar:", fr: "Choisissez un Pokémon à échanger :", de: "Wähle ein Pokémon zum Tauschen:", it: "Scegli un Pokémon da scambiare:",
+    ja: "交換に出すポケモンを選べ:", ko: "교환할 포켓몬을 선택하세요:", "zh-hans": "选择要交换的宝可梦:", "zh-hant": "選擇要交換的寶可夢:",
+  },
+  "Decline Trade": {
+    en: "Decline Trade", es: "Rechazar Intercambio", fr: "Refuser l'Échange", de: "Tausch ablehnen", it: "Rifiuta Scambio",
+    ja: "交換しない", ko: "교환 거절", "zh-hans": "拒绝交换", "zh-hant": "拒絕交換",
+  },
+  "You traded": {
+    en: "You traded", es: "Intercambiaste", fr: "Vous avez échangé", de: "Du hast getauscht", it: "Hai scambiato",
+    ja: "交換した", ko: "교환했습니다", "zh-hans": "你交换了", "zh-hant": "你交換了",
+  },
+  "You received:": {
+    en: "You received:", es: "Recibiste:", fr: "Vous avez reçu :", de: "Du erhieltst:", it: "Hai ricevuto:",
+    ja: "受け取った:", ko: "받았습니다:", "zh-hans": "你收到了:", "zh-hant": "你收到了:",
+  },
+  "Confirm Trade": {
+    en: "Confirm Trade", es: "Confirmar Intercambio", fr: "Confirmer l'Échange", de: "Tausch bestätigen", it: "Conferma Scambio",
+    ja: "交換を確定", ko: "교환 확인", "zh-hans": "确认交换", "zh-hant": "確認交換",
+  },
+  "fainted!": {
+    en: "fainted!", es: "¡se debilitó!", fr: "est K.O. !", de: "ist kampfunfähig!", it: "è esausto!",
+    ja: "たおれた！", ko: "쓰러졌다!", "zh-hans": "倒下了！", "zh-hant": "倒下了！",
+  },
+  "enters!": {
+    en: "enters!", es: "¡entra!", fr: "entre en jeu !", de: "tritt ein!", it: "entra!",
+    ja: "登場！", ko: "등장!", "zh-hans": "上场！", "zh-hant": "登場！",
+  },
+  "dmg": {
+    en: "dmg", es: "daño", fr: "dégâts", de: "Schaden", it: "danno",
+    ja: "ダメージ", ko: "피해", "zh-hans": "伤害", "zh-hant": "傷害",
+  },
+  "Super effective!": {
+    en: "Super effective!", es: "¡Muy eficaz!", fr: "Super efficace !", de: "Effektiv!", it: "Super efficace!",
+    ja: "効果は抜群だ！", ko: "효과가 굉장했다!", "zh-hans": "效果拔群！", "zh-hant": "效果絕佳！",
+  },
+  "Not very effective...": {
+    en: "Not very effective...", es: "No muy eficaz...", fr: "Pas très efficace...", de: "Nicht sehr effektiv...", it: "Non molto efficace...",
+    ja: "効果は今ひとつ...", ko: "효과가 별로인 듯...", "zh-hans": "效果一般...", "zh-hant": "效果一般...",
+  },
+  "No effect!": {
+    en: "No effect!", es: "¡Sin efecto!", fr: "Aucun effet !", de: "Keine Wirkung!", it: "Nessun effetto!",
+    ja: "効果がない！", ko: "효과가 없다!", "zh-hans": "没有效果！", "zh-hant": "沒有效果！",
+  },
+  "HP": {
+    en: "HP", es: "PS", fr: "PV", de: "KP", it: "PS",
+    ja: "HP", ko: "HP", "zh-hans": "HP", "zh-hant": "HP",
+  },
+  "Moves": {
+    en: "Moves", es: "Movimientos", fr: "Capacités", de: "Attacken", it: "Mosse",
+    ja: "わざ", ko: "기술", "zh-hans": "招式", "zh-hant": "招式",
+  },
+  "VS": {
+    en: "VS", es: "VS", fr: "VS", de: "VS", it: "VS",
+    ja: "VS", ko: "VS", "zh-hans": "VS", "zh-hant": "VS",
+  },
+  "Turn": {
+    en: "Turn", es: "Turno", fr: "Tour", de: "Runde", it: "Turno",
+    ja: "ターン", ko: "턴", "zh-hans": "回合", "zh-hant": "回合",
+  },
+  "has no moves!": {
+    en: "has no moves!", es: "no tiene movimientos!", fr: "n'a pas de capacités!", de: "hat keine Attacken!", it: "non ha mosse!",
+    ja: "わざがない！", ko: "기술이 없다!", "zh-hans": "没有招式！", "zh-hant": "沒有招式！",
+  },
+  "used": {
+    en: "used", es: "usó", fr: "a utilisé", de: "eingesetzt", it: "ha usato",
+    ja: "使った", ko: "사용했다", "zh-hans": "使用了", "zh-hant": "使用了",
+  },
+  "Stats": {
+    en: "Stats", es: "Estad.", fr: "Stats", de: "Stats", it: "Stat.",
+    ja: "ステータス", ko: "스탯", "zh-hans": "能力", "zh-hant": "能力",
+  },
+  "Back": {
+    en: "Back", es: "Atrás", fr: "Retour", de: "Zurück", it: "Indietro",
+    ja: "戻る", ko: "뒤로", "zh-hans": "返回", "zh-hant": "返回",
+  },
+  "Your team is full!": {
+    en: "Your team is full!", es: "¡Tu equipo está lleno!", fr: "Votre équipe est complète!", de: "Dein Team ist voll!", it: "La tua squadra è piena!",
+    ja: "チームがいっぱいです！", ko: "팀이 가득 찼습니다!", "zh-hans": "你的队伍已满！", "zh-hant": "你的隊伍已滿！",
+  },
+  "Choose a Pokémon to release:": {
+    en: "Choose a Pokémon to release:", es: "Elige un Pokémon para liberar:", fr: "Choisissez un Pokémon à relâcher:", de: "Wähle ein Pokémon zum Freilassen:", it: "Scegli un Pokémon da rilasciare:",
+    ja: "離すポケモンを選んでください：", ko: "놓아줄 포켓몬을 선택하세요:", "zh-hans": "选择要放生的宝可梦：", "zh-hant": "選擇要放生的寶可夢：",
+  },
 };
 
 export function t(key, language) {

@@ -1,6 +1,10 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getLanguage, subscribe } from "../stores/language";
+import { t, getTypeName, getStatLabel } from "../stores/translations";
+import PokeTypeBadge from "./PokeTypeBadge";
 import LanguageSelector from "./LanguageSelector";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "../../components/ui/tooltip";
+import { BubbleGroup, Bubble, BubbleContent } from "../../components/ui/bubble";
 
 const TYPE_CHART = {
   normal: { rock: 0.5, ghost: 0, steel: 0.5 },
@@ -23,30 +27,167 @@ const TYPE_CHART = {
   fairy: { fire: 0.5, fighting: 2, poison: 0.5, dragon: 2, dark: 2, steel: 0.5 },
 };
 
-const TYPE_COLORS = {
-  normal: "#A8A878", fire: "#F08030", water: "#6890F0", electric: "#F8D030",
-  grass: "#78C850", ice: "#98D8D8", fighting: "#C03028", poison: "#A040A0",
-  ground: "#E0C068", flying: "#A890F0", psychic: "#F85888", bug: "#A8B820",
-  rock: "#B8A038", ghost: "#705898", dragon: "#7038F8", dark: "#705848",
-  steel: "#B8B8D0", fairy: "#EE99AC",
-};
 
-const TYPE_EMOJI = {
-  normal: "⭐", fire: "🔥", water: "💧", electric: "⚡", grass: "🌿",
-  ice: "❄️", fighting: "🥊", poison: "☠️", ground: "🌍", flying: "🕊️",
-  psychic: "🔮", bug: "🐛", rock: "🪨", ghost: "👻", dragon: "🐉",
-  dark: "🌑", steel: "⚙️", fairy: "🧚",
-};
 
 const STARTERS = {
-  bulbasaur: { id: 1, slug: "bulbasaur", name: "Bulbasaur", types: ["grass", "poison"], hp: 45, atk: 49, def: 49, spa: 65, spd: 65, spe: 45, starterMoves: ["tackle", "vine-whip", "razor-leaf", "poison-powder", "leech-seed", "sleep-powder", "sludge", "solar-beam"] },
-  charmander: { id: 4, slug: "charmander", name: "Charmander", types: ["fire"], hp: 39, atk: 52, def: 43, spa: 60, spd: 50, spe: 65, starterMoves: ["scratch", "ember", "fire-spin", "smokescreen", "fire-fang", "flame-burst", "inferno", "fire-blast"] },
-  squirtle: { id: 7, slug: "squirtle", name: "Squirtle", types: ["water"], hp: 44, atk: 48, def: 65, spa: 50, spd: 64, spe: 43, starterMoves: ["tackle", "water-gun", "bubble", "bite", "withdraw", "water-pulse", "rain-dance", "hydro-pump"] },
+  bulbasaur: { id: 1, slug: "bulbasaur", name: "Bulbasaur", types: ["grass", "poison"], hp: 45, atk: 49, def: 49, spa: 65, spd: 65, spe: 45 },
+  charmander: { id: 4, slug: "charmander", name: "Charmander", types: ["fire"], hp: 39, atk: 52, def: 43, spa: 60, spd: 50, spe: 65 },
+  squirtle: { id: 7, slug: "squirtle", name: "Squirtle", types: ["water"], hp: 44, atk: 48, def: 65, spa: 50, spd: 64, spe: 43 },
 };
 
 const FLOOR_NAMES = ["Route 1", "Route 2", "Route 3", "Route 4", "Victory Road", "Pokémon League"];
-const MAX_ENERGY = 3;
-const DRAW_PER_TURN = 5;
+
+const ITEMS = [
+  { id: "protein", name: "Protein", desc: "Permanently raises Attack by 5", stat: "atk", boost: 5 },
+  { id: "iron", name: "Iron", desc: "Permanently raises Defense by 5", stat: "def", boost: 5 },
+  { id: "calcium", name: "Calcium", desc: "Permanently raises Sp.Atk by 5", stat: "spa", boost: 5 },
+  { id: "zinc", name: "Zinc", desc: "Permanently raises Sp.Def by 5", stat: "spd", boost: 5 },
+  { id: "carbos", name: "Carbos", desc: "Permanently raises Speed by 5", stat: "spe", boost: 5 },
+  { id: "hp-up", name: "HP Up", desc: "Permanently raises Max HP by 10", stat: "hp", boost: 10 },
+  { id: "rare-candy", name: "Rare Candy", desc: "Fully restores a Pokémon's HP", stat: "heal", boost: 999 },
+  { id: "revive", name: "Revive", desc: "Revives a fainted Pokémon with 50% HP", stat: "revive", boost: 0.5 },
+];
+
+const TRAINER_NAMES = [
+  "Youngster Joey", "Lass Sarah", "Bug Catcher Don", "Hiker Dan",
+  "Fisherman Will", "Picnicker Lily", "Camper Sam", "Schoolkid Max",
+];
+
+const GRUNT_TEAMS = [
+  { name: "Team Rocket Grunt", dialogue: "Prepare for trouble!", types: ["dark", "poison"] },
+  { name: "Team Magma Grunt", dialogue: "Our cause is just!", types: ["ground", "fire"] },
+  { name: "Team Aqua Grunt", dialogue: "The sea calls!", types: ["water", "ice"] },
+  { name: "Team Galactic Grunt", dialogue: "Embrace the new world!", types: ["psychic", "steel"] },
+];
+
+const GYM_LEADERS = [
+  { name: "Brock", type: "rock", floor: 0 },
+  { name: "Misty", type: "water", floor: 1 },
+  { name: "Lt. Surge", type: "electric", floor: 2 },
+  { name: "Erika", type: "grass", floor: 3 },
+  { name: "Koga", type: "poison", floor: 4 },
+  { name: "Giovanni", type: "ground", floor: 5 },
+];
+
+const NODE_TYPES = ["encounter", "trainer", "grunt", "item", "move-change", "move-upgrade", "pokemon-center", "poke-trader"];
+
+function isPokemonAvailable(dexEntry, teamLevel) {
+  if (dexEntry.legendary || dexEntry.mythical) return false;
+  const chart = dexEntry.evolutionChart;
+  if (!chart) return true;
+  const myEntry = chart.find(m => m.name === dexEntry.slug);
+  if (!myEntry || myEntry.stage <= 1) return true;
+  const preEntry = chart.find(m => m.stage === myEntry.stage - 1);
+  if (preEntry && preEntry.evolvesTo) {
+    const myEvo = preEntry.evolvesTo.find(e => e.id === dexEntry.id || e.name === dexEntry.slug);
+    if (myEvo) {
+      if (myEvo.trigger === "level-up" && myEvo.minLevel !== null) {
+        return myEvo.minLevel <= teamLevel;
+      }
+      return true;
+    }
+  }
+  return true;
+}
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let LEVEL_EVOLUTIONS = {};
+let CONDITIONAL_EVOLUTIONS = {};
+
+function buildEvolutionData() {
+  const levelEvo = {};
+  const condEvo = {};
+  for (const d of POKEDEX) {
+    const chart = d.evolutionChart;
+    if (!chart) continue;
+    const myEntry = chart.find(m => m.name === d.slug);
+    if (!myEntry || !myEntry.evolvesTo) continue;
+    const levelUpTargets = myEntry.evolvesTo.filter(e => e.trigger === "level-up" && e.minLevel !== null);
+    if (levelUpTargets.length === 1) {
+      const target = getDexEntry(levelUpTargets[0].name);
+      if (target) {
+        levelEvo[d.slug] = { ...target, minLevel: levelUpTargets[0].minLevel };
+      }
+    } else if (levelUpTargets.length > 1 || myEntry.evolvesTo.length > 0) {
+      const targets = myEntry.evolvesTo
+        .map(e => getDexEntry(e.name))
+        .filter(Boolean);
+      if (targets.length > 0) {
+        condEvo[d.slug] = targets;
+      }
+    }
+  }
+  return { levelEvo, condEvo };
+}
+
+function calcStat(baseStat, level, isHP = false) {
+  const base = Math.floor(baseStat);
+  if (isHP) return base + 20 + Math.floor((level - 1) * 2);
+  return base + Math.floor((level - 1) * 1.5);
+}
+
+function getDexEntry(slug) {
+  return POKEDEX.find(d => d.slug === slug);
+}
+
+function getMoveName(move, language) {
+  if (!move) return "";
+  const m = ALL_MOVES[move.key];
+  return m?.names?.[language] || m?.names?.en || move.name || move.key;
+}
+
+function getPokemonName(pkm, language) {
+  if (!pkm) return "";
+  const entry = POKEDEX[pkm.id];
+  return entry?.names?.[language] || entry?.names?.en || pkm.name || "";
+}
+
+function getTeamLevel(team) {
+  if (team.length === 0) return 5;
+  return Math.max(...team.map(p => p.level || 5));
+}
+
+function getRandomPokemon(teamLevel = 5, excludeIds = new Set(), types = null) {
+  let pool = POKEDEX.filter(d => isPokemonAvailable(d, teamLevel) && !excludeIds.has(d.id));
+  if (pool.length === 0) pool = POKEDEX.filter(d => !d.legendary && !d.mythical && !excludeIds.has(d.id));
+  if (pool.length === 0) pool = POKEDEX.filter(d => !excludeIds.has(d.id));
+  if (types) {
+    const typed = pool.filter(d => d.types.some(t => types.includes(t)));
+    if (typed.length > 0) pool = typed;
+  }
+  if (pool.length === 0) pool = POKEDEX.filter(d => !d.legendary && !d.mythical);
+  if (pool.length === 0) pool = POKEDEX;
+  const dexEntry = pool[Math.floor(Math.random() * pool.length)];
+  return createPokemon(dexEntry, teamLevel);
+}
+
+function generateThemedTeam(teamLevel, count, types) {
+  const pool = POKEDEX.filter(d => isPokemonAvailable(d, teamLevel) && d.types.some(t => types.includes(t)));
+  const shuffled = shuffleArray(pool);
+  const team = [];
+  for (let i = 0; i < count; i++) {
+    team.push(createPokemon(shuffled[i % shuffled.length], teamLevel));
+  }
+  return team;
+}
+
+function generateRandomTeam(teamLevel, count = 1) {
+  const pool = POKEDEX.filter(d => isPokemonAvailable(d, teamLevel));
+  const shuffled = shuffleArray(pool);
+  const team = [];
+  for (let i = 0; i < count; i++) {
+    team.push(createPokemon(shuffled[i % shuffled.length], teamLevel));
+  }
+  return team;
+}
 
 function getEffectiveness(moveType, defenderTypes) {
   let mult = 1;
@@ -59,221 +200,224 @@ function getEffectiveness(moveType, defenderTypes) {
   return mult;
 }
 
-function calcDamage(power, atk, def, effectiveness) {
+function calcDamage(power, atk, def, effectiveness, level = 5) {
   if (power === 0) return 0;
-  const base = ((2 * 5 / 5 + 2) * power * (atk / def)) / 50 + 2;
+  const base = ((2 * level / 5 + 2) * power * (atk / def)) / 50 + 2;
   const stab = 1.25;
   const random = 0.85 + Math.random() * 0.15;
   return Math.max(1, Math.floor(base * stab * effectiveness * random));
 }
 
-function getCardCost(power) {
-  if (!power || power === 0) return 0;
-  if (power <= 30) return 1;
-  if (power <= 60) return 2;
-  return 3;
-}
-
-function makeCard(moveKey, moveData) {
-  const cost = moveData.power ? getCardCost(moveData.power) : 0;
-  return {
-    id: moveKey + "_" + Math.random().toString(36).slice(2, 8),
-    key: moveKey,
-    name: moveData.names?.en || moveKey,
-    type: moveData.type,
-    category: moveData.category,
-    power: moveData.power || 0,
-    accuracy: moveData.accuracy || 100,
-    cost,
-    effect: moveData.effect?.en || "",
-  };
-}
-
-function buildStarterDeck(starterKey) {
-  const starter = STARTERS[starterKey];
-  return starter.starterMoves.map((m) => makeCard(m, ALL_MOVES[m] || { names: { en: m }, type: "normal", category: "physical", power: 40, accuracy: 100 }));
-}
-
 let ALL_MOVES = {};
+let POKEDEX = [];
 
-const ENEMY_TEMPLATES = {
-  1: [
-    { slug: "pidgey", name: "Pidgey", types: ["normal", "flying"], hp: 40, atk: 45, def: 40, spa: 35, spd: 35, spe: 56, moves: ["tackle", "gust", "quick-attack", "sand-attack"] },
-    { slug: "rattata", name: "Rattata", types: ["normal"], hp: 30, atk: 56, def: 35, spa: 25, spd: 35, spe: 72, moves: ["tackle", "bite", "quick-attack", "hyper-fang"] },
-    { slug: "caterpie", name: "Caterpie", types: ["bug"], hp: 45, atk: 30, def: 35, spa: 20, spd: 20, spe: 45, moves: ["tackle", "bug-bite", "string-shot", "struggle"] },
-    { slug: "weedle", name: "Weedle", types: ["bug", "poison"], hp: 40, atk: 35, def: 30, spa: 20, spd: 20, spe: 50, moves: ["poison-sting", "bug-bite", "string-shot", "struggle"] },
-    { slug: "zigzagoon", name: "Zigzagoon", types: ["normal"], hp: 38, atk: 30, def: 41, spa: 30, spd: 41, spe: 60, moves: ["tackle", "tail-whip", "mud-slap", "headbutt"] },
-  ],
-  2: [
-    { slug: "spearow", name: "Spearow", types: ["normal", "flying"], hp: 40, atk: 60, def: 30, spa: 31, spd: 31, spe: 70, moves: ["peck", "leer", "quick-attack", "fury-attack"] },
-    { slug: "nidoran-m", name: "Nidoran♂", types: ["poison"], hp: 46, atk: 57, def: 40, spa: 40, spd: 40, spe: 50, moves: ["peck", "leer", "poison-sting", "fury-attack"] },
-    { slug: "sandshrew", name: "Sandshrew", types: ["ground"], hp: 50, atk: 75, def: 85, spa: 20, spd: 30, spe: 40, moves: ["scratch", "sand-attack", "mud-slap", "slash"] },
-    { slug: "mankey", name: "Mankey", types: ["fighting"], hp: 40, atk: 80, def: 35, spa: 35, spd: 45, spe: 70, moves: ["scratch", "low-kick", "karate-chop", "seismic-toss"] },
-    { slug: "machop", name: "Machop", types: ["fighting"], hp: 70, atk: 80, def: 50, spa: 35, spd: 35, spe: 35, moves: ["low-kick", "karate-chop", "seismic-toss", "revenge"] },
-  ],
-  3: [
-    { slug: "pikachu", name: "Pikachu", types: ["electric"], hp: 35, atk: 55, def: 40, spa: 50, spd: 50, spe: 90, moves: ["thundershock", "quick-attack", "iron-tail", "thunderbolt"] },
-    { slug: "clefairy", name: "Clefairy", types: ["fairy"], hp: 70, atk: 45, def: 48, spa: 60, spd: 65, spe: 35, moves: ["dazzling-gleam", "moonblast", "metronome", "light-screen"] },
-    { slug: "gyarados", name: "Gyarados", types: ["water", "flying"], hp: 95, atk: 125, def: 79, spa: 60, spd: 100, spe: 81, moves: ["bite", "waterfall", "dragon-rage", "crunch"] },
-    { slug: "dragonair", name: "Dragonair", types: ["dragon"], hp: 82, atk: 84, def: 65, spa: 70, spd: 70, spe: 70, moves: ["dragon-rage", "slam", "dragon-breath", "aqua-tail"] },
-    { slug: "snorlax", name: "Snorlax", types: ["normal"], hp: 160, atk: 110, def: 65, spa: 65, spd: 110, spe: 30, moves: ["tackle", "body-slam", "rest", "earthquake"] },
-  ],
-  4: [
-    { slug: "arcanine", name: "Arcanine", types: ["fire"], hp: 90, atk: 110, def: 80, spa: 100, spd: 80, spe: 95, moves: ["ember", "flamethrower", "fire-fang", "extreme-speed"] },
-    { slug: "starmie", name: "Starmie", types: ["water", "psychic"], hp: 60, atk: 75, def: 85, spa: 100, spd: 85, spe: 115, moves: ["water-gun", "surf", "psychic", "thunderbolt"] },
-    { slug: "alakazam", name: "Alakazam", types: ["psychic"], hp: 55, atk: 50, def: 45, spa: 135, spd: 95, spe: 120, moves: ["psychic", "shadow-ball", "energy-ball", "focus-blast"] },
-    { slug: "scizor", name: "Scizor", types: ["bug", "steel"], hp: 70, atk: 130, def: 100, spa: 55, spd: 80, spe: 65, moves: ["bullet-punch", "x-scissor", "iron-head", "swords-dance"] },
-  ],
-  boss: [
-    { slug: "mewtwo", name: "Mewtwo", types: ["psychic"], hp: 106, atk: 110, def: 90, spa: 154, spd: 90, spe: 130, moves: ["psychic", "shadow-ball", "aura-sphere", "recover"], isBoss: true },
-    { slug: "rayquaza", name: "Rayquaza", types: ["dragon", "flying"], hp: 105, atk: 150, def: 90, spa: 150, spd: 90, spe: 95, moves: ["dragon-claw", "fly", "outrage", "extreme-speed"], isBoss: true },
-    { slug: "charizard", name: "Charizard", types: ["fire", "flying"], hp: 78, atk: 84, def: 78, spa: 109, spd: 85, spe: 100, moves: ["flamethrower", "air-slash", "dragon-pulse", "solar-beam"], isBoss: true },
-  ],
-};
-
-function generateEnemies(floor) {
-  const templates = ENEMY_TEMPLATES[floor] || ENEMY_TEMPLATES[1];
-  const numEnemies = floor <= 2 ? 1 : Math.random() < 0.4 ? 2 : 1;
-  const enemies = [];
-  for (let i = 0; i < numEnemies; i++) {
-    const template = templates[Math.floor(Math.random() * templates.length)];
-    const scaling = 1 + (floor - 1) * 0.15;
-    enemies.push({
-      ...template,
-      id: "enemy_" + Math.random().toString(36).slice(2, 8),
-      maxHp: Math.floor(template.hp * scaling),
-      currentHp: Math.floor(template.hp * scaling),
-      deck: template.moves.map((m) => makeCard(m, ALL_MOVES[m] || { names: { en: m }, type: "normal", category: "physical", power: 40, accuracy: 100 })),
-      intent: null,
-    });
-  }
-  return enemies;
-}
-
-function generateBoss(floor) {
-  const templates = ENEMY_TEMPLATES.boss;
-  const template = templates[Math.floor(Math.random() * templates.length)];
-  const scaling = 1 + (floor - 1) * 0.1;
+function moveDataFromSlug(slug) {
+  const m = ALL_MOVES[slug];
+  if (!m) return null;
   return {
-    ...template,
-    id: "boss_" + Math.random().toString(36).slice(2, 8),
-    maxHp: Math.floor(template.hp * scaling * 1.5),
-    currentHp: Math.floor(template.hp * scaling * 1.5),
-    deck: template.moves.map((m) => makeCard(m, ALL_MOVES[m] || { names: { en: m }, type: "normal", category: "physical", power: 40, accuracy: 100 })),
-    intent: null,
+    key: slug, name: m.names?.en || slug, type: m.type, category: m.category,
+    power: m.power || 0, accuracy: m.accuracy || 100,
   };
 }
 
-function generateRewardCards(floor) {
-  const allMoveKeys = Object.keys(ALL_MOVES);
-  const damaging = allMoveKeys.filter((k) => ALL_MOVES[k].power && ALL_MOVES[k].power > 0);
-  const numCards = 3;
-  const rewards = [];
-  const used = new Set();
-  for (let i = 0; i < numCards; i++) {
-    let key;
-    let attempts = 0;
-    do {
-      key = damaging[Math.floor(Math.random() * damaging.length)];
-      attempts++;
-    } while (used.has(key) && attempts < 50);
-    used.add(key);
-    const move = ALL_MOVES[key];
-    rewards.push(makeCard(key, move));
-  }
-  return rewards;
+function getLevelUpMove(dexEntry) {
+  const levelUp = dexEntry?.moves?.levelUp;
+  if (!levelUp || levelUp.length === 0) return null;
+  const attacking = levelUp.filter(entry => {
+    const m = ALL_MOVES[entry.name];
+    return m && m.power && m.power > 0;
+  });
+  if (attacking.length === 0) return null;
+  const entry = attacking[Math.floor(Math.random() * attacking.length)];
+  return moveDataFromSlug(entry.name);
 }
 
-function generateShopCards(floor) {
-  const allMoveKeys = Object.keys(ALL_MOVES);
-  const damaging = allMoveKeys.filter((k) => ALL_MOVES[k].power && ALL_MOVES[k].power > 20);
-  const cards = [];
-  const used = new Set();
-  for (let i = 0; i < 4; i++) {
-    let key;
-    let attempts = 0;
-    do {
-      key = damaging[Math.floor(Math.random() * damaging.length)];
-      attempts++;
-    } while (used.has(key) && attempts < 50);
-    used.add(key);
-    const move = ALL_MOVES[key];
-    const card = makeCard(key, move);
-    card.price = 30 + card.cost * 20 + Math.floor(Math.random() * 20);
-    cards.push(card);
+function getLearnableMove(dexEntry) {
+  const pool = [];
+  const levelUp = dexEntry?.moves?.levelUp || [];
+  const tm = dexEntry?.moves?.tm || [];
+  for (const l of levelUp) {
+    const md = moveDataFromSlug(l.name);
+    if (md && md.power > 0) pool.push(md);
   }
-  return cards;
+  for (const t of tm) {
+    const md = moveDataFromSlug(t);
+    if (md && md.power > 0) pool.push(md);
+  }
+  if (pool.length === 0) {
+    const allAttacks = Object.entries(ALL_MOVES).filter(([_, mv]) => mv.power > 0);
+    if (allAttacks.length === 0) return null;
+    const [key, mv] = allAttacks[Math.floor(Math.random() * allAttacks.length)];
+    return { key, name: mv.names?.en || key, type: mv.type, category: mv.category, power: mv.power, accuracy: mv.accuracy || 100 };
+  }
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function pickIntent(enemy) {
-  const attacks = enemy.deck.filter((c) => c.power > 0);
-  if (attacks.length === 0) return { type: "unknown", card: enemy.deck[0] };
-  const card = attacks[Math.floor(Math.random() * attacks.length)];
-  return { type: "attack", card };
+function createPokemon(dexEntry, level = 5) {
+  const baseHp = dexEntry.baseStats.find(s => s.name === "hp")?.value || 50;
+  const baseAtk = dexEntry.baseStats.find(s => s.name === "attack")?.value || 50;
+  const baseDef = dexEntry.baseStats.find(s => s.name === "defense")?.value || 50;
+  const baseSpa = dexEntry.baseStats.find(s => s.name === "special-attack")?.value || 50;
+  const baseSpd = dexEntry.baseStats.find(s => s.name === "special-defense")?.value || 50;
+  const baseSpe = dexEntry.baseStats.find(s => s.name === "speed")?.value || 50;
+  const hp = calcStat(baseHp, level, true);
+  return {
+    id: Math.random().toString(36).slice(2, 8),
+    slug: dexEntry.slug,
+    name: dexEntry.names?.en || dexEntry.slug,
+    types: dexEntry.types,
+    level,
+    hp, maxHp: hp,
+    atk: calcStat(baseAtk, level),
+    def: calcStat(baseDef, level),
+    spa: calcStat(baseSpa, level),
+    spd: calcStat(baseSpd, level),
+    spe: calcStat(baseSpe, level),
+    sprite: dexEntry.sprite,
+    moves: [getLevelUpMove(dexEntry)].filter(Boolean),
+    fainted: false,
+  };
 }
 
-function shuffleArray(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+function generateMap(floor) {
+  const numRows = 8;
+  const map = [];
+  for (let r = 0; r < numRows; r++) {
+    const numNodes = 2 + (Math.random() < 0.4 ? 1 : 0);
+    const row = [];
+    const available = shuffleArray(NODE_TYPES);
+    for (let n = 0; n < numNodes; n++) {
+      let type;
+      if (floor === 0 && r === 0 && n === 0) {
+        type = "encounter";
+      } else {
+        type = available[n % available.length];
+      }
+      row.push({ type, id: `n${r}_${n}` });
+    }
+    map.push(row);
   }
-  return a;
+  map.push([{ type: "boss", id: `boss_${floor}`, isBoss: true }]);
+  return map;
+}
+
+function initBattle(prev, enemyTeam, isBoss = false) {
+  const playerTeam = prev.team
+    .filter(p => !p.fainted)
+    .map(p => ({ ...p, hp: p.hp }));
+  if (playerTeam.length === 0) return prev;
+  const eTeam = enemyTeam.map(p => ({ ...p, hp: p.maxHp }));
+  return {
+    ...prev,
+    screen: "battle",
+    battlePlayerTeam: playerTeam,
+    battleEnemyTeam: eTeam,
+    battleActivePlayer: 0,
+    battleActiveEnemy: 0,
+    battleLog: [`A wild battle begins!`],
+    battleFinished: false,
+    battleResult: null,
+    battleTurn: 1,
+    battleSpeed: 1000,
+    isBossBattle: isBoss,
+  };
+}
+
+function executeAttack(attacker, defender, log, side, language) {
+  const validMoves = attacker.moves.filter(m => m.power && m.power > 0);
+  if (validMoves.length === 0) {
+    log.push(`${getPokemonName(attacker, language)} ${t("has no moves!", language)}`);
+    return;
+  }
+  const move = validMoves[Math.floor(Math.random() * validMoves.length)];
+  const atkStat = move.category === "physical" ? attacker.atk : attacker.spa;
+  const defStat = move.category === "physical" ? defender.def : defender.spd;
+  const effectiveness = getEffectiveness(move.type, defender.types);
+  const dmg = calcDamage(move.power, atkStat, defStat, effectiveness, attacker.level || 5);
+  defender.hp = Math.max(0, defender.hp - dmg);
+
+  let effText = "";
+  if (effectiveness > 1) effText = ` ${t("Super effective!", language)}`;
+  else if (effectiveness < 1 && effectiveness > 0) effText = ` ${t("Not very effective...", language)}`;
+  else if (effectiveness === 0) effText = ` ${t("No effect!", language)}`;
+
+  const moveName = getMoveName(move, language);
+  log.push(`${getPokemonName(attacker, language)} ${t("used", language)} ${moveName}! ${dmg} ${t("dmg", language)}${effText}`);
+}
+
+function findNextPokemon(team, currentIdx) {
+  for (let i = currentIdx + 1; i < team.length; i++) {
+    if (team[i].hp > 0) return i;
+  }
+  for (let i = 0; i < currentIdx; i++) {
+    if (team[i].hp > 0) return i;
+  }
+  return null;
 }
 
 const INITIAL_STATE = {
   screen: "title",
   floor: 0,
-  playerHp: 0,
-  playerMaxHp: 0,
-  playerAtk: 0,
-  playerDef: 0,
-  playerSpa: 0,
-  playerSpe: 0,
-  playerTypes: [],
-  playerPokemon: null,
-  deck: [],
-  hand: [],
-  drawPile: [],
-  discardPile: [],
-  energy: MAX_ENERGY,
-  gold: 50,
-  potions: [],
-  enemies: [],
-  turn: 0,
+  team: [],
+  map: [],
+  mapRow: 0,
+  mapNodeIndex: -1,
+  playerName: "Red",
+
+  battlePlayerTeam: [],
+  battleEnemyTeam: [],
+  battleActivePlayer: 0,
+  battleActiveEnemy: 0,
   battleLog: [],
-  selectedCard: null,
-  targetEnemy: null,
-  rewardCards: [],
-  shopCards: [],
-  shopRemovePrice: 75,
-  gameOver: false,
-  victory: false,
-  animating: false,
-  showCardDetail: null,
-  enemyIntents: {},
-  playerBuffs: { atk: 0, def: 0 },
-  enemyBuffs: {},
-  lastBattleWasBoss: false,
+  battleFinished: false,
+  battleResult: null,
+  battleTurn: 1,
+  battleSpeed: 800,
+  isBossBattle: false,
+
+  encounterChoices: [],
+  currentItem: null,
+  currentItemPokemonIndex: -1,
+  moveChangePokemonIndex: -1,
+  moveChangeMoveIndex: -1,
+  moveChangeNewMove: null,
+  moveUpgradePokemonIndex: -1,
+  moveUpgradeMoveIndex: -1,
+  moveUpgradeNewPower: 0,
+  tradePokemonIndex: -1,
+  tradeNewPokemon: null,
+  battleRewardChoice: null,
+
+  rewardOptions: [],
+  discardCandidate: null,
+  pendingEvolutions: [],
+  evolutionChoicePokemonIndex: -1,
+  evolutionChoiceOptions: [],
+  pendingEvolutionAdvance: null,
 };
 
 export default function Pokeroguelite() {
-  const [language, setLanguage] = useState(getLanguage());
+  const [language, setLanguage] = useState("en");
   const [state, setState] = useState(() => ({ ...INITIAL_STATE }));
-  const [moveData, setMoveData] = useState({});
-  const [pokedex, setPokedex] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const logEndRef = useRef(null);
 
-  useEffect(() => subscribe(setLanguage), []);
+  useEffect(() => {
+    setLanguage(getLanguage());
+    return subscribe(setLanguage);
+  }, []);
 
   useEffect(() => {
     Promise.all([
-      fetch("/moves.json").then((r) => r.json()),
-      fetch("/pokedex.json").then((r) => r.json()),
+      fetch("/moves.json").then(r => r.json()),
+      fetch("/pokedex.json").then(r => r.json()),
     ]).then(([moves, dex]) => {
       ALL_MOVES = moves;
-      setMoveData(moves);
-      setPokedex(dex);
+      POKEDEX = dex;
+      const { levelEvo, condEvo } = buildEvolutionData();
+      LEVEL_EVOLUTIONS = levelEvo;
+      CONDITIONAL_EVOLUTIONS = condEvo;
+      setDataLoaded(true);
     });
   }, []);
 
@@ -284,437 +428,656 @@ export default function Pokeroguelite() {
   }, [state.battleLog]);
 
   const update = useCallback((fn) => {
-    setState((prev) => {
+    setState(prev => {
       const next = typeof fn === "function" ? fn(prev) : { ...prev, ...fn };
       return next;
     });
   }, []);
 
+  useEffect(() => {
+    if (state.screen !== "battle" || state.battleFinished || !dataLoaded) return;
+    const timer = setTimeout(() => {
+      setState(prev => {
+        if (prev.screen !== "battle" || prev.battleFinished) return prev;
+        return simulateBattleTurn(prev, language);
+      });
+    }, state.battleSpeed);
+    return () => clearTimeout(timer);
+  }, [state.screen, state.battleFinished, state.battleTurn, dataLoaded, state.battleSpeed, language]);
+
+  function simulateBattleTurn(prev, language) {
+    const pTeam = prev.battlePlayerTeam.map(p => ({ ...p }));
+    const eTeam = prev.battleEnemyTeam.map(e => ({ ...e }));
+    let pIdx = prev.battleActivePlayer;
+    let eIdx = prev.battleActiveEnemy;
+    const log = [...prev.battleLog];
+
+    const playerPkm = pTeam[pIdx];
+    const enemyPkm = eTeam[eIdx];
+
+    if (!playerPkm || !enemyPkm || playerPkm.hp <= 0 || enemyPkm.hp <= 0) {
+      return prev;
+    }
+
+    const turnNum = prev.battleTurn;
+    log.push(`--- ${t("Turn", language)} ${turnNum} ---`);
+
+    const playerFirst = playerPkm.spe >= enemyPkm.spe;
+
+    if (playerFirst) {
+      executeAttack(playerPkm, enemyPkm, log, "player", language);
+      if (enemyPkm.hp <= 0) {
+        log.push(`${getPokemonName(enemyPkm, language)} ${t("fainted!", language)}`);
+        const nextE = findNextPokemon(eTeam, eIdx);
+        if (nextE !== null) {
+          eIdx = nextE;
+          log.push(`${getPokemonName(eTeam[eIdx], language)} ${t("enters!", language)}`);
+        } else {
+          return {
+            ...prev,
+            battlePlayerTeam: pTeam,
+            battleEnemyTeam: eTeam,
+            battleActivePlayer: pIdx,
+            battleActiveEnemy: eIdx,
+            battleLog: log,
+            battleFinished: true,
+            battleResult: "win",
+            battleTurn: turnNum + 1,
+          };
+        }
+      } else {
+        executeAttack(enemyPkm, playerPkm, log, "enemy", language);
+        if (playerPkm.hp <= 0) {
+          log.push(`${getPokemonName(playerPkm, language)} ${t("fainted!", language)}`);
+          playerPkm.fainted = true;
+          const nextP = findNextPokemon(pTeam, pIdx);
+          if (nextP !== null) {
+            pIdx = nextP;
+            log.push(`${getPokemonName(pTeam[pIdx], language)} ${t("enters!", language)}`);
+          } else {
+            return {
+              ...prev,
+              battlePlayerTeam: pTeam,
+              battleEnemyTeam: eTeam,
+              battleActivePlayer: pIdx,
+              battleActiveEnemy: eIdx,
+              battleLog: log,
+              battleFinished: true,
+              battleResult: "lose",
+              battleTurn: turnNum + 1,
+            };
+          }
+        }
+      }
+    } else {
+      executeAttack(enemyPkm, playerPkm, log, "enemy", language);
+      if (playerPkm.hp <= 0) {
+        log.push(`${getPokemonName(playerPkm, language)} ${t("fainted!", language)}`);
+        playerPkm.fainted = true;
+        const nextP = findNextPokemon(pTeam, pIdx);
+        if (nextP !== null) {
+          pIdx = nextP;
+          log.push(`${getPokemonName(pTeam[pIdx], language)} ${t("enters!", language)}`);
+        } else {
+          return {
+            ...prev,
+            battlePlayerTeam: pTeam,
+            battleEnemyTeam: eTeam,
+            battleActivePlayer: pIdx,
+            battleActiveEnemy: eIdx,
+            battleLog: log,
+            battleFinished: true,
+            battleResult: "lose",
+            battleTurn: turnNum + 1,
+          };
+        }
+      } else {
+        executeAttack(playerPkm, enemyPkm, log, "player", language);
+        if (enemyPkm.hp <= 0) {
+          log.push(`${getPokemonName(enemyPkm, language)} ${t("fainted!", language)}`);
+          const nextE = findNextPokemon(eTeam, eIdx);
+          if (nextE !== null) {
+            eIdx = nextE;
+            log.push(`${getPokemonName(eTeam[eIdx], language)} ${t("enters!", language)}`);
+          } else {
+            return {
+              ...prev,
+              battlePlayerTeam: pTeam,
+              battleEnemyTeam: eTeam,
+              battleActivePlayer: pIdx,
+              battleActiveEnemy: eIdx,
+              battleLog: log,
+              battleFinished: true,
+              battleResult: "win",
+              battleTurn: turnNum + 1,
+            };
+          }
+        }
+      }
+    }
+
+    return {
+      ...prev,
+      battlePlayerTeam: pTeam,
+      battleEnemyTeam: eTeam,
+      battleActivePlayer: pIdx,
+      battleActiveEnemy: eIdx,
+      battleLog: log,
+      battleTurn: turnNum + 1,
+    };
+  }
+
   function startGame(starterKey) {
     const starter = STARTERS[starterKey];
-    const dexEntry = Object.values(ENEMY_TEMPLATES).flat().find((e) => e.slug === starter.slug) || {};
-    const sprite = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${starter.id}.png`;
-    const deck = buildStarterDeck(starterKey);
-    const maxHp = starter.hp + 10;
+    const dexEntry = POKEDEX.find(d => d.slug === starterKey);
+    const level = 5;
+    const hp = calcStat(starter.hp, level, true);
+    const pkm = {
+      id: Math.random().toString(36).slice(2, 8),
+      slug: starter.slug,
+      name: starter.name,
+      types: starter.types,
+      level,
+      hp, maxHp: hp,
+      atk: calcStat(starter.atk, level),
+      def: calcStat(starter.def, level),
+      spa: calcStat(starter.spa, level),
+      spd: calcStat(starter.spd, level),
+      spe: calcStat(starter.spe, level),
+      sprite: dexEntry?.sprite || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${starter.id}.png`,
+      moves: [getLevelUpMove(dexEntry || POKEDEX.find(d => d.id === starter.id))].filter(Boolean),
+      fainted: false,
+    };
+    const map = generateMap(0);
     update({
       screen: "map",
       floor: 0,
-      playerHp: maxHp,
-      playerMaxHp: maxHp,
-      playerAtk: starter.atk,
-      playerDef: starter.def,
-      playerSpa: starter.spa,
-      playerSpe: starter.spe,
-      playerTypes: starter.types,
-      playerPokemon: { ...starter, sprite },
-      deck,
-      hand: [],
-      drawPile: [],
-      discardPile: [],
-      energy: MAX_ENERGY,
-      gold: 50,
-      potions: ["potion"],
-      enemies: [],
-      turn: 0,
-      battleLog: [],
-      selectedCard: null,
-      targetEnemy: null,
-      rewardCards: [],
-      shopCards: [],
-      gameOver: false,
-      victory: false,
-      animating: false,
-      showCardDetail: null,
-      enemyIntents: {},
-      playerBuffs: { atk: 0, def: 0 },
-      enemyBuffs: {},
-      lastBattleWasBoss: false,
+      team: [pkm],
+      map, mapRow: 0, mapNodeIndex: -1,
+      ...INITIAL_STATE,
+      screen: "map", floor: 0, team: [pkm], map, mapRow: 0,
     });
   }
 
-  function startBattle(isElite = false, isBoss = false) {
-    let enemies;
-    let lastBattleWasBoss = isBoss;
-    if (isBoss) {
-      enemies = [generateBoss(state.floor + 1)];
-    } else if (isElite) {
-      const pool = ENEMY_TEMPLATES[Math.min(state.floor + 1, 4)] || ENEMY_TEMPLATES[4];
-      const template = pool[Math.floor(Math.random() * pool.length)];
-      const scaling = 1 + state.floor * 0.2;
-      enemies = [{
-        ...template,
-        id: "elite_" + Math.random().toString(36).slice(2, 8),
-        maxHp: Math.floor(template.hp * scaling * 1.3),
-        currentHp: Math.floor(template.hp * scaling * 1.3),
-        deck: template.moves.map((m) => makeCard(m, ALL_MOVES[m] || { names: { en: m }, type: "normal", category: "physical", power: 40, accuracy: 100 })),
-        intent: null,
-        isElite: true,
-      }];
-    } else {
-      enemies = generateEnemies(state.floor + 1);
-    }
+  function selectNode(rowIndex, nodeIndex) {
+    const node = state.map[rowIndex]?.[nodeIndex];
+    if (!node) return;
 
-    enemies.forEach((e) => { e.intent = pickIntent(e); });
-
-    const shuffled = shuffleArray(state.deck);
-    const drawPile = shuffled;
-    const hand = drawPile.splice(0, DRAW_PER_TURN);
-
-    update({
-      screen: "battle",
-      enemies,
-      deck: state.deck,
-      hand,
-      drawPile,
-      discardPile: [],
-      energy: MAX_ENERGY,
-      turn: 1,
-      battleLog: ["Battle start!"],
-      selectedCard: null,
-      targetEnemy: null,
-      enemyIntents: {},
-      playerBuffs: { atk: 0, def: 0 },
-      enemyBuffs: {},
-      lastBattleWasBoss,
-    });
-  }
-
-  function drawCards(num) {
     update((prev) => {
-      let drawPile = [...prev.drawPile];
-      let discardPile = [...prev.discardPile];
-      let hand = [...prev.hand];
-
-      for (let i = 0; i < num; i++) {
-        if (drawPile.length === 0) {
-          if (discardPile.length === 0) break;
-          drawPile = shuffleArray(discardPile);
-          discardPile = [];
+      const teamLevel = getTeamLevel(prev.team);
+      switch (node.type) {
+        case "encounter": {
+          const choices = [];
+          const used = new Set();
+          for (let i = 0; i < 3; i++) {
+            let pkm;
+            let tries = 0;
+            do {
+              pkm = getRandomPokemon(teamLevel, used);
+              tries++;
+            } while (tries < 20 && choices.some(c => c.slug === pkm.slug));
+            used.add(pkm.slug);
+            choices.push(pkm);
+          }
+          return { ...prev, screen: "encounter", encounterChoices: choices, mapRow: rowIndex, mapNodeIndex: nodeIndex };
         }
-        hand.push(drawPile.shift());
+        case "trainer": {
+          const name = TRAINER_NAMES[Math.floor(Math.random() * TRAINER_NAMES.length)];
+          const count = prev.floor >= 2 && Math.random() < 0.4 ? 2 : 1;
+          const enemyTeam = generateRandomTeam(teamLevel, count);
+          return initBattle({ ...prev, trainerName: name, isBossBattle: false }, enemyTeam, false);
+        }
+        case "grunt": {
+          const grunt = GRUNT_TEAMS[Math.floor(Math.random() * GRUNT_TEAMS.length)];
+          const count = prev.floor >= 3 && Math.random() < 0.4 ? 2 : 1;
+          const enemyTeam = generateThemedTeam(teamLevel, count, grunt.types);
+          return initBattle({ ...prev, trainerName: grunt.name, dialogue: grunt.dialogue, isBossBattle: false }, enemyTeam, false);
+        }
+        case "item": {
+          const item = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+          return { ...prev, screen: "item", currentItem: item, currentItemPokemonIndex: -1, mapRow: rowIndex, mapNodeIndex: nodeIndex };
+        }
+        case "move-change": {
+          return { ...prev, screen: "move-change", moveChangePokemonIndex: -1, moveChangeMoveIndex: -1, moveChangeNewMove: null, mapRow: rowIndex, mapNodeIndex: nodeIndex };
+        }
+        case "move-upgrade": {
+          return { ...prev, screen: "move-upgrade", moveUpgradePokemonIndex: -1, moveUpgradeMoveIndex: -1, moveUpgradeNewPower: 0, mapRow: rowIndex, mapNodeIndex: nodeIndex };
+        }
+        case "pokemon-center": {
+          const healedTeam = prev.team.map(p => ({ ...p, hp: p.maxHp, fainted: false }));
+          return { ...prev, screen: "pokemon-center", team: healedTeam, mapRow: rowIndex, mapNodeIndex: nodeIndex };
+        }
+        case "poke-trader": {
+          return { ...prev, screen: "poke-trader", tradeNewPokemon: null, tradePokemonIndex: -1, mapRow: rowIndex, mapNodeIndex: nodeIndex };
+        }
+        case "boss": {
+          const gymLeader = GYM_LEADERS[prev.floor] || GYM_LEADERS[0];
+          const bossTeam = generateThemedTeam(teamLevel, 2 + Math.min(prev.floor, 2), [gymLeader.type]);
+          return initBattle({ ...prev, trainerName: gymLeader.name, isBossBattle: true }, bossTeam, true);
+        }
+        default:
+          return prev;
       }
-
-      return { drawPile, discardPile, hand };
     });
   }
 
-  function playCard(cardIndex, targetId) {
+  function selectEncounterPokemon(index) {
+    const chosen = state.encounterChoices[index];
+    if (!chosen) return;
+    if (state.team.length >= 6) {
+      update((prev) => ({
+        ...prev,
+        discardCandidate: { ...chosen },
+        screen: "discard-pokemon",
+      }));
+      return;
+    }
     update((prev) => {
-      if (prev.animating) return prev;
-      const card = prev.hand[cardIndex];
-      if (!card || card.cost > prev.energy) return prev;
+      let newTeam = [...prev.team, { ...chosen }];
+      const addedIndex = newTeam.length - 1;
+      const condOptions = CONDITIONAL_EVOLUTIONS[chosen.slug];
+      if (condOptions && condOptions.length > 0 && !newTeam.some((p, i) => i !== addedIndex && hasPendingLevelEvolution(p))) {
+        return {
+          ...prev,
+          team: newTeam,
+          evolutionChoicePokemonIndex: addedIndex,
+          evolutionChoiceOptions: condOptions.map(d => ({
+            slug: d.slug,
+            name: d.names?.en || d.slug,
+            sprite: d.sprite,
+            types: d.types,
+          })),
+          screen: "evolution-choice",
+        };
+      }
+      return advanceRow(prev, { team: newTeam });
+    });
+  }
 
-      const target = prev.enemies.find((e) => e.id === targetId);
-      if (!target || target.currentHp <= 0) return prev;
+  function skipEncounter() {
+    update((prev) => advanceRow(prev));
+  }
 
-      const newEnergy = prev.energy - card.cost;
-      const newHand = prev.hand.filter((_, i) => i !== cardIndex);
-      const newDiscard = [...prev.discardPile, card];
+  function discardPokemon(index) {
+    update((prev) => {
+      const chosen = prev.discardCandidate;
+      if (!chosen) return advanceRow(prev);
+      const newTeam = prev.team.filter((_, i) => i !== index);
+      newTeam.push({ ...chosen });
+      const addedIndex = newTeam.length - 1;
+      const condOptions = CONDITIONAL_EVOLUTIONS[chosen.slug];
+      if (condOptions && condOptions.length > 0 && !newTeam.some((p, i) => i !== addedIndex && hasPendingLevelEvolution(p))) {
+        return {
+          ...prev,
+          team: newTeam,
+          discardCandidate: null,
+          evolutionChoicePokemonIndex: addedIndex,
+          evolutionChoiceOptions: condOptions.map(d => ({
+            slug: d.slug,
+            name: d.names?.en || d.slug,
+            sprite: d.sprite,
+            types: d.types,
+          })),
+          screen: "evolution-choice",
+        };
+      }
+      const next = advanceRow(prev, { team: newTeam });
+      return { ...next, discardCandidate: null };
+    });
+  }
 
-      let newEnemies = [...prev.enemies];
-      let log = [...prev.battleLog];
-      let playerHp = prev.playerHp;
-      let newPlayerBuffs = { ...prev.playerBuffs };
+  function applyItem(pokemonIndex) {
+    update((prev) => {
+      const item = prev.currentItem;
+      if (!item || pokemonIndex < 0 || pokemonIndex >= prev.team.length) return prev;
+      const newTeam = prev.team.map((p, i) => {
+        if (i !== pokemonIndex) return p;
+        const updated = { ...p };
+        if (item.stat === "heal") {
+          updated.hp = updated.maxHp;
+        } else if (item.stat === "revive") {
+          if (!p.fainted) return p;
+          updated.fainted = false;
+          updated.hp = Math.floor(updated.maxHp * item.boost);
+        } else if (item.stat === "hp") {
+          updated.maxHp += item.boost;
+          updated.hp += item.boost;
+        } else {
+          updated[item.stat] += item.boost;
+        }
+        return updated;
+      });
+      return advanceRow(prev, { team: newTeam });
+    });
+  }
 
-      if (card.category === "status") {
-        const lowerName = card.name.toLowerCase();
-        if (lowerName.includes("swords dance") || lowerName.includes("bulk up")) {
-          newPlayerBuffs.atk += 1;
-          log.push(`⬆ ${card.name}! Attack raised!`);
-        } else if (lowerName.includes("shell armor") || lowerName.includes("acid armor")) {
-          newPlayerBuffs.def += 1;
-          log.push(`⬆ ${card.name}! Defense raised!`);
-        } else if (lowerName.includes("leech seed")) {
-          const heal = Math.floor(target.maxHp * 0.08);
-          const idx = newEnemies.findIndex((e) => e.id === targetId);
-          newEnemies[idx] = { ...target, currentHp: Math.max(0, target.currentHp - heal) };
-          playerHp = Math.min(prev.playerMaxHp, playerHp + heal);
-          log.push(`🌱 ${card.name} drains ${heal} HP!`);
-        } else if (lowerName.includes("recover") || lowerName.includes("rest")) {
-          const heal = Math.floor(prev.playerMaxHp * 0.3);
-          playerHp = Math.min(prev.playerMaxHp, playerHp + heal);
-          log.push(`💚 ${card.name} heals ${heal} HP!`);
-        } else if (lowerName.includes("heal") || lowerName.includes("synthesis") || lowerName.includes("morning sun")) {
-          const heal = Math.floor(prev.playerMaxHp * 0.25);
-          playerHp = Math.min(prev.playerMaxHp, playerHp + heal);
-          log.push(`💚 ${card.name} heals ${heal} HP!`);
-        } else if (lowerName.includes("light screen") || lowerName.includes("reflect")) {
-          newPlayerBuffs.def += 1;
-          log.push(`🛡 ${card.name} Defense raised!`);
-        } else if (lowerName.includes("tail whip") || lowerName.includes("leer")) {
-          const newBuffs = { ...prev.enemyBuffs };
-          newBuffs[targetId] = (newBuffs[targetId] || 0) - 1;
-          log.push(`⬇ ${card.name} on ${target.name}! Defense lowered!`);
+  function selectMoveChangePokemon(pokemonIndex) {
+    update((prev) => {
+      const pkm = prev.team[pokemonIndex];
+      if (!pkm) return prev;
+      return { ...prev, moveChangePokemonIndex: pokemonIndex };
+    });
+  }
+
+  function selectMoveChangeMove(moveIndex) {
+    update((prev) => {
+      const pkm = prev.team[prev.moveChangePokemonIndex];
+      if (!pkm || moveIndex < 0 || moveIndex >= pkm.moves.length) return prev;
+      const dexEntry = POKEDEX.find(d => d.slug === pkm.slug);
+      const newMove = getLearnableMove(dexEntry);
+      if (!newMove) return prev;
+      const newTeam = prev.team.map((p, i) => {
+        if (i !== prev.moveChangePokemonIndex) return p;
+        const newMoves = p.moves.map((m, j) => j === moveIndex ? newMove : m);
+        return { ...p, moves: newMoves };
+      });
+      return advanceRow(prev, { team: newTeam });
+    });
+  }
+
+  function selectMoveUpgradePokemon(pokemonIndex) {
+    update((prev) => {
+      const pkm = prev.team[pokemonIndex];
+      if (!pkm) return prev;
+      return { ...prev, moveUpgradePokemonIndex: pokemonIndex };
+    });
+  }
+
+  function selectMoveUpgradeMove(moveIndex) {
+    update((prev) => {
+      const pkm = prev.team[prev.moveUpgradePokemonIndex];
+      if (!pkm || moveIndex < 0 || moveIndex >= pkm.moves.length) return prev;
+      const newTeam = prev.team.map((p, i) => {
+        if (i !== prev.moveUpgradePokemonIndex) return p;
+        const newMoves = p.moves.map((m, j) => {
+          if (j !== moveIndex) return m;
+          return { ...m, power: Math.floor((m.power || 10) * 1.4) };
+        });
+        return { ...p, moves: newMoves };
+      });
+      return advanceRow(prev, { team: newTeam });
+    });
+  }
+
+  function doTrade(pokemonIndex) {
+    update((prev) => {
+      if (prev.tradeNewPokemon === null) {
+        const randomPkm = getRandomPokemon(getTeamLevel(prev.team));
+        if (pokemonIndex < 0 || pokemonIndex >= prev.team.length) return prev;
+        const newPokemon = { ...randomPkm, id: Math.random().toString(36).slice(2, 8) };
+        const newTeam = prev.team.map((p, i) => i === pokemonIndex ? newPokemon : p);
+        const condOptions = CONDITIONAL_EVOLUTIONS[newPokemon.slug];
+        if (condOptions && condOptions.length > 0 && !newTeam.some((p, i) => i !== pokemonIndex && hasPendingLevelEvolution(p))) {
           return {
             ...prev,
-            energy: newEnergy,
-            hand: newHand,
-            discardPile: newDiscard,
-            battleLog: log,
-            enemyBuffs: newBuffs,
-            selectedCard: null,
+            team: newTeam,
+            evolutionChoicePokemonIndex: pokemonIndex,
+            evolutionChoiceOptions: condOptions.map(d => ({
+              slug: d.slug,
+              name: d.names?.en || d.slug,
+              sprite: d.sprite,
+              types: d.types,
+            })),
+            screen: "evolution-choice",
           };
-        } else {
-          log.push(`✨ ${card.name} used!`);
         }
-      } else {
-        const atkStat = card.category === "physical" ? prev.playerAtk + newPlayerBuffs.atk * 15 : prev.playerSpa + newPlayerBuffs.atk * 15;
-        const defStat = card.category === "physical" ? target.def : target.spd;
-        const effectiveness = getEffectiveness(card.type, target.types);
-        const dmg = calcDamage(card.power, atkStat, defStat, effectiveness);
+        return advanceRow(prev, { team: newTeam });
+      }
+      return prev;
+    });
+  }
 
-        const idx = newEnemies.findIndex((e) => e.id === targetId);
-        const newHp = Math.max(0, target.currentHp - dmg);
-        newEnemies[idx] = { ...target, currentHp: newHp };
+  function skipTrade() {
+    update((prev) => advanceRow(prev));
+  }
 
-        let effText = "";
-        if (effectiveness > 1) effText = " Super effective!";
-        else if (effectiveness < 1 && effectiveness > 0) effText = " Not very effective...";
-        else if (effectiveness === 0) effText = " No effect!";
+  function moveTeamMember(fromIndex, toIndex) {
+    update((prev) => {
+      const newTeam = [...prev.team];
+      const [moved] = newTeam.splice(fromIndex, 1);
+      newTeam.splice(toIndex, 0, moved);
+      return { ...prev, team: newTeam };
+    });
+  }
 
-        log.push(`${card.name} deals ${dmg} damage to ${target.name}!${effText}`);
+  function selectEvolution(optionSlug) {
+    update((prev) => {
+      const idx = prev.evolutionChoicePokemonIndex;
+      if (idx < 0 || idx >= prev.team.length) return prev;
+      const newDex = getDexEntry(optionSlug);
+      if (!newDex) return prev;
+      const pkm = prev.team[idx];
+      const newPkm = evolveToPokemon(pkm, newDex, pkm.level || 5);
+      const newTeam = prev.team.map((p, i) => i === idx ? newPkm : p);
 
-        if (card.key.includes("absorb") || card.key.includes("drain") || card.key.includes("giga-drain") || card.key.includes("mega-drain")) {
-          const heal = Math.floor(dmg / 2);
-          playerHp = Math.min(prev.playerMaxHp, playerHp + heal);
-          log.push(`  Drains ${heal} HP!`);
-        }
+      const remainingTriggers = findConditionalEvolutionTriggers(newTeam, new Set([idx]));
+      if (remainingTriggers.length > 0) {
+        return {
+          ...prev,
+          team: newTeam,
+          evolutionChoicePokemonIndex: remainingTriggers[0].index,
+          evolutionChoiceOptions: remainingTriggers[0].options.map(d => ({
+            slug: d.slug,
+            name: d.names?.en || d.slug,
+            sprite: d.sprite,
+            types: d.types,
+          })),
+        };
       }
 
-      const aliveEnemies = newEnemies.filter((e) => e.currentHp > 0);
-      const isBossDefeated = aliveEnemies.length === 0 && prev.lastBattleWasBoss;
-
-      return {
-        ...prev,
-        energy: newEnergy,
-        hand: newHand,
-        discardPile: newDiscard,
-        enemies: newEnemies,
-        battleLog: log,
-        playerHp,
-        playerBuffs: newPlayerBuffs,
-        selectedCard: null,
-        targetEnemy: aliveEnemies.length > 0 ? null : prev.targetEnemy,
-        screen: aliveEnemies.length === 0 ? (isBossDefeated ? "victory" : "reward") : prev.screen,
-      };
-    });
-  }
-
-  function endTurn() {
-    update((prev) => {
-      if (prev.animating) return prev;
-      let log = [...prev.battleLog];
-      let playerHp = prev.playerHp;
-      let newEnemies = [...prev.enemies];
-      let newEnemyBuffs = { ...prev.enemyBuffs };
-
-      log.push("--- Enemy Turn ---");
-
-      for (const enemy of newEnemies) {
-        if (enemy.currentHp <= 0) continue;
-        if (!enemy.intent || !enemy.intent.card) continue;
-
-        const intentCard = enemy.intent.card;
-        if (intentCard.power > 0) {
-          const atkStat = intentCard.category === "physical" ? enemy.atk : enemy.spa;
-          const defStat = intentCard.category === "physical" ? prev.playerDef + prev.playerBuffs.def * 15 : prev.playerDef + prev.playerBuffs.def * 15;
-          const effectiveness = getEffectiveness(intentCard.type, prev.playerTypes);
-          const dmg = calcDamage(intentCard.power, atkStat, defStat, effectiveness);
-          playerHp = Math.max(0, playerHp - dmg);
-          let effText = "";
-          if (effectiveness > 1) effText = " Super effective!";
-          else if (effectiveness < 1 && effectiveness > 0) effText = " Not very effective...";
-          log.push(`${enemy.name} uses ${intentCard.name} for ${dmg} damage!${effText}`);
-        } else {
-          const lowerName = intentCard.name.toLowerCase();
-          if (lowerName.includes("leer") || lowerName.includes("tail-whip")) {
-            log.push(`${enemy.name} uses ${intentCard.name}! Your defense lowered!`);
-          } else if (lowerName.includes("recover") || lowerName.includes("rest")) {
-            const heal = Math.floor(enemy.maxHp * 0.2);
-            const idx = newEnemies.findIndex((e) => e.id === enemy.id);
-            newEnemies[idx] = { ...enemy, currentHp: Math.min(enemy.maxHp, enemy.currentHp + heal) };
-            log.push(`${enemy.name} heals ${heal} HP!`);
-          } else {
-            log.push(`${enemy.name} uses ${intentCard.name}!`);
-          }
-        }
-
-        if (playerHp <= 0) break;
+      if (prev.pendingEvolutionAdvance) {
+        return advanceRow({ ...prev, team: newTeam }, prev.pendingEvolutionAdvance);
       }
+      return { ...prev, team: newTeam, screen: "map", evolutionChoicePokemonIndex: -1, evolutionChoiceOptions: [], pendingEvolutionAdvance: null };
+    });
+  }
 
-      if (playerHp <= 0) {
-        return { ...prev, playerHp: 0, battleLog: [...log, "You fainted!"], screen: "gameover" };
+  function dismissEvolution() {
+    update((prev) => {
+      const remainingTriggers = findConditionalEvolutionTriggers(prev.team, new Set([prev.evolutionChoicePokemonIndex]));
+      if (remainingTriggers.length > 0) {
+        return {
+          ...prev,
+          evolutionChoicePokemonIndex: remainingTriggers[0].index,
+          evolutionChoiceOptions: remainingTriggers[0].options.map(d => ({
+            slug: d.slug,
+            name: d.names?.en || d.slug,
+            sprite: d.sprite,
+            types: d.types,
+          })),
+        };
       }
-
-      newEnemies.forEach((e) => {
-        if (e.currentHp > 0) {
-          e.intent = pickIntent(e);
-        }
-      });
-
-      const newDrawPile = [...prev.drawPile];
-      const newDiscardPile = [...prev.discardPile, ...prev.hand];
-      const hand = newDrawPile.splice(0, DRAW_PER_TURN);
-
-      log.push("--- Your Turn ---");
-
-      return {
-        ...prev,
-        playerHp,
-        enemies: newEnemies,
-        enemyBuffs: newEnemyBuffs,
-        drawPile: newDrawPile,
-        discardPile: newDiscardPile,
-        hand,
-        energy: MAX_ENERGY,
-        turn: prev.turn + 1,
-        battleLog: log,
-      };
-    });
-  }
-
-  function selectReward(card) {
-    update((prev) => ({
-      deck: [...prev.deck, card],
-      screen: "map",
-    }));
-  }
-
-  function skipReward() {
-    update({ screen: "map" });
-  }
-
-  function enterShop() {
-    const cards = generateShopCards(state.floor);
-    update({ screen: "shop", shopCards: cards, shopRemovePrice: 75 });
-  }
-
-  function buyCard(index) {
-    update((prev) => {
-      const card = prev.shopCards[index];
-      if (!card || prev.gold < card.price) return prev;
-      return {
-        gold: prev.gold - card.price,
-        deck: [...prev.deck, makeCard(card.key, ALL_MOVES[card.key])],
-        shopCards: prev.shopCards.filter((_, i) => i !== index),
-      };
-    });
-  }
-
-  function removeCard() {
-    update((prev) => {
-      if (prev.gold < prev.shopRemovePrice || prev.deck.length <= 5) return prev;
-      const idx = Math.floor(Math.random() * prev.deck.length);
-      return {
-        gold: prev.gold - prev.shopRemovePrice,
-        deck: prev.deck.filter((_, i) => i !== idx),
-        shopRemovePrice: prev.shopRemovePrice + 25,
-      };
-    });
-  }
-
-  function healAtRest() {
-    update((prev) => {
-      const heal = Math.floor(prev.playerMaxHp * 0.3);
-      return {
-        playerHp: Math.min(prev.playerMaxHp, prev.playerHp + heal),
-        screen: "map",
-      };
-    });
-  }
-
-  function advanceFloor() {
-    update((prev) => {
-      const nextFloor = prev.floor + 1;
-      if (nextFloor >= 5) {
-        return { floor: nextFloor, screen: "map" };
+      if (prev.pendingEvolutionAdvance) {
+        return advanceRow(prev, prev.pendingEvolutionAdvance);
       }
-      return { floor: nextFloor, screen: "map" };
+      return { ...prev, screen: "map", evolutionChoicePokemonIndex: -1, evolutionChoiceOptions: [], pendingEvolutionAdvance: null };
     });
   }
 
-  function chooseNodeType(type) {
-    if (type === "battle") startBattle();
-    else if (type === "elite") startBattle(true);
-    else if (type === "boss") startBattle(false, true);
-    else if (type === "rest") update({ screen: "rest" });
-    else if (type === "shop") enterShop();
-  }
-
-  function usePotion() {
-    update((prev) => {
-      if (prev.potions.length === 0) return prev;
-      const heal = Math.floor(prev.playerMaxHp * 0.3);
-      const newPotions = prev.potions.slice(1);
-      return {
-        playerHp: Math.min(prev.playerMaxHp, prev.playerHp + heal),
-        potions: newPotions,
-        battleLog: [...prev.battleLog, `🧪 Used potion! Healed ${heal} HP!`],
-      };
-    });
-  }
-
-  const spriteUrl = useMemo(() => {
-    if (!state.playerPokemon) return "";
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${state.playerPokemon.id}.png`;
-  }, [state.playerPokemon]);
-
-  const enemySpriteUrl = useCallback((slug, id) => {
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${id}.png`;
-  }, []);
-
-  function getEnemySprite(enemy) {
-    const dexEntry = pokedex.find((p) => p.slug === enemy.slug);
-    if (dexEntry) {
-      return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${dexEntry.id}.png`;
+  function levelUpPokemon(pkm) {
+    const newLevel = (pkm.level || 5) + 1;
+    const dexEntry = getDexEntry(pkm.slug);
+    if (!dexEntry) return { pkm: { ...pkm, level: newLevel }, evolved: false, evolutions: [] };
+    const baseHp = dexEntry.baseStats.find(s => s.name === "hp")?.value || 50;
+    const baseAtk = dexEntry.baseStats.find(s => s.name === "attack")?.value || 50;
+    const baseDef = dexEntry.baseStats.find(s => s.name === "defense")?.value || 50;
+    const baseSpa = dexEntry.baseStats.find(s => s.name === "special-attack")?.value || 50;
+    const baseSpd = dexEntry.baseStats.find(s => s.name === "special-defense")?.value || 50;
+    const baseSpe = dexEntry.baseStats.find(s => s.name === "speed")?.value || 50;
+    const newMaxHp = calcStat(baseHp, newLevel, true);
+    const hpGain = newMaxHp - pkm.maxHp;
+    const leveled = {
+      ...pkm,
+      level: newLevel,
+      maxHp: newMaxHp,
+      hp: Math.min(newMaxHp, Math.max(0, pkm.hp) + Math.max(0, hpGain)),
+      atk: calcStat(baseAtk, newLevel),
+      def: calcStat(baseDef, newLevel),
+      spa: calcStat(baseSpa, newLevel),
+      spd: calcStat(baseSpd, newLevel),
+      spe: calcStat(baseSpe, newLevel),
+    };
+    const evoEntry = LEVEL_EVOLUTIONS[leveled.slug];
+    if (evoEntry) {
+      const minLevel = evoEntry.minLevel || 22;
+      if (newLevel >= minLevel) {
+        const newDex = evoEntry;
+        const eBaseHp = newDex.baseStats.find(s => s.name === "hp")?.value || 50;
+        const eBaseAtk = newDex.baseStats.find(s => s.name === "attack")?.value || 50;
+        const eBaseDef = newDex.baseStats.find(s => s.name === "defense")?.value || 50;
+        const eBaseSpa = newDex.baseStats.find(s => s.name === "special-attack")?.value || 50;
+        const eBaseSpd = newDex.baseStats.find(s => s.name === "special-defense")?.value || 50;
+        const eBaseSpe = newDex.baseStats.find(s => s.name === "speed")?.value || 50;
+        const eMaxHp = calcStat(eBaseHp, newLevel, true);
+        return {
+          pkm: {
+            ...leveled,
+            slug: newDex.slug,
+            name: newDex.names?.en || newDex.slug,
+            types: newDex.types,
+            sprite: newDex.sprite,
+            maxHp: eMaxHp,
+            hp: eMaxHp,
+            atk: calcStat(eBaseAtk, newLevel),
+            def: calcStat(eBaseDef, newLevel),
+            spa: calcStat(eBaseSpa, newLevel),
+            spd: calcStat(eBaseSpd, newLevel),
+            spe: calcStat(eBaseSpe, newLevel),
+          },
+          evolved: true,
+        };
+      }
     }
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/0.png`;
+    return { pkm: leveled, evolved: false };
   }
 
-  function HpBar({ current, max, color = "bg-green-500" }) {
+  function evolveToPokemon(pkm, newDex, newLevel) {
+    const eBaseHp = newDex.baseStats.find(s => s.name === "hp")?.value || 50;
+    const eBaseAtk = newDex.baseStats.find(s => s.name === "attack")?.value || 50;
+    const eBaseDef = newDex.baseStats.find(s => s.name === "defense")?.value || 50;
+    const eBaseSpa = newDex.baseStats.find(s => s.name === "special-attack")?.value || 50;
+    const eBaseSpd = newDex.baseStats.find(s => s.name === "special-defense")?.value || 50;
+    const eBaseSpe = newDex.baseStats.find(s => s.name === "speed")?.value || 50;
+    const eMaxHp = calcStat(eBaseHp, newLevel, true);
+    return {
+      ...pkm,
+      slug: newDex.slug,
+      name: newDex.names?.en || newDex.slug,
+      types: newDex.types,
+      sprite: newDex.sprite,
+      maxHp: eMaxHp,
+      hp: eMaxHp,
+      atk: calcStat(eBaseAtk, newLevel),
+      def: calcStat(eBaseDef, newLevel),
+      spa: calcStat(eBaseSpa, newLevel),
+      spd: calcStat(eBaseSpd, newLevel),
+      spe: calcStat(eBaseSpe, newLevel),
+    };
+  }
+
+  function hasPendingLevelEvolution(pkm) {
+    const evoEntry = LEVEL_EVOLUTIONS[pkm.slug];
+    if (!evoEntry) return false;
+    return (pkm.level || 5) < (evoEntry.minLevel || 22);
+  }
+
+  function findConditionalEvolutionTriggers(team, excludeIndices = new Set()) {
+    // Don't trigger conditional evolutions if any teammate still has a pending level evolution
+    if (team.some((p, i) => !excludeIndices.has(i) && hasPendingLevelEvolution(p))) {
+      return [];
+    }
+    const triggers = [];
+    for (let i = 0; i < team.length; i++) {
+      if (excludeIndices.has(i)) continue;
+      const options = CONDITIONAL_EVOLUTIONS[team[i].slug];
+      if (options && options.length > 0) {
+        triggers.push({ index: i, pkm: team[i], options });
+      }
+    }
+    return triggers;
+  }
+
+  function advanceRow(prev, extra = {}) {
+    const teamToLevel = extra.team || prev.team;
+    const leveledTeam = teamToLevel.map(p => levelUpPokemon(p).pkm);
+    const triggers = findConditionalEvolutionTriggers(leveledTeam);
+    if (triggers.length > 0) {
+      const { team: _t, ...extraWithoutTeam } = extra;
+      return {
+        ...prev,
+        team: leveledTeam,
+        evolutionChoicePokemonIndex: triggers[0].index,
+        evolutionChoiceOptions: triggers[0].options.map(d => ({
+          slug: d.slug,
+          name: d.names?.en || d.slug,
+          sprite: d.sprite,
+          types: d.types,
+        })),
+        pendingEvolutionAdvance: extraWithoutTeam,
+        screen: "evolution-choice",
+      };
+    }
+    const nextMapRow = prev.mapRow + 1;
+    if (nextMapRow >= prev.map.length) {
+      const nextFloor = prev.floor + 1;
+      if (nextFloor >= FLOOR_NAMES.length) {
+        return { ...prev, ...extra, team: leveledTeam, screen: "victory" };
+      }
+      const newMap = generateMap(nextFloor);
+      return { ...prev, team: leveledTeam, floor: nextFloor, map: newMap, mapRow: 0, mapNodeIndex: -1, screen: "map" };
+    }
+    return { ...prev, ...extra, team: leveledTeam, mapRow: nextMapRow, mapNodeIndex: -1, screen: "map" };
+  }
+
+  function continueAfterBattle() {
+    update((prev) => {
+      let freshTeam = prev.team.map(p => {
+        const battlePkm = prev.battlePlayerTeam.find(bp => bp.id === p.id);
+        return battlePkm ? { ...p, hp: battlePkm.hp, fainted: battlePkm.hp <= 0 } : p;
+      });
+      if (prev.battleResult === "lose") {
+        return { ...prev, team: freshTeam, screen: "gameover" };
+      }
+      freshTeam = freshTeam.map(p => levelUpPokemon(p).pkm);
+      const triggers = findConditionalEvolutionTriggers(freshTeam);
+      if (triggers.length > 0) {
+        return {
+          ...prev,
+          team: freshTeam,
+          evolutionChoicePokemonIndex: triggers[0].index,
+          evolutionChoiceOptions: triggers[0].options.map(d => ({
+            slug: d.slug,
+            name: d.names?.en || d.slug,
+            sprite: d.sprite,
+            types: d.types,
+          })),
+          pendingEvolutionAdvance: {},
+          screen: "evolution-choice",
+        };
+      }
+      return advanceRow(prev, { team: freshTeam });
+    });
+  }
+
+  const activePlayerPkm = state.battlePlayerTeam[state.battleActivePlayer];
+  const activeEnemyPkm = state.battleEnemyTeam[state.battleActiveEnemy];
+
+  function HpBar({ current, max }) {
     const pct = Math.max(0, Math.min(100, (current / max) * 100));
-    let barColor = color;
+    let barColor = "bg-green-500";
     if (pct < 25) barColor = "bg-red-500";
     else if (pct < 50) barColor = "bg-yellow-500";
     return (
-      <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+      <div className="w-full h-2.5 bg-slate-700 rounded-full overflow-hidden">
         <div className={`h-full ${barColor} rounded-full transition-all duration-300`} style={{ width: `${pct}%` }} />
       </div>
     );
   }
 
-  function TypeBadge({ type }) {
+  if (!dataLoaded) {
     return (
-      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{ backgroundColor: TYPE_COLORS[type] || "#68A090" }}>
-        {TYPE_EMOJI[type] || ""} {type}
-      </span>
-    );
-  }
-
-  function Card({ card, onClick, small = false, affordable = true }) {
-    return (
-      <div
-        onClick={onClick}
-        className={`
-          relative flex flex-col items-center justify-between rounded-xl border-2 cursor-pointer
-          transition-all duration-200 hover:scale-105 hover:-translate-y-1
-          ${affordable ? "border-slate-500 hover:border-yellow-400 bg-slate-800" : "border-slate-700 bg-slate-900 opacity-50 cursor-not-allowed"}
-          ${small ? "w-20 h-28 p-1" : "w-28 h-40 p-2"}
-        `}
-      >
-        <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-slate-900 border-2 border-yellow-400 flex items-center justify-center text-xs font-bold text-yellow-400">
-          {card.cost}
-        </div>
-        <div className="text-center mt-1">
-          <div className={`${small ? "text-[10px]" : "text-xs"} font-bold text-white leading-tight`}>{card.name}</div>
-          <div className={`${small ? "text-[8px]" : "text-[10px]"} text-slate-400 uppercase`}>{card.type}</div>
-        </div>
-        <div className="text-center">
-          <div className="text-lg">{TYPE_EMOJI[card.type] || "⭐"}</div>
-          {card.power > 0 && <div className={`${small ? "text-[10px]" : "text-xs"} text-slate-300`}>Power: {card.power}</div>}
-          {card.category === "status" && <div className={`${small ? "text-[10px]" : "text-xs"} text-slate-300`}>Status</div>}
-        </div>
-        <div className="w-full h-1 rounded-full" style={{ backgroundColor: TYPE_COLORS[card.type] || "#68A090" }} />
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center text-white text-2xl">
+        Loading Pokédex...
       </div>
     );
   }
@@ -722,417 +1085,497 @@ export default function Pokeroguelite() {
   if (state.screen === "title") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4">
+        <div className="absolute top-4 right-4">
+          <LanguageSelector />
+        </div>
         <div className="text-center mb-8">
           <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-blue-500 mb-2">
-            Pokéroguelite
+            Pokelite
           </h1>
-          <p className="text-slate-400 text-lg">A Pokémon Deckbuilder</p>
-          <p className="text-slate-500 text-sm mt-1">Inspired by Slay the Spire</p>
+          <p className="text-slate-400 text-lg">{t("A Roguelite Pokémon Journey", language)}</p>
+          <p className="text-slate-500 text-sm mt-1">{t("Inspired by Slay the Spire", language)}</p>
         </div>
 
         <div className="mb-8 text-slate-300 text-center max-w-md">
-          <p className="mb-2">Build your deck. Battle wild Pokémon. Climb the routes.</p>
-          <p className="text-sm text-slate-500">Choose your starter to begin your run!</p>
+          <p className="mb-2">{t("Build your team. Battle trainers. Conquer the Gym Leaders.", language)}</p>
+          <p className="text-sm text-slate-500">{t("Choose your starter to begin your run!", language)}</p>
         </div>
 
         <div className="flex gap-4 flex-wrap justify-center">
-          {Object.entries(STARTERS).map(([key, starter]) => (
-            <button
-              key={key}
-              onClick={() => startGame(key)}
-              className="flex flex-col items-center p-4 rounded-2xl border-2 border-slate-600 hover:border-yellow-400 bg-slate-800 hover:bg-slate-700 transition-all duration-200 hover:scale-105 w-36"
-            >
-              <img
-                src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${starter.id}.png`}
-                alt={starter.name}
-                className="w-20 h-20"
-              />
-              <span className="text-white font-bold mt-2">{starter.name}</span>
-              <div className="flex gap-1 mt-1">
-                {starter.types.map((t) => (
-                  <TypeBadge key={t} type={t} />
-                ))}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">HP: {starter.hp}</div>
-            </button>
-          ))}
+          {Object.entries(STARTERS).map(([key, starter]) => {
+            const dexEntry = POKEDEX.find(d => d.slug === key);
+            return (
+              <button
+                key={key}
+                onClick={() => startGame(key)}
+                className="flex flex-col items-center p-4 rounded-2xl border-2 border-slate-600 hover:border-yellow-400 bg-slate-800 hover:bg-slate-700 transition-all duration-200 hover:scale-105 w-36"
+              >
+                <img
+                  src={dexEntry?.sprite || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${starter.id}.png`}
+                  alt={starter.name}
+                  className="w-20 h-20"
+                />
+                <span className="text-white font-bold mt-2">{starter.name}</span>
+                <div className="flex gap-1 mt-1 flex-wrap justify-center">
+                  {starter.types.map((t) => <PokeTypeBadge key={t} type={t} language={language} />)}
+                </div>
+                <div className="text-xs text-slate-400 mt-1">Lv.5 · HP: {starter.hp}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
     );
   }
 
   if (state.screen === "map") {
-    const floorIndex = state.floor;
-    const isLastFloor = floorIndex >= 5;
-
-    const nodeTypes = [];
-    if (floorIndex < 5) {
-      const pool = [];
-      pool.push({ type: "battle", label: "Battle", emoji: "⚔️" });
-      pool.push({ type: "battle", label: "Battle", emoji: "⚔️" });
-      if (floorIndex > 0) pool.push({ type: "elite", label: "Elite", emoji: "💀" });
-      if (floorIndex > 1) pool.push({ type: "shop", label: "Shop", emoji: "🛒" });
-      if (floorIndex > 0 && floorIndex < 4) pool.push({ type: "rest", label: "Rest", emoji: "🏕️" });
-      if (floorIndex === 4) pool.push({ type: "boss", label: "BOSS", emoji: "👑" });
-      const shuffled = shuffleArray(pool);
-      nodeTypes.push(...shuffled.slice(0, 3));
-      if (floorIndex === 4) nodeTypes.push({ type: "boss", label: "BOSS", emoji: "👑" });
-    }
+    const { map, mapRow, team, floor } = state;
+    const currentRow = map[mapRow];
+    const isLastFloor = floor >= FLOOR_NAMES.length;
+    const gymLeader = GYM_LEADERS[floor];
 
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6 bg-slate-800/80 backdrop-blur rounded-xl p-4 border border-slate-700">
-            <div className="flex items-center gap-3">
-              {state.playerPokemon && (
-                <img src={spriteUrl} alt={state.playerPokemon.name} className="w-12 h-12" />
-              )}
-              <div>
-                <div className="text-white font-bold">{state.playerPokemon?.name}</div>
-                <div className="flex items-center gap-2">
-                  <HpBar current={state.playerHp} max={state.playerMaxHp} />
-                  <span className="text-xs text-slate-300">{state.playerHp}/{state.playerMaxHp}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-yellow-400">💰 {state.gold}</span>
-              <span className="text-red-400">🧪 ×{state.potions.length}</span>
-              <span className="text-slate-400">🃏 {state.deck.length}</span>
-            </div>
-          </div>
-
-          {/* Floor progress */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              {FLOOR_NAMES.map((name, i) => (
-                <div key={i} className={`text-xs text-center flex-1 ${i <= floorIndex ? "text-yellow-400" : "text-slate-600"}`}>
-                  <div className={`w-8 h-8 rounded-full mx-auto mb-1 flex items-center justify-center text-sm font-bold ${i < floorIndex ? "bg-yellow-400 text-slate-900" : i === floorIndex ? "bg-yellow-400/20 text-yellow-400 border-2 border-yellow-400" : "bg-slate-700 text-slate-500"}`}>
-                    {i < floorIndex ? "✓" : i + 1}
+      <div className="h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4">
+        <div className="max-w-4xl mx-auto w-full flex flex-col flex-1 overflow-hidden">
+          <div className="flex items-center justify-between mb-4 bg-slate-800/80 backdrop-blur rounded-xl p-3 border border-slate-700 flex-shrink-0">
+            <div className="text-white font-bold">{FLOOR_NAMES[floor] || "Unknown"}</div>
+            {team.length > 0 && (
+              <div className="flex gap-1">
+                {team.map((pkm, i) => (
+                  <div key={pkm.id} className={`text-center ${i === 0 ? "ring-2 ring-yellow-400 rounded-lg" : ""} p-1 ${pkm.hp <= 0 ? "opacity-40" : ""}`}>
+                    <img src={pkm.sprite} alt={pkm.name} className="w-8 h-8 mx-auto" />
+                    <div className="text-xs text-slate-400">{pkm.name.slice(0, 6)}</div>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <div className="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                        <div className={`h-full ${pkm.hp <= 0 ? "bg-red-800" : pkm.hp / pkm.maxHp < 0.3 ? "bg-red-500" : "bg-green-500"} rounded-full`} style={{ width: `${Math.max(0, (pkm.hp / pkm.maxHp) * 100)}%` }} />
+                      </div>
+                    </div>
                   </div>
-                  <span className="hidden sm:block">{name}</span>
-                </div>
-              ))}
-            </div>
-            <div className="h-1 bg-slate-700 rounded-full mx-4">
-              <div className="h-full bg-yellow-400 rounded-full transition-all" style={{ width: `${(floorIndex / 5) * 100}%` }} />
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Current floor info */}
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-white">{FLOOR_NAMES[floorIndex] || "Unknown Route"}</h2>
-            <p className="text-slate-400 text-sm mt-1">Choose your path</p>
+          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="text-center mb-4">
+            <h2 className="text-2xl font-bold text-white mb-1">{FLOOR_NAMES[floor] || "Route Unknown"}</h2>
+            <p className="text-slate-400 text-sm">{t("Choose your path", language)}</p>
           </div>
 
-          {/* Node choices */}
-          {!isLastFloor ? (
-            <div className="flex gap-4 justify-center flex-wrap">
-              {nodeTypes.map((node, i) => (
-                <button
-                  key={i}
-                  onClick={() => chooseNodeType(node.type)}
-                  className={`
-                    flex flex-col items-center p-6 rounded-2xl border-2 transition-all duration-200 hover:scale-105 w-36
-                    ${node.type === "boss" ? "border-red-500 bg-red-900/30 hover:bg-red-900/50" :
-                      node.type === "elite" ? "border-orange-500 bg-orange-900/30 hover:bg-orange-900/50" :
-                      node.type === "shop" ? "border-green-500 bg-green-900/30 hover:bg-green-900/50" :
-                      node.type === "rest" ? "border-blue-500 bg-blue-900/30 hover:bg-blue-900/50" :
-                      "border-slate-500 bg-slate-800 hover:bg-slate-700"}
-                  `}
-                >
-                  <span className="text-4xl mb-2">{node.emoji}</span>
-                  <span className={`font-bold ${node.type === "boss" ? "text-red-400" : node.type === "elite" ? "text-orange-400" : "text-white"}`}>
-                    {node.label}
-                  </span>
-                  {node.type === "battle" && <span className="text-xs text-slate-400 mt-1">Wild Pokémon</span>}
-                  {node.type === "elite" && <span className="text-xs text-orange-400/70 mt-1">Strong foe</span>}
-                  {node.type === "shop" && <span className="text-xs text-green-400/70 mt-1">Buy & sell</span>}
-                  {node.type === "rest" && <span className="text-xs text-blue-400/70 mt-1">Heal up</span>}
-                  {node.type === "boss" && <span className="text-xs text-red-400/70 mt-1">Legendary!</span>}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center">
-              <p className="text-slate-400 mb-4">You've completed all routes! Time for the Pokémon League!</p>
-              <button
-                onClick={() => chooseNodeType("boss")}
-                className="px-8 py-4 bg-gradient-to-r from-red-600 to-yellow-500 text-white font-bold text-xl rounded-2xl hover:scale-105 transition-all"
-              >
-                👑 Face the Champion!
-              </button>
-            </div>
-          )}
+          <div className="flex flex-col items-center gap-4 mb-8">
+            {map.map((row, rIdx) => (
+              <div key={rIdx} className="flex gap-4 justify-center">
+                {row.map((node, nIdx) => {
+                  const isCurrentRow = rIdx === mapRow;
+                  const isPastRow = rIdx < mapRow;
+                  let emoji, label, color;
+                  switch (node.type) {
+                    case "encounter": emoji = "🌿"; label = t("Wild Pokémon", language); color = "border-green-500 bg-green-900/30"; break;
+                    case "trainer": emoji = "⚔️"; label = t("Trainer", language); color = "border-orange-500 bg-orange-900/30"; break;
+                    case "grunt": emoji = "🔴"; label = t("Team Rocket", language); color = "border-red-500 bg-red-900/30"; break;
+                    case "item": emoji = "📦"; label = t("Item", language); color = "border-blue-500 bg-blue-900/30"; break;
+                    case "move-change": emoji = "🔄"; label = t("Change Move", language); color = "border-purple-500 bg-purple-900/30"; break;
+                    case "move-upgrade": emoji = "⬆️"; label = t("Upgrade Move", language); color = "border-cyan-500 bg-cyan-900/30"; break;
+                    case "pokemon-center": emoji = "💚"; label = t("Pokémon Center", language); color = "border-pink-500 bg-pink-900/30"; break;
+                    case "poke-trader": emoji = "🔄"; label = t("Poké Trader", language); color = "border-yellow-500 bg-yellow-900/30"; break;
+                    case "boss": emoji = "👑"; label = floor >= 5 ? t("Champion", language) : t("Gym Leader", language); color = "border-red-500 bg-red-900/50"; break;
+                    default: emoji = "❓"; label = "?"; color = "border-slate-500 bg-slate-800";
+                  }
+                  return (
+                    <button
+                      key={node.id}
+                      onClick={() => isCurrentRow ? selectNode(rIdx, nIdx) : null}
+                      disabled={isPastRow}
+                      className={`
+                        flex flex-col items-center p-4 rounded-2xl border-2 transition-all duration-200 w-32
+                        ${isPastRow ? "border-slate-700 bg-slate-900/50 opacity-40 cursor-not-allowed" :
+                          isCurrentRow ? `${color} hover:scale-105 cursor-pointer` :
+                          "border-slate-700 bg-slate-900/50 opacity-60 cursor-not-allowed"}
+                      `}
+                    >
+                      <span className="text-3xl mb-1">{emoji}</span>
+                      <span className="text-xs font-bold text-white">{label}</span>
+                      {node.isBoss && gymLeader && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-[10px] text-red-300">{gymLeader.name}</span>
+                          <PokeTypeBadge type={gymLeader.type} language={language} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          </div>
 
-          {/* Deck view */}
-          <div className="mt-8 bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-            <h3 className="text-white font-bold mb-3">Your Deck ({state.deck.length} cards)</h3>
-            <div className="flex flex-wrap gap-2">
-              {state.deck.map((card, i) => (
-                <Card key={card.id} card={card} small />
+          <TooltipProvider>
+          <div className="flex-shrink-0 bg-slate-800/50 rounded-xl p-4 border border-slate-700 mt-4">
+            <h3 className="text-white font-bold mb-3">{t("Your Team", language)} ({team.length}/6)</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {team.map((pkm, i) => (
+                <Tooltip key={pkm.id}>
+                  <TooltipTrigger asChild>
+                    <div className={`bg-slate-900/50 rounded-xl p-2 border ${pkm.hp <= 0 ? "border-red-900 opacity-60" : "border-slate-600"} cursor-help`}>
+                      <div className="flex items-center gap-2">
+                        <img src={pkm.sprite} alt={pkm.name} className="w-10 h-10" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-white text-sm font-bold truncate">{pkm.name} <span className="text-[10px] text-slate-500 font-normal">Lv.{pkm.level || 5}</span></div>
+                          <HpBar current={pkm.hp} max={pkm.maxHp} />
+                          <div className="text-xs text-slate-400">{Math.max(0, pkm.hp)}/{pkm.maxHp}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 mt-1 flex-wrap">
+                        {pkm.types.map(t => <PokeTypeBadge key={t} type={t} language={language} />)}
+                      </div>
+                      <div className="flex gap-1 mt-1">
+                        {i > 0 && <button onClick={(e) => { e.stopPropagation(); moveTeamMember(i, i - 1); }} className="text-xs px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300" title="Move up">↑</button>}
+                        {i < team.length - 1 && <button onClick={(e) => { e.stopPropagation(); moveTeamMember(i, i + 1); }} className="text-xs px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300" title="Move down">↓</button>}
+                        {i === 0 && <span className="text-[10px] text-yellow-500 font-bold px-1">LEAD</span>}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {pkm.moves.map(m => (
+                          <span key={m.key} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                            <span className="text-[9px] uppercase opacity-60 mr-0.5">{getTypeName(m.type, language)}</span>
+                            {getMoveName(m, language)} <span className="opacity-50">({m.power || "—"})</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center" className="max-w-xs">
+                    <div className="text-xs space-y-1">
+                      <div className="font-bold text-sm mb-1">{t("Stats", language)}</div>
+                      <div>HP: {pkm.hp}/{pkm.maxHp}</div>
+                      <div>{getStatLabel("attack", language)}: {pkm.atk}</div>
+                      <div>{getStatLabel("defense", language)}: {pkm.def}</div>
+                      <div>{getStatLabel("special-attack", language)}: {pkm.spa}</div>
+                      <div>{getStatLabel("special-defense", language)}: {pkm.spd}</div>
+                      <div>{getStatLabel("speed", language)}: {pkm.spe}</div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
               ))}
             </div>
           </div>
+          </TooltipProvider>
         </div>
       </div>
     );
   }
 
   if (state.screen === "battle") {
-    const aliveEnemies = state.enemies.filter((e) => e.currentHp > 0);
-    const currentTarget = state.targetEnemy || (aliveEnemies.length === 1 ? aliveEnemies[0]?.id : null);
+    const isWin = state.battleResult === "win";
+    const isLose = state.battleResult === "lose";
 
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-4 bg-slate-800/80 backdrop-blur rounded-xl p-3 border border-slate-700">
-            <div className="flex items-center gap-3">
-              {state.playerPokemon && (
-                <img src={spriteUrl} alt={state.playerPokemon.name} className="w-10 h-10" />
-              )}
-              <div>
-                <div className="text-white font-bold text-sm">{state.playerPokemon?.name}</div>
-                <div className="flex items-center gap-2">
-                  <HpBar current={state.playerHp} max={state.playerMaxHp} />
-                  <span className="text-xs text-slate-300">{state.playerHp}/{state.playerMaxHp}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex gap-1">
-                {Array.from({ length: MAX_ENERGY }).map((_, i) => (
-                  <div key={i} className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < state.energy ? "bg-yellow-400 text-slate-900" : "bg-slate-700 text-slate-500"}`}>
-                    ⚡
-                  </div>
-                ))}
-              </div>
-              {state.potions.length > 0 && (
-                <button onClick={usePotion} className="px-2 py-1 bg-green-700 hover:bg-green-600 text-white text-xs rounded-lg transition-colors">
-                  🧪 Heal
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Battle field */}
-          <div className="mb-4">
-            <div className="flex justify-center gap-6 flex-wrap">
-              {state.enemies.map((enemy) => {
-                const isDead = enemy.currentHp <= 0;
-                const isSelected = currentTarget === enemy.id;
-                return (
-                  <div
-                    key={enemy.id}
-                    onClick={() => { if (!isDead && state.selectedCard !== null) update({ targetEnemy: enemy.id }); }}
-                    className={`
-                      relative flex flex-col items-center p-4 rounded-2xl border-2 transition-all duration-200 w-44
-                      ${isDead ? "opacity-30 border-slate-700 bg-slate-900" :
-                        isSelected ? "border-yellow-400 bg-slate-700" :
-                        "border-slate-600 bg-slate-800 hover:border-slate-400 cursor-pointer"}
-                    `}
-                  >
-                    {/* Intent */}
-                    {!isDead && enemy.intent && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-600 rounded-full px-2 py-0.5 text-xs">
-                        {enemy.intent.card?.power > 0 ? (
-                          <span className="text-red-400">⚔️ {enemy.intent.card.name}</span>
-                        ) : (
-                          <span className="text-blue-400">✨ {enemy.intent.card?.name}</span>
-                        )}
-                      </div>
-                    )}
-
-                    <img src={getEnemySprite(enemy)} alt={enemy.name} className={`w-20 h-20 ${isDead ? "grayscale" : ""}`} />
-                    <div className="text-white font-bold text-sm mt-1">{enemy.name}</div>
-                    {enemy.isElite && <span className="text-orange-400 text-xs font-bold">ELITE</span>}
-                    {enemy.isBoss && <span className="text-red-400 text-xs font-bold">BOSS</span>}
-                    <div className="flex gap-1 mt-1">
-                      {enemy.types.map((t) => (
-                        <TypeBadge key={t} type={t} />
-                      ))}
-                    </div>
-                    <div className="w-full mt-2">
-                      <HpBar current={enemy.currentHp} max={enemy.maxHp} />
-                      <div className="text-xs text-slate-400 text-center mt-0.5">{enemy.currentHp}/{enemy.maxHp}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Battle log */}
-          <div ref={logEndRef} className="mb-4 h-24 overflow-y-auto bg-slate-900/80 rounded-xl p-3 border border-slate-700 text-xs font-mono">
-            {state.battleLog.map((msg, i) => (
-              <div key={i} className={`py-0.5 ${msg.startsWith("---") ? "text-yellow-400 font-bold mt-1" : "text-slate-400"}`}>
-                {msg}
-              </div>
-            ))}
-          </div>
-
-          {/* Selected card indicator */}
-          {state.selectedCard !== null && (
-            <div className="text-center mb-2 text-sm text-yellow-400">
-              Click an enemy to play <strong>{state.hand[state.selectedCard]?.name}</strong>
-              <button onClick={() => update({ selectedCard: null })} className="ml-2 text-slate-400 hover:text-white">[Cancel]</button>
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex flex-col">
+        <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col">
+          {state.trainerName && (
+            <div className="text-center text-yellow-400 font-bold text-lg mb-2">
+              {state.isBossBattle ? "👑 " : ""}{state.trainerName} {t("wants to battle!", language)}
             </div>
           )}
 
-          {/* Player hand */}
-          <div className="bg-slate-800/80 backdrop-blur rounded-xl p-4 border border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-400">Hand ({state.hand.length})</span>
-              <button
-                onClick={endTurn}
-                className="px-4 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold text-sm rounded-lg transition-colors"
-              >
-                End Turn ⏭️
+          <div className="flex-1 flex flex-col justify-center gap-4">
+            {activeEnemyPkm && (
+              <div className="bg-slate-800/80 rounded-xl p-4 border border-red-800">
+                <div className="flex items-center gap-3">
+                  <img src={activeEnemyPkm.sprite} alt={activeEnemyPkm.name} className="w-16 h-16" />
+                  <div className="flex-1">
+                    <div className="text-white font-bold">{activeEnemyPkm.name} <span className="text-xs text-slate-500 font-normal">Lv.{activeEnemyPkm.level || 5}</span></div>
+                    <div className="flex gap-1 mt-0.5">
+                      {activeEnemyPkm.types.map(t => <PokeTypeBadge key={t} type={t} language={language} />)}
+                    </div>
+                    <HpBar current={Math.max(0, activeEnemyPkm.hp)} max={activeEnemyPkm.maxHp} />
+                    <div className="text-xs text-slate-400">{Math.max(0, activeEnemyPkm.hp)}/{activeEnemyPkm.maxHp}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center text-3xl">⚡ {t("VS", language)} ⚡</div>
+
+            {activePlayerPkm && (
+              <div className="bg-slate-800/80 rounded-xl p-4 border border-green-800">
+                <div className="flex items-center gap-3">
+                  <img src={activePlayerPkm.sprite} alt={activePlayerPkm.name} className="w-16 h-16" />
+                  <div className="flex-1">
+                    <div className="text-white font-bold">{activePlayerPkm.name} <span className="text-xs text-slate-500 font-normal">Lv.{activePlayerPkm.level || 5}</span></div>
+                    <div className="flex gap-1 mt-0.5">
+                      {activePlayerPkm.types.map(t => <PokeTypeBadge key={t} type={t} language={language} />)}
+                    </div>
+                    <HpBar current={Math.max(0, activePlayerPkm.hp)} max={activePlayerPkm.maxHp} />
+                    <div className="text-xs text-slate-400">{Math.max(0, activePlayerPkm.hp)}/{activePlayerPkm.maxHp}</div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {activePlayerPkm.moves.map(m => (
+                    <span key={m.key} className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300 border border-slate-600">
+                      <span className="text-[10px] uppercase opacity-60 mr-1">{getTypeName(m.type, language)}</span>
+                      {getMoveName(m, language)} ({m.power})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div ref={logEndRef} className="mt-4 h-40 overflow-y-auto bg-slate-900/80 rounded-xl p-3 border border-slate-700">
+            <BubbleGroup>
+              {state.battleLog.map((msg, i) => {
+                const isTurn = msg.startsWith("---");
+                const isDmg = msg.includes(" dmg") || msg.includes("fainted") || msg.includes("enters");
+                return (
+                  <Bubble key={i} variant={isTurn ? "tinted" : "muted"} align={isDmg ? "end" : "start"}>
+                    <BubbleContent className={isTurn ? "text-yellow-400 font-bold text-center text-xs" : "text-slate-200 text-xs"}>
+                      {msg}
+                    </BubbleContent>
+                  </Bubble>
+                );
+              })}
+            </BubbleGroup>
+            {!state.battleFinished && <div className="text-slate-500 animate-pulse mt-2 text-xs">⚡ Battling...</div>}
+          </div>
+
+          {state.battleFinished && (
+            <div className="mt-4 text-center">
+              {state.battleResult === "win" ? (
+                <div>
+                  <div className="text-3xl text-green-400 font-bold mb-3">{t("Victory!", language)}</div>
+                  <button onClick={continueAfterBattle} className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition-all">
+                    {t("Continue", language)}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-3xl text-red-400 font-bold mb-3">{t("All Pokémon fainted!", language)}</div>
+                  <button onClick={continueAfterBattle} className="px-8 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-all">
+                    {t("Game Over", language)}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (state.screen === "encounter") {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
+        <div className="max-w-2xl w-full bg-slate-800 rounded-2xl p-6 border border-slate-700">
+          <h2 className="text-2xl font-bold text-green-400 text-center mb-2">🌿 {t("Wild Pokémon", language)}!</h2>
+          <p className="text-slate-400 text-center mb-6">{t("Choose a Pokémon to add to your team", language)}</p>
+          <div className="flex gap-4 justify-center flex-wrap">
+            {state.encounterChoices.map((pkm, i) => (
+              <button key={i} onClick={() => selectEncounterPokemon(i)} className="flex flex-col items-center p-4 rounded-2xl border-2 border-green-700 hover:border-green-400 bg-slate-900 hover:bg-slate-700 transition-all duration-200 hover:scale-105 w-36">
+                <img src={pkm.sprite} alt={pkm.name} className="w-16 h-16" />
+                <span className="text-white font-bold mt-2">{pkm.name}</span>
+                <div className="flex gap-1 mt-1 flex-wrap justify-center">
+                  {pkm.types.map(t => <PokeTypeBadge key={t} type={t} language={language} />)}
+                </div>
+                <div className="text-xs text-slate-400 mt-1">Lv.{pkm.level || 5} · HP: {pkm.maxHp}</div>
               </button>
-            </div>
-            <div className="flex gap-2 flex-wrap justify-center">
-              {state.hand.map((card, i) => (
-                <Card
-                  key={card.id}
-                  card={card}
-                  small={state.hand.length > 5}
-                  affordable={card.cost <= state.energy}
-                  onClick={() => {
-                    if (card.cost > state.energy) return;
-                    if (aliveEnemies.length === 1) {
-                      playCard(i, aliveEnemies[0].id);
-                    } else {
-                      update({ selectedCard: i, targetEnemy: null });
-                    }
-                  }}
-                />
-              ))}
-            </div>
-            <div className="flex justify-between text-xs text-slate-500 mt-2">
-              <span>Draw: {state.drawPile.length}</span>
-              <span>Discard: {state.discardPile.length}</span>
-            </div>
+            ))}
+          </div>
+          <div className="text-center mt-6">
+            <button onClick={skipEncounter} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">{t("Skip", language)}</button>
           </div>
         </div>
       </div>
     );
   }
 
-  if (state.screen === "reward") {
+  if (state.screen === "discard-pokemon") {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
-        <div className="max-w-lg w-full bg-slate-800 rounded-2xl p-6 border border-slate-700">
-          <h2 className="text-2xl font-bold text-yellow-400 text-center mb-2">Victory!</h2>
-          <p className="text-slate-400 text-center mb-6">Choose a card to add to your deck</p>
+        <div className="max-w-xl w-full bg-slate-800 rounded-2xl p-6 border border-slate-700">
+          <h2 className="text-2xl font-bold text-green-400 text-center mb-2">🌿 {t("Wild Pokémon", language)}!</h2>
+          <p className="text-slate-400 text-center mb-2">{t("Your team is full!", language)}</p>
+          <p className="text-slate-500 text-center text-sm mb-6">{t("Choose a Pokémon to release:", language)}</p>
+          <div className="grid grid-cols-2 gap-3">
+            {state.team.map((pkm, i) => (
+              <button key={pkm.id} onClick={() => discardPokemon(i)} className="flex items-center gap-3 p-3 rounded-xl border border-red-700/50 bg-slate-900 hover:bg-red-900/30 hover:border-red-500 transition-all">
+                <img src={pkm.sprite} alt={pkm.name} className="w-10 h-10" />
+                <div className="text-left">
+                  <div className="text-white font-bold text-sm truncate">{pkm.name}</div>
+                  <div className="text-xs text-slate-400">{getTypeName(pkm.types[0], language)} · Lv.{pkm.level || 5}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="text-center mt-6">
+            <button onClick={skipEncounter} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">{t("Skip", language)}</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-          <div className="flex gap-4 justify-center flex-wrap mb-6">
-            {state.rewardCards.map((card, i) => (
-              <div key={card.id} className="flex flex-col items-center">
-                <Card card={card} onClick={() => selectReward(card)} />
-                <div className="text-xs text-slate-400 mt-1 max-w-[120px] text-center">{card.effect}</div>
+  if (state.screen === "item") {
+    const item = state.currentItem;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
+        <div className="max-w-xl w-full bg-slate-800 rounded-2xl p-6 border border-slate-700">
+          <h2 className="text-2xl font-bold text-blue-400 text-center mb-2">📦 {t("Found an Item!", language)}</h2>
+          <p className="text-blue-300 text-center text-lg font-bold mb-1">{item?.name}</p>
+          <p className="text-slate-400 text-center mb-6">{item?.desc}</p>
+          <p className="text-slate-500 text-center text-sm mb-4">{t("Choose a Pokémon to give it to:", language)}</p>
+          <div className="grid grid-cols-2 gap-3">
+            {state.team.map((pkm, i) => (
+              <button key={pkm.id} onClick={() => applyItem(i)} className="flex items-center gap-3 p-3 rounded-xl border border-slate-600 bg-slate-900 hover:bg-slate-700 transition-all">
+                <img src={pkm.sprite} alt={pkm.name} className="w-10 h-10" />
+                <div className="text-left">
+                  <div className="text-white font-bold">{pkm.name}</div>
+                  <div className="text-xs text-slate-400">{Math.max(0, pkm.hp)}/{pkm.maxHp} {t("HP", language)}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="text-center mt-6">
+            <button onClick={() => update((prev) => advanceRow(prev))} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">{t("Skip", language)}</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.screen === "move-change") {
+    const { team, moveChangePokemonIndex } = state;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
+        <div className="max-w-xl w-full bg-slate-800 rounded-2xl p-6 border border-slate-700">
+          <h2 className="text-2xl font-bold text-purple-400 text-center mb-2">🔄 {t("Change a Move", language)}</h2>
+          {moveChangePokemonIndex < 0 ? (
+            <>
+              <p className="text-slate-400 text-center mb-4">{t("Choose a Pokémon to change a move:", language)}</p>
+              <div className="grid grid-cols-2 gap-3">
+                {team.map((pkm, i) => (
+                  <button key={pkm.id} onClick={() => selectMoveChangePokemon(i)} className="flex items-center gap-3 p-3 rounded-xl border border-slate-600 bg-slate-900 hover:bg-slate-700 transition-all">
+                    <img src={pkm.sprite} alt={pkm.name} className="w-10 h-10" />
+                    <div className="text-left">
+                      <div className="text-white font-bold">{pkm.name}</div>
+                      <div className="text-xs text-slate-400">{pkm.moves.length} {t("Moves", language)}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-slate-400 text-center mb-4">{t("Choose a move to replace:", language)}</p>
+              <div className="grid grid-cols-2 gap-3">
+                {team[moveChangePokemonIndex]?.moves.map((m, i) => (
+                  <button key={m.key} onClick={() => selectMoveChangeMove(i)} className="p-3 rounded-xl border border-slate-600 bg-slate-900 hover:bg-slate-700 transition-all">
+                    <div className="text-white font-bold">{getMoveName(m, language)}</div>
+                    <div className="text-xs text-slate-400">{getTypeName(m.type, language)} · {t("Power", language)}: {m.power}</div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="text-center mt-6">
+            {moveChangePokemonIndex >= 0 ? (
+              <button onClick={() => update((prev) => ({ ...prev, moveChangePokemonIndex: -1 }))} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">{t("Back", language)}</button>
+            ) : (
+              <button onClick={() => update((prev) => advanceRow(prev))} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">{t("Cancel", language)}</button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.screen === "move-upgrade") {
+    const { team, moveUpgradePokemonIndex } = state;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
+        <div className="max-w-xl w-full bg-slate-800 rounded-2xl p-6 border border-slate-700">
+          <h2 className="text-2xl font-bold text-cyan-400 text-center mb-2">⬆️ {t("Upgrade a Move", language)}</h2>
+          {moveUpgradePokemonIndex < 0 ? (
+            <>
+              <p className="text-slate-400 text-center mb-4">{t("Choose a Pokémon to upgrade a move:", language)}</p>
+              <div className="grid grid-cols-2 gap-3">
+                {team.map((pkm, i) => (
+                  <button key={pkm.id} onClick={() => selectMoveUpgradePokemon(i)} className="flex items-center gap-3 p-3 rounded-xl border border-slate-600 bg-slate-900 hover:bg-slate-700 transition-all">
+                    <img src={pkm.sprite} alt={pkm.name} className="w-10 h-10" />
+                    <div className="text-left">
+                      <div className="text-white font-bold">{pkm.name}</div>
+                      <div className="text-xs text-slate-400">{pkm.moves.length} {t("Moves", language)}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-slate-400 text-center mb-4">{t("Choose a move to upgrade:", language)}</p>
+              <div className="grid grid-cols-2 gap-3">
+                {team[moveUpgradePokemonIndex]?.moves.map((m, i) => (
+                  <button key={m.key} onClick={() => selectMoveUpgradeMove(i)} className="p-3 rounded-xl border border-slate-600 bg-slate-900 hover:bg-slate-700 transition-all">
+                    <div className="text-white font-bold">{getMoveName(m, language)}</div>
+                    <div className="text-xs text-slate-400">{t("Power", language)}: {m.power} → {Math.floor((m.power || 10) * 1.4)}</div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="text-center mt-6">
+            {moveUpgradePokemonIndex >= 0 ? (
+              <button onClick={() => update((prev) => ({ ...prev, moveUpgradePokemonIndex: -1 }))} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">{t("Back", language)}</button>
+            ) : (
+              <button onClick={() => update((prev) => advanceRow(prev))} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">{t("Cancel", language)}</button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.screen === "pokemon-center") {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
+        <div className="max-w-md w-full bg-slate-800 rounded-2xl p-6 border border-pink-700 text-center">
+          <span className="text-5xl">💚</span>
+          <h2 className="text-2xl font-bold text-pink-400 mt-4 mb-2">{t("Pokémon Center", language)}</h2>
+          <p className="text-slate-400 mb-6">{t("Your Pokémon have been fully healed!", language)}</p>
+          <div className="bg-slate-900/50 rounded-xl p-4 mb-6">
+            {state.team.map(pkm => (
+              <div key={pkm.id} className="flex items-center gap-3 mb-2 last:mb-0">
+                <img src={pkm.sprite} alt={pkm.name} className="w-8 h-8" />
+                <span className="text-white font-bold">{pkm.name}</span>
+                <span className="text-green-400 ml-auto">{t("HP", language)} {Math.max(0, pkm.hp)}/{pkm.maxHp}</span>
               </div>
             ))}
           </div>
-
-          <div className="text-center">
-            <button onClick={skipReward} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
-              Skip Reward
-            </button>
-          </div>
-
-          <div className="mt-4 text-center">
-            <button onClick={() => { advanceFloor(); }} className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold rounded-lg transition-colors">
-              Continue →
-            </button>
-          </div>
+          <button onClick={() => update((prev) => advanceRow(prev))} className="px-8 py-3 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl transition-all">{t("Continue", language)}</button>
         </div>
       </div>
     );
   }
 
-  if (state.screen === "rest") {
+  if (state.screen === "poke-trader") {
+    const { team } = state;
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
-        <div className="max-w-md w-full bg-slate-800 rounded-2xl p-6 border border-slate-700 text-center">
-          <span className="text-5xl">🏕️</span>
-          <h2 className="text-2xl font-bold text-blue-400 mt-4 mb-2">Rest Site</h2>
-          <p className="text-slate-400 mb-6">Take a moment to recover your strength.</p>
-
-          <div className="space-y-3">
-            <button
-              onClick={healAtRest}
-              className="w-full py-3 bg-green-700 hover:bg-green-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <span className="text-2xl">💚</span>
-              <div className="text-left">
-                <div>Rest</div>
-                <div className="text-xs font-normal text-green-200">Heal 30% HP ({Math.floor(state.playerMaxHp * 0.3)} HP)</div>
-              </div>
-            </button>
-            <button
-              onClick={() => update({ screen: "map" })}
-              className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors"
-            >
-              Skip
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (state.screen === "shop") {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-6">
-            <span className="text-5xl">🛒</span>
-            <h2 className="text-2xl font-bold text-green-400 mt-2">Poké Mart</h2>
-            <p className="text-slate-400 text-sm">Gold: 💰 {state.gold}</p>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="text-white font-bold mb-3">Cards for Sale</h3>
-            <div className="flex gap-4 flex-wrap justify-center">
-              {state.shopCards.map((card, i) => (
-                <div key={card.id} className="flex flex-col items-center">
-                  <Card
-                    card={card}
-                    affordable={state.gold >= card.price}
-                    onClick={() => buyCard(i)}
-                  />
-                  <div className="text-yellow-400 text-xs font-bold mt-1">💰 {card.price}</div>
+        <div className="max-w-xl w-full bg-slate-800 rounded-2xl p-6 border border-yellow-700">
+          <h2 className="text-2xl font-bold text-yellow-400 text-center mb-2">🔄 {t("Poké Trader", language)}</h2>
+          <p className="text-slate-400 text-center mb-4">{t("Choose a Pokémon to trade away:", language)}</p>
+          <div className="grid grid-cols-2 gap-3">
+            {team.map((pkm, i) => (
+              <button key={pkm.id} onClick={() => doTrade(i)} className="flex items-center gap-3 p-3 rounded-xl border border-slate-600 bg-slate-900 hover:bg-slate-700 transition-all">
+                <img src={pkm.sprite} alt={pkm.name} className="w-10 h-10" />
+                <div className="text-left">
+                  <div className="text-white font-bold">{pkm.name}</div>
+                  <div className="text-xs text-slate-400">{pkm.hp}/{pkm.maxHp} {t("HP", language)}</div>
                 </div>
-              ))}
-              {state.shopCards.length === 0 && <p className="text-slate-500">Sold out!</p>}
-            </div>
+              </button>
+            ))}
           </div>
-
-          <div className="mb-6 text-center">
-            <button
-              onClick={removeCard}
-              disabled={state.gold < state.shopRemovePrice || state.deck.length <= 5}
-              className={`px-6 py-3 rounded-xl font-bold transition-colors ${state.gold >= state.shopRemovePrice && state.deck.length > 5 ? "bg-red-700 hover:bg-red-600 text-white" : "bg-slate-700 text-slate-500 cursor-not-allowed"}`}
-            >
-              🗑️ Remove a Card (💰 {state.shopRemovePrice})
-            </button>
-          </div>
-
-          <div className="text-center">
-            <button onClick={() => update({ screen: "map" })} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
-              Leave Shop
-            </button>
-          </div>
-
-          <div className="mt-6 bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-            <h3 className="text-white font-bold mb-3">Your Deck ({state.deck.length} cards)</h3>
-            <div className="flex flex-wrap gap-2">
-              {state.deck.map((card) => (
-                <Card key={card.id} card={card} small />
-              ))}
-            </div>
+          <div className="text-center mt-6">
+            <button onClick={skipTrade} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">{t("Decline Trade", language)}</button>
           </div>
         </div>
       </div>
@@ -1144,18 +1587,12 @@ export default function Pokeroguelite() {
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
         <div className="max-w-md w-full bg-slate-800 rounded-2xl p-6 border border-red-800 text-center">
           <span className="text-5xl">💀</span>
-          <h2 className="text-2xl font-bold text-red-400 mt-4 mb-2">Game Over</h2>
-          <p className="text-slate-400 mb-2">Your run has ended on {FLOOR_NAMES[state.floor] || "Route " + (state.floor + 1)}.</p>
+          <h2 className="text-2xl font-bold text-red-400 mt-4 mb-2">{t("Game Over", language)}</h2>
+          <p className="text-slate-400 mb-2">{t("Your run ended on", language)} {FLOOR_NAMES[state.floor] || "Route " + (state.floor + 1)}.</p>
           <div className="text-slate-500 text-sm mb-6">
-            <p>Deck size: {state.deck.length} cards</p>
-            <p>Gold earned: {state.gold}</p>
+            <p>{t("Team size", language)}: {state.team.length} {t("Pokémon", language)}</p>
           </div>
-          <button
-            onClick={() => update({ ...INITIAL_STATE })}
-            className="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold rounded-xl transition-colors"
-          >
-            Try Again
-          </button>
+          <button onClick={() => update({ ...INITIAL_STATE, screen: "title" })} className="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold rounded-xl transition-colors">{t("Try Again", language)}</button>
         </div>
       </div>
     );
@@ -1166,32 +1603,55 @@ export default function Pokeroguelite() {
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
         <div className="max-w-md w-full bg-slate-800 rounded-2xl p-6 border border-yellow-500 text-center">
           <span className="text-5xl">🏆</span>
-          <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200 mt-4 mb-2">
-            Champion!
-          </h2>
-          <p className="text-slate-300 mb-4">You conquered the Pokémon League!</p>
+          <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200 mt-4 mb-2">{t("Champion", language)}!</h2>
+          <p className="text-slate-300 mb-4">{t("You conquered the Pokémon League!", language)}</p>
           <div className="bg-slate-900/50 rounded-xl p-4 mb-6 text-sm">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              {state.playerPokemon && (
-                <img src={spriteUrl} alt={state.playerPokemon.name} className="w-16 h-16" />
-              )}
-              <div className="text-left">
-                <div className="text-white font-bold">{state.playerPokemon?.name}</div>
-                <div className="text-green-400">HP: {state.playerHp}/{state.playerMaxHp}</div>
-              </div>
-            </div>
-            <div className="text-slate-400 mt-2 space-y-1">
-              <p>Final Deck: {state.deck.length} cards</p>
-              <p>Gold Remaining: 💰 {state.gold}</p>
-              <p>Floors Cleared: {state.floor + 1}</p>
+            <div className="text-slate-400 space-y-1">
+              <p>{t("Final Team", language)}: {state.team.length} {t("Pokémon", language)}</p>
+              <p>{t("Floors Cleared", language)}: {state.floor + 1}</p>
             </div>
           </div>
-          <button
-            onClick={() => update({ ...INITIAL_STATE })}
-            className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-slate-900 font-bold rounded-xl transition-all"
-          >
-            Play Again
-          </button>
+          <button onClick={() => update({ ...INITIAL_STATE, screen: "title" })} className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-slate-900 font-bold rounded-xl transition-all">{t("Play Again", language)}</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.screen === "evolution-choice") {
+    const evoPkm = state.team[state.evolutionChoicePokemonIndex];
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex items-center justify-center">
+        <div className="max-w-2xl w-full bg-slate-800 rounded-2xl p-6 border border-purple-700 text-center">
+          <span className="text-5xl">✨</span>
+          <h2 className="text-2xl font-bold text-purple-400 mt-4 mb-2">Evolution!</h2>
+          {evoPkm && (
+            <div className="mb-6">
+              <img src={evoPkm.sprite} alt={evoPkm.name} className="w-20 h-20 mx-auto" />
+              <p className="text-white text-lg font-bold mt-2">{evoPkm.name}</p>
+              <p className="text-slate-400 text-sm">Lv.{evoPkm.level || 5}</p>
+              <p className="text-yellow-300 text-sm mt-2">Choose an evolution:</p>
+            </div>
+          )}
+          <div className="flex gap-4 justify-center flex-wrap">
+            {state.evolutionChoiceOptions.map((opt) => (
+              <button
+                key={opt.slug}
+                onClick={() => selectEvolution(opt.slug)}
+                className="flex flex-col items-center p-4 rounded-2xl border-2 border-purple-600 hover:border-purple-400 bg-slate-900 hover:bg-slate-700 transition-all duration-200 hover:scale-105 w-32"
+              >
+                <img src={opt.sprite} alt={opt.name} className="w-16 h-16" />
+                <span className="text-white font-bold mt-2 text-sm">{opt.name}</span>
+                <div className="flex gap-1 mt-1 flex-wrap justify-center">
+                  {opt.types.map(t => <PokeTypeBadge key={t} type={t} language={language} />)}
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-6">
+            <button onClick={dismissEvolution} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
+              Skip Evolution
+            </button>
+          </div>
         </div>
       </div>
     );
