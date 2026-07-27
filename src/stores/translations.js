@@ -249,6 +249,10 @@ const ui = {
     en: "Weight", es: "Peso", fr: "Poids", de: "Gewicht", it: "Peso",
     ja: "重さ", ko: "몸무게", "zh-hans": "体重", "zh-hant": "體重",
   },
+  "Evolution (header)": {
+    en: "Evolution", es: "Evolución", fr: "Évolution", de: "Entwicklung", it: "Evoluzione",
+    ja: "進化", ko: "진화", "zh-hans": "进化", "zh-hant": "進化",
+  },
   "Color (header)": {
     en: "Color", es: "Color", fr: "Couleur", de: "Farbe", it: "Colore",
     ja: "色", ko: "색", "zh-hans": "颜色", "zh-hant": "顏色",

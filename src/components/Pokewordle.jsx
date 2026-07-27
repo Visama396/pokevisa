@@ -369,10 +369,11 @@ export default function Pokewordle() {
 
       {guesses.length > 0 && (
         <div className="overflow-x-auto">
-          <div className="min-w-[640px]">
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 px-1">
+          <div className="min-w-[720px]">
+            <div className="grid grid-cols-8 gap-2 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 px-1">
               <div>{t("Pokémon (header)", language)}</div>
               <div>{t("Gen (header)", language)}</div>
+              <div>{t("Evolution (header)", language)}</div>
               <div>{t("Types (header)", language)}</div>
               <div>{t("Abilities (header)", language)}</div>
               <div>{t("Height (header)", language)}</div>

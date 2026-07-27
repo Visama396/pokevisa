@@ -1,6 +1,7 @@
 import Cell from "./Cell";
 import NumberCell from "./NumberCell";
 import GenerationCell from "./GenerationCell";
+import EvolutionCell from "./EvolutionCell";
 import PokeTypeBadge from "./PokeTypeBadge";
 import { t } from "../stores/translations";
 import {
@@ -21,12 +22,18 @@ export default function PokedleGuess({ todayPokemon, pokemon, abilities, languag
   const todayAbilityNames = todayPokemon.abilities.map((a) => a.name);
 
   return (
-    <div className="grid grid-cols-7 gap-2 items-stretch rounded-lg bg-slate-800/40 p-2 border border-slate-700/50">
+    <div className="grid grid-cols-8 gap-2 items-stretch rounded-lg bg-slate-800/40 p-2 border border-slate-700/50">
       <div className="flex justify-center items-center h-full">
         <img src={pokemon.sprite} alt="" className="size-14 object-contain" />
       </div>
 
       <GenerationCell value={pokemon.generation} target={todayPokemon.generation} />
+
+      <EvolutionCell
+        value={pokemon.evolution.stage}
+        target={todayPokemon.evolution.stage}
+        language={language}
+      />
 
       <Cell
         correct={
