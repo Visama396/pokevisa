@@ -12,7 +12,7 @@ const TILE_COLORS = {
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 
-function TileContent({ tile, enemy, treasure, isPlayer, isOtherPlayer, otherPlayerName, playerSpriteId, otherSpriteId }) {
+function TileContent({ tile, enemy, treasure, gold, isPlayer, isOtherPlayer, otherPlayerName, playerSpriteId, otherSpriteId }) {
   if (isPlayer) {
     return (
       <img
@@ -46,6 +46,9 @@ function TileContent({ tile, enemy, treasure, isPlayer, isOtherPlayer, otherPlay
   if (treasure && !treasure.opened) {
     return <span className="text-sm">📦</span>;
   }
+  if (gold && !gold.collected) {
+    return <span className="text-sm">💰</span>;
+  }
   if (tile === TILE.STAIRS) {
     return <span className="text-sm">🔽</span>;
   }
@@ -69,7 +72,7 @@ export default function DungeonMap({
 
   if (!dungeon) return null;
 
-  const { tiles, enemies, treasures, width, height } = dungeon;
+  const { tiles, enemies, treasures, gold, width, height } = dungeon;
 
   const viewRadius = 7;
   const viewMinX = Math.max(0, playerX - viewRadius);
@@ -95,6 +98,13 @@ export default function DungeonMap({
   const treasureMap = {};
   for (const t of treasures) {
     treasureMap[`${t.x},${t.y}`] = t;
+  }
+
+  const goldMap = {};
+  if (gold) {
+    for (const g of gold) {
+      goldMap[`${g.x},${g.y}`] = g;
+    }
   }
 
   function handleTileClick(x, y) {
@@ -124,6 +134,7 @@ export default function DungeonMap({
             const otherInfo = otherPlayerMap[key];
             const enemy = enemyMap[key];
             const treasure = treasureMap[key];
+            const goldCoin = goldMap[key];
 
             let bgClass = "bg-slate-900";
             if (isVisible) {
@@ -150,6 +161,7 @@ export default function DungeonMap({
                     tile={tile}
                     enemy={isVisible ? enemy : null}
                     treasure={isVisible ? treasure : null}
+                    gold={isVisible ? goldCoin : null}
                     isPlayer={isPlayer}
                     isOtherPlayer={!!otherInfo}
                     otherPlayerName={otherInfo?.name}

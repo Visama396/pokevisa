@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getLanguage, subscribe } from "../stores/language";
 import { t, getTypeName } from "../stores/translations";
 import { supabase } from "../lib/supabase";
-import { generateDungeon, isWalkable, TILE } from "../lib/dungeon";
-import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType } from "../lib/moves";
-import { addTeamMember, removeTeamMember, updateTeamMember, getTeam, saveDungeonProgress, deleteSavedDungeon } from "../lib/auth";
+import { generateDungeon, isWalkable, moveEnemyToward, TILE } from "../lib/dungeon";
+import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesSpeed, calcExpGain, checkLevelUp } from "../lib/moves";
+import { addTeamMember, removeTeamMember, updateTeamMember, getTeam, saveProfile, saveDungeonProgress, deleteSavedDungeon } from "../lib/auth";
 import LanguageSelector from "./LanguageSelector";
 import DungeonMap from "./DungeonMap";
 import DungeonBattle from "./DungeonBattle";
@@ -24,6 +24,11 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
   const [allReady, setAllReady] = useState(false);
   const [error, setError] = useState("");
+  const [goldCount, setGoldCount] = useState(0);
+  const [enemiesMoved, setEnemiesMoved] = useState(true);
+  const [floorNum, setFloorNum] = useState(1);
+  const [showStairsChoice, setShowStairsChoice] = useState(false);
+  const [showSafeExit, setShowSafeExit] = useState(false);
   const channelRef = useRef(null);
   const stepCountRef = useRef(0);
 
@@ -255,10 +260,43 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     };
   }, [roomId, playerId, loadDungeonFromDb]);
 
+  // Move all enemies 1 step toward player
+  const moveEnemies = useCallback(async () => {
+    if (!dungeon || !myPlayer) return;
+
+    const px = myPlayer.position_x;
+    const py = myPlayer.position_y;
+    const occupied = new Set();
+    occupied.add(`${px},${py}`);
+    for (const e of dungeon.enemies) {
+      occupied.add(`${e.x},${e.y}`);
+    }
+
+    const newEnemies = dungeon.enemies.map((e) => {
+      const dist = Math.abs(e.x - px) + Math.abs(e.y - py);
+      if (dist > 8) return e;
+      const pos = moveEnemyToward(dungeon.tiles, e.x, e.y, px, py, occupied);
+      if (pos) {
+        occupied.delete(`${e.x},${e.y}`);
+        occupied.add(`${pos.x},${pos.y}`);
+        return { ...e, x: pos.x, y: pos.y };
+      }
+      return e;
+    });
+
+    setDungeon((d) => ({ ...d, enemies: newEnemies }));
+    await supabase
+      .from("dungeon_state")
+      .update({ enemies: newEnemies })
+      .eq("room_id", roomId);
+
+    setEnemiesMoved(true);
+  }, [dungeon, myPlayer, roomId]);
+
   // Handle player movement
   const handleMove = useCallback(
     async (x, y) => {
-      if (!dungeon || inBattle || !myPlayer) return;
+      if (!dungeon || inBattle || !myPlayer || !enemiesMoved) return;
       if (!isWalkable(dungeon.tiles, x, y)) return;
 
       // Update position locally
@@ -318,6 +356,32 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         });
       }
 
+      // Enemies take their turn
+      setEnemiesMoved(false);
+      setTimeout(() => moveEnemies(), 300);
+
+      // Check for gold
+      const goldItem = dungeon.gold?.find(
+        (g) => g.x === x && g.y === y && !g.collected
+      );
+      if (goldItem) {
+        setGoldCount((prev) => prev + goldItem.amount);
+        setDungeon((d) => ({
+          ...d,
+          gold: d.gold.map((g) =>
+            g.x === x && g.y === y ? { ...g, collected: true } : g
+          ),
+        }));
+        await supabase
+          .from("dungeon_state")
+          .update({
+            gold: dungeon.gold.map((g) =>
+              g.x === x && g.y === y ? { ...g, collected: true } : g
+            ),
+          })
+          .eq("room_id", roomId);
+      }
+
       // Check for enemy encounter
       const enemy = dungeon.enemies.find((e) => e.x === x && e.y === y);
       if (enemy) {
@@ -349,10 +413,10 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
       // Check for stairs
       if (dungeon.tiles[y]?.[x] === TILE.STAIRS) {
-        setBattleResult({ message: "You found the exit! Floor cleared!" });
+        setShowStairsChoice(true);
       }
     },
-    [dungeon, inBattle, myPlayer, playerId, roomId]
+    [dungeon, inBattle, myPlayer, playerId, roomId, enemiesMoved, moveEnemies]
   );
 
   // Handle battle end
@@ -361,20 +425,46 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       setBattleResult(result);
 
       // Sync active Pokémon HP from battle
-      if (team[0]) {
+      if (team[activeTeamIndex]) {
         const newHp = result.playerHp || 0;
         setTeam((prev) => {
           const updated = [...prev];
-          updated[0] = { ...updated[0], hp: newHp };
+          updated[activeTeamIndex] = { ...updated[activeTeamIndex], hp: newHp };
           return updated;
         });
         setMyPlayer((prev) => prev ? { ...prev, hp: newHp } : prev);
-        if (team[0].id) {
-          await updateTeamMember(team[0].id, { hp: newHp });
+        if (team[activeTeamIndex].id) {
+          await updateTeamMember(team[activeTeamIndex].id, { hp: newHp });
         }
       }
 
       if (result.result === "won") {
+        // Gain EXP
+        if (inBattle?.type === "enemy" && team[activeTeamIndex]) {
+          const expGain = calcExpGain(inBattle.data.level);
+          const pkm = team[activeTeamIndex];
+          const newExp = (pkm.exp || 0) + expGain;
+          const leveledUp = checkLevelUp(pkm.level || 5, newExp);
+          let newLevel = pkm.level || 5;
+          let newMaxHp = pkm.maxHp;
+          if (leveledUp) {
+            newLevel = leveledUp;
+            newMaxHp = newMaxHp + 3;
+          }
+          const updatedPkm = { ...pkm, exp: newExp, level: newLevel, maxHp: newMaxHp };
+          setTeam((prev) => {
+            const updated = [...prev];
+            updated[activeTeamIndex] = updatedPkm;
+            return updated;
+          });
+          if (pkm.id) {
+            await updateTeamMember(pkm.id, { level: newLevel, maxHp: newMaxHp, exp: newExp });
+          }
+          if (leveledUp) {
+            setMyPlayer((prev) => prev ? { ...prev, level: newLevel } : prev);
+          }
+        }
+
         // Remove enemy from dungeon
         if (inBattle?.type === "enemy") {
           const newEnemies = dungeon.enemies.filter(
@@ -495,6 +585,101 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const handleCaptureDecline = useCallback(() => {
     setCaptureAttempt(null);
   }, []);
+
+  // Handle stairs: leave safely
+  const handleLeaveSafely = useCallback(async () => {
+    setShowStairsChoice(false);
+    setShowSafeExit(true);
+  }, []);
+
+  // Handle stairs: descend to next floor
+  const handleDescend = useCallback(async () => {
+    setShowStairsChoice(false);
+    const nextFloor = floorNum + 1;
+    setFloorNum(nextFloor);
+    const newSeed = Date.now();
+    const gen = generateDungeon(20, 15, newSeed);
+
+    // Heal active Pokémon partially on descend
+    setTeam((prev) => {
+      return prev.map((p, i) => {
+        if (i === activeTeamIndex) {
+          const healAmount = Math.floor(p.maxHp * 0.3);
+          return { ...p, hp: Math.min(p.maxHp, p.hp + healAmount) };
+        }
+        return p;
+      });
+    });
+
+    setDungeon(gen);
+    setVisitedTiles(new Set());
+    setEnemiesMoved(true);
+    stepCountRef.current = 0;
+
+    // Update DB
+    await supabase
+      .from("dungeon_state")
+      .update({
+        width: gen.width,
+        height: gen.height,
+        tiles: gen.tiles,
+        enemies: gen.enemies,
+        treasures: gen.treasures,
+        gold: gen.gold,
+      })
+      .eq("room_id", roomId);
+
+    // Move player to spawn
+    setMyPlayer((p) => ({ ...p, position_x: gen.spawnX, position_y: gen.spawnY }));
+    await supabase
+      .from("room_players")
+      .update({ position_x: gen.spawnX, position_y: gen.spawnY })
+      .eq("player_id", playerId)
+      .eq("room_id", roomId);
+
+    // Update room floor
+    await supabase.from("rooms").update({ floor: nextFloor }).eq("id", roomId);
+  }, [floorNum, roomId, playerId, activeTeamIndex]);
+
+  // Confirm safe exit — save to account and leave
+  const handleConfirmExit = useCallback(async () => {
+    // Save gold + team to account profile
+    const profile = await (await import("../lib/auth")).getProfile(accountId);
+    const existingGold = profile?.inventory?.gold || 0;
+    const existingItems = profile?.inventory?.items || [];
+    const existingStored = profile?.stored_pokemon || [];
+
+    // Collect any captured Pokémon beyond the active one into stored
+    const activePkm = team[activeTeamIndex];
+    const extraPkm = team.filter((_, i) => i !== activeTeamIndex && p.id).map((p) => ({
+      pokemon_id: p.pokemonId,
+      nickname: p.nickname,
+      level: p.level,
+      moves: p.moves,
+    }));
+
+    await saveProfile(accountId, {
+      inventory: {
+        gold: existingGold + goldCount,
+        items: existingItems,
+      },
+      stored_pokemon: [...existingStored, ...extraPkm],
+    });
+
+    // Heal active Pokémon to full
+    if (activePkm?.id) {
+      await updateTeamMember(activePkm.id, { hp: activePkm.maxHp });
+    }
+
+    setShowSafeExit(false);
+    if (onLeave) onLeave();
+
+    await supabase
+      .from("room_players")
+      .delete()
+      .eq("player_id", playerId)
+      .eq("room_id", roomId);
+  }, [accountId, goldCount, team, activeTeamIndex, playerId, roomId, onLeave]);
 
   if (!room) {
     return (
@@ -649,7 +834,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               otherPlayers={otherPlayers}
               visitedTiles={visitedTiles}
               onMove={handleMove}
-              disabled={!!inBattle}
+              disabled={!!inBattle || !enemiesMoved}
             />
           ) : (
             <div className="text-center text-slate-400 py-10">
@@ -718,6 +903,18 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               ))}
             </div>
           )}
+
+          {/* Floor & Gold */}
+          <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-3 space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-400">{t("Floor", language)}</span>
+              <span className="text-slate-200 font-semibold">{floorNum}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-400">💰 {t("Gold", language)}</span>
+              <span className="text-yellow-400 font-semibold">{goldCount}</span>
+            </div>
+          </div>
 
           {/* Controls hint */}
           <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-3">

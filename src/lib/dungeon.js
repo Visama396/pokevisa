@@ -11,6 +11,7 @@ export const TILE = {
   ENEMY: 3,
   TREASURE: 4,
   PLAYER: 5,
+  GOLD: 6,
 };
 
 // Seeded random number generator (mulberry32)
@@ -166,6 +167,23 @@ export function generateDungeon(width = 20, height = 15, seed = Date.now()) {
     opened: false,
   }));
 
+  // Place gold coins
+  const usedForGold = new Set([
+    ...enemyPositions.map((p) => `${p.x},${p.y}`),
+    ...treasurePositions.map((p) => `${p.x},${p.y}`),
+  ]);
+  const availableForGold = floorTiles.filter(
+    (p) => !usedForGold.has(`${p.x},${p.y}`)
+  );
+  const goldCount = Math.min(availableForGold.length, 3 + Math.floor(rng() * 4));
+  const goldPositions = shuffleWithRNG(availableForGold, rng).slice(0, goldCount);
+  const gold = goldPositions.map((pos) => ({
+    x: pos.x,
+    y: pos.y,
+    amount: 5 + Math.floor(rng() * 21),
+    collected: false,
+  }));
+
   // Spawn position (center of first room)
   const firstRoom = rooms[0];
   const spawnX = Math.floor(firstRoom.x + firstRoom.w / 2);
@@ -178,6 +196,7 @@ export function generateDungeon(width = 20, height = 15, seed = Date.now()) {
     rooms,
     enemies,
     treasures,
+    gold,
     spawnX,
     spawnY,
     stairsX,
@@ -222,4 +241,33 @@ export function getVisibleTiles(tiles, px, py, range = 5) {
 export function isWalkable(tiles, x, y) {
   if (y < 0 || y >= tiles.length || x < 0 || x >= tiles[0].length) return false;
   return tiles[y][x] !== TILE.WALL;
+}
+
+// Move enemy 1 step toward target (simple greedy chase)
+export function moveEnemyToward(tiles, ex, ey, tx, ty, occupiedPositions) {
+  const dirs = [
+    { dx: 0, dy: -1 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 },
+  ];
+
+  // Sort dirs by distance to target
+  dirs.sort((a, b) => {
+    const dxa = ex + a.dx, dya = ey + a.dy;
+    const dxb = ex + b.dx, dyb = ey + b.dy;
+    const da = Math.abs(dxa - tx) + Math.abs(dya - ty);
+    const db = Math.abs(dxb - tx) + Math.abs(dyb - ty);
+    return da - db;
+  });
+
+  for (const { dx, dy } of dirs) {
+    const nx = ex + dx;
+    const ny = ey + dy;
+    const key = `${nx},${ny}`;
+    if (isWalkable(tiles, nx, ny) && !occupiedPositions.has(key)) {
+      return { x: nx, y: ny };
+    }
+  }
+  return null; // stuck
 }
