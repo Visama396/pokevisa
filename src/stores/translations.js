@@ -572,6 +572,96 @@ const ui = {
     en: "Choose a Pokémon to release:", es: "Elige un Pokémon para liberar:", fr: "Choisissez un Pokémon à relâcher:", de: "Wähle ein Pokémon zum Freilassen:", it: "Scegli un Pokémon da rilasciare:",
     ja: "離すポケモンを選んでください：", ko: "놓아줄 포켓몬을 선택하세요:", "zh-hans": "选择要放生的宝可梦：", "zh-hant": "選擇要放生的寶可夢：",
   },
+
+  // Stats Battle
+  "Stats Battle": {
+    en: "Stats Battle", es: "Batalla de Stats", fr: "Bataille de Stats", de: "Stat-Kampf", it: "Battaglia Stat",
+    ja: "ステータスバトル", ko: "스탯 배틀", "zh-hans": "属性对战", "zh-hant": "屬性對戰",
+  },
+  "Which Pokémon has the highest": {
+    en: "Which Pokémon has the highest", es: "¿Quién tiene más", fr: "Quel Pokémon a le plus haut", de: "Welches Pokémon hat den höchsten", it: "Quale Pokémon ha l'",
+    ja: "どのポケモンが最も", ko: "어떤 포켓몬이 더 높은", "zh-hans": "哪只宝可梦的", "zh-hant": "哪隻寶可夢的",
+  },
+  "Score": {
+    en: "Score", es: "Puntos", fr: "Score", de: "Punkte", it: "Punteggio",
+    ja: "スコア", ko: "점수", "zh-hans": "得分", "zh-hant": "得分",
+  },
+  "Round": {
+    en: "Round", es: "Ronda", fr: "Tour", de: "Runde", it: "Turno",
+    ja: "ラウンド", ko: "라운드", "zh-hans": "回合", "zh-hant": "回合",
+  },
+  "Correct!": {
+    en: "Correct!", es: "¡Correcto!", fr: "Correct !", de: "Richtig!", it: "Corretto!",
+    ja: "正解！", ko: "정답!", "zh-hans": "正确！", "zh-hant": "正確！",
+  },
+  "Wrong!": {
+    en: "Wrong!", es: "¡Incorrecto!", fr: "Faux !", de: "Falsch!", it: "Sbagliato!",
+    ja: "不正解！", ko: "오답!", "zh-hans": "错误！", "zh-hant": "錯誤！",
+  },
+  "Play": {
+    en: "Play", es: "Jugar", fr: "Jouer", de: "Spielen", it: "Gioca",
+    ja: "プレイ", ko: "플레이", "zh-hans": "开始", "zh-hant": "開始",
+  },
+  "Play Again": {
+    en: "Play Again", es: "Jugar de nuevo", fr: "Rejouer", de: "Nochmal spielen", it: "Gioca ancora",
+    ja: "もう一度プレイ", ko: "다시 플레이", "zh-hans": "再玩一次", "zh-hant": "再玩一次",
+  },
+  "Total Score": {
+    en: "Total Score", es: "Puntuación Total", fr: "Score Total", de: "Gesamtpunktzahl", it: "Punteggio Totale",
+    ja: "合計スコア", ko: "총 점수", "zh-hans": "总分", "zh-hant": "總分",
+  },
+  "Best Streak": {
+    en: "Best Streak", es: "Mejor Racha", fr: "Meilleure Série", de: "Beste Serie", it: "Miglior Serie",
+    ja: "最高連勝", ko: "최고 연승", "zh-hans": "最佳连胜", "zh-hant": "最佳連勝",
+  },
+  "or": {
+    en: "or", es: "o", fr: "ou", de: "oder", it: "o",
+    ja: "か", ko: "또는", "zh-hans": "或", "zh-hant": "或",
+  },
+  "statsbattle-desc": {
+    en: "You're given a question, and two Pokémon to choose from. Guess which wins.",
+    es: "Recibes una pregunta y dos Pokémon para elegir. Adivina cuál gana.",
+    fr: "Vous recevez une question et deux Pokémon parmi lesquels choisir. Devinez lequel gagne.",
+    de: "Du bekommst eine Frage und zwei Pokémon zur Auswahl. Errate, welches gewinnt.",
+    it: "Ricevi una domanda e due Pokémon tra cui scegliere. Indovina chi vince.",
+    ja: "質問と2体のポケモンが表示される。勝つほうを当てよう！",
+    ko: "질문과 선택할 포켓몬 2마리가 주어진다. 누가 이길지 맞춰보세요!",
+    "zh-hans": "给出一个问题和两只宝可梦，猜猜谁赢。",
+    "zh-hant": "給出一個問題和兩隻寶可夢，猜猜誰贏。",
+  },
+  "statsbattle-rule1": {
+    en: "⚔️ Two Pokémon appear. Pick the one you think wins the stat.",
+    es: "⚔️ Aparecen dos Pokémon. Elige al que crees que gana la estadística.",
+    fr: "⚔️ Deux Pokémon apparaissent. Choisissez celui que vous pensez gagner.",
+    de: "⚔️ Zwei Pokémon erscheinen. Wähle das, von dem du denkst, dass es die Statistik gewinnt.",
+    it: "⚔️ Appaiono due Pokémon. Scegli quello che pensi vinca la stat.",
+    ja: "⚔️ 2体のポケモンが登場。勝つほうを選ぼう！",
+    ko: "⚔️ 포켓몬 2마리가 나타난다. 이길 것 같은 쪽을 고르세요.",
+    "zh-hans": "⚔️ 两只宝可梦出现，选出你认为赢的那只。",
+    "zh-hant": "⚔️ 兩隻寶可夢出現，選出你認為贏的那隻。",
+  },
+  "statsbattle-rule2": {
+    en: "🏆 The winner stays as champion for the next round!",
+    es: "🏆 ¡El ganador se queda como campeón para la siguiente ronda!",
+    fr: "🏆 Le gagnant reste champion pour le prochain tour !",
+    de: "🏆 Der Gewinner bleibt Champion für die nächste Runde!",
+    it: "🏆 Il vincitore resta campione per il prossimo turno!",
+    ja: "🏆 勝者は次のラウンドのチャンピオンとして残る！",
+    ko: "🏆 승자는 다음 라운드의 챔피언으로 남습니다!",
+    "zh-hans": "🏆 赢家作为冠军留在下一轮！",
+    "zh-hant": "🏆 贏家作為冠軍留在下一輪！",
+  },
+  "statsbattle-rule3": {
+    en: "💀 One wrong answer and it's game over.",
+    es: "💀 Una respuesta incorrecta y se acabó el juego.",
+    fr: "💀 Une mauvaise réponse et c'est terminé.",
+    de: "💀 Eine falsche Antwort und das Spiel ist vorbei.",
+    it: "💀 Una risposta sbagliata e la partita è finita.",
+    ja: "💀 間違えるとゲームオーバー！",
+    ko: "💀 한 번 틀리면 게임 오버!",
+    "zh-hans": "💀 答错一次就游戏结束。",
+    "zh-hant": "💀 答錯一次就遊戲結束。",
+  },
 };
 
 export function t(key, language) {
