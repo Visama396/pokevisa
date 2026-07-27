@@ -24,7 +24,7 @@ export default function PokedleGuess({ todayPokemon, pokemon, abilities, languag
   return (
     <div className="grid grid-cols-8 gap-2 items-stretch rounded-lg bg-slate-800/40 p-2 border border-slate-700/50">
       <div className="flex justify-center items-center h-full">
-        <img src={pokemon.sprite} alt="" className="size-14 object-contain" />
+        <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`} alt="" className="size-14 object-contain" />
       </div>
 
       <GenerationCell value={pokemon.generation} target={todayPokemon.generation} />

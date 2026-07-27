@@ -38,6 +38,10 @@ const bubbleVariants = cva(
           "*:data-[slot=bubble-content]:bg-slate-800 *:data-[slot=bubble-content]:text-slate-200 *:data-[slot=bubble-content]:border *:data-[slot=bubble-content]:border-slate-700 [&>[data-slot=bubble-content]:is(button,a):hover]:bg-slate-700",
         "pokelite-turn":
           "*:data-[slot=bubble-content]:bg-slate-800/90 *:data-[slot=bubble-content]:text-yellow-400 *:data-[slot=bubble-content]:border *:data-[slot=bubble-content]:border-yellow-500/40 *:data-[slot=bubble-content]:font-bold *:data-[slot=bubble-content]:text-center",
+        "dungeon-enemy":
+          "*:data-[slot=bubble-content]:bg-red-950/60 *:data-[slot=bubble-content]:text-red-200 *:data-[slot=bubble-content]:border *:data-[slot=bubble-content]:border-red-800/40",
+        "dungeon-player":
+          "*:data-[slot=bubble-content]:bg-blue-950/60 *:data-[slot=bubble-content]:text-blue-200 *:data-[slot=bubble-content]:border *:data-[slot=bubble-content]:border-blue-800/40",
       },
     },
     defaultVariants: {

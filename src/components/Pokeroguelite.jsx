@@ -273,7 +273,7 @@ function createPokemon(dexEntry, level = 5) {
     spa: calcStat(baseSpa, level),
     spd: calcStat(baseSpd, level),
     spe: calcStat(baseSpe, level),
-    sprite: dexEntry.sprite,
+    sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dexEntry.id}.png`,
     moves: [getLevelUpMove(dexEntry)].filter(Boolean),
     fainted: false,
   };
@@ -314,7 +314,7 @@ function initBattle(prev, enemyTeam, isBoss = false) {
     battleEnemyTeam: eTeam,
     battleActivePlayer: 0,
     battleActiveEnemy: 0,
-    battleLog: [`A wild battle begins!`],
+    battleLog: [{ text: `A wild battle begins!`, side: "enemy" }],
     battleFinished: false,
     battleResult: null,
     battleTurn: 1,
@@ -326,7 +326,7 @@ function initBattle(prev, enemyTeam, isBoss = false) {
 function executeAttack(attacker, defender, log, side, language) {
   const validMoves = attacker.moves.filter(m => m.power && m.power > 0);
   if (validMoves.length === 0) {
-    log.push(`${getPokemonName(attacker, language)} ${t("has no moves!", language)}`);
+    log.push({ text: `${getPokemonName(attacker, language)} ${t("has no moves!", language)}`, side });
     return;
   }
   const move = validMoves[Math.floor(Math.random() * validMoves.length)];
@@ -342,7 +342,7 @@ function executeAttack(attacker, defender, log, side, language) {
   else if (effectiveness === 0) effText = ` ${t("No effect!", language)}`;
 
   const moveName = getMoveName(move, language);
-  log.push(`${getPokemonName(attacker, language)} ${t("used", language)} ${moveName}! ${dmg} ${t("dmg", language)}${effText}`);
+  log.push({ text: `${getPokemonName(attacker, language)} ${t("used", language)} ${moveName}! ${dmg} ${t("dmg", language)}${effText}`, side });
 }
 
 function findNextPokemon(team, currentIdx) {
@@ -460,18 +460,18 @@ export default function Pokeroguelite() {
     }
 
     const turnNum = prev.battleTurn;
-    log.push(`--- ${t("Turn", language)} ${turnNum} ---`);
+    log.push({ text: `--- ${t("Turn", language)} ${turnNum} ---`, side: null });
 
     const playerFirst = playerPkm.spe >= enemyPkm.spe;
 
     if (playerFirst) {
       executeAttack(playerPkm, enemyPkm, log, "player", language);
       if (enemyPkm.hp <= 0) {
-        log.push(`${getPokemonName(enemyPkm, language)} ${t("fainted!", language)}`);
+        log.push({ text: `${getPokemonName(enemyPkm, language)} ${t("fainted!", language)}`, side: "player" });
         const nextE = findNextPokemon(eTeam, eIdx);
         if (nextE !== null) {
           eIdx = nextE;
-          log.push(`${getPokemonName(eTeam[eIdx], language)} ${t("enters!", language)}`);
+          log.push({ text: `${getPokemonName(eTeam[eIdx], language)} ${t("enters!", language)}`, side: "enemy" });
         } else {
           return {
             ...prev,
@@ -488,12 +488,12 @@ export default function Pokeroguelite() {
       } else {
         executeAttack(enemyPkm, playerPkm, log, "enemy", language);
         if (playerPkm.hp <= 0) {
-          log.push(`${getPokemonName(playerPkm, language)} ${t("fainted!", language)}`);
+          log.push({ text: `${getPokemonName(playerPkm, language)} ${t("fainted!", language)}`, side: "enemy" });
           playerPkm.fainted = true;
           const nextP = findNextPokemon(pTeam, pIdx);
           if (nextP !== null) {
             pIdx = nextP;
-            log.push(`${getPokemonName(pTeam[pIdx], language)} ${t("enters!", language)}`);
+            log.push({ text: `${getPokemonName(pTeam[pIdx], language)} ${t("enters!", language)}`, side: "player" });
           } else {
             return {
               ...prev,
@@ -512,12 +512,12 @@ export default function Pokeroguelite() {
     } else {
       executeAttack(enemyPkm, playerPkm, log, "enemy", language);
       if (playerPkm.hp <= 0) {
-        log.push(`${getPokemonName(playerPkm, language)} ${t("fainted!", language)}`);
+        log.push({ text: `${getPokemonName(playerPkm, language)} ${t("fainted!", language)}`, side: "enemy" });
         playerPkm.fainted = true;
         const nextP = findNextPokemon(pTeam, pIdx);
         if (nextP !== null) {
           pIdx = nextP;
-          log.push(`${getPokemonName(pTeam[pIdx], language)} ${t("enters!", language)}`);
+          log.push({ text: `${getPokemonName(pTeam[pIdx], language)} ${t("enters!", language)}`, side: "player" });
         } else {
           return {
             ...prev,
@@ -534,11 +534,11 @@ export default function Pokeroguelite() {
       } else {
         executeAttack(playerPkm, enemyPkm, log, "player", language);
         if (enemyPkm.hp <= 0) {
-          log.push(`${getPokemonName(enemyPkm, language)} ${t("fainted!", language)}`);
+          log.push({ text: `${getPokemonName(enemyPkm, language)} ${t("fainted!", language)}`, side: "player" });
           const nextE = findNextPokemon(eTeam, eIdx);
           if (nextE !== null) {
             eIdx = nextE;
-            log.push(`${getPokemonName(eTeam[eIdx], language)} ${t("enters!", language)}`);
+            log.push({ text: `${getPokemonName(eTeam[eIdx], language)} ${t("enters!", language)}`, side: "enemy" });
           } else {
             return {
               ...prev,
@@ -584,7 +584,7 @@ export default function Pokeroguelite() {
       spa: calcStat(starter.spa, level),
       spd: calcStat(starter.spd, level),
       spe: calcStat(starter.spe, level),
-      sprite: dexEntry?.sprite || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${starter.id}.png`,
+      sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${(dexEntry || POKEDEX.find(d => d.id === starter.id))?.id || starter.id}.png`,
       moves: [getLevelUpMove(dexEntry || POKEDEX.find(d => d.id === starter.id))].filter(Boolean),
       fainted: false,
     };
@@ -1111,11 +1111,11 @@ export default function Pokeroguelite() {
                 className="flex flex-col items-center p-4 rounded-2xl border-2 border-slate-600 hover:border-yellow-400 bg-slate-800 hover:bg-slate-700 transition-all duration-200 hover:scale-105 w-36"
               >
                 <img
-                  src={dexEntry?.sprite || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${starter.id}.png`}
+                  src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${starter.id}.png`}
                   alt={starter.name}
-                  className="w-20 h-20"
+                  className="w-28 h-28"
                 />
-                <span className="text-white font-bold mt-2">{starter.name}</span>
+                <span className="text-white font-bold">{starter.name}</span>
                 <div className="flex gap-1 mt-1 flex-wrap justify-center">
                   {starter.types.map((t) => <PokeTypeBadge key={t} type={t} language={language} />)}
                 </div>
@@ -1323,11 +1323,13 @@ export default function Pokeroguelite() {
 
           <div ref={logEndRef} className="mt-4 h-40 overflow-y-auto bg-slate-900/80 rounded-xl p-3 border border-slate-700">
             <BubbleGroup>
-              {state.battleLog.map((msg, i) => {
-                const isTurn = msg.startsWith("---");
-                const isDmg = msg.includes(" dmg") || msg.includes("fainted") || msg.includes("enters");
+              {state.battleLog.map((entry, i) => {
+                const isTurn = entry.text ? entry.text.startsWith("---") : entry.startsWith("---");
+                const msg = entry.text || entry;
+                const side = entry.side || null;
+                const align = isTurn ? "center" : side === "player" ? "end" : side === "enemy" ? "start" : "start";
                 return (
-                  <Bubble key={i} variant={isTurn ? "pokelite-turn" : "pokelite"} align={isDmg ? "end" : "start"}>
+                  <Bubble key={i} variant={isTurn ? "pokelite-turn" : side === "player" ? "dungeon-player" : side === "enemy" ? "dungeon-enemy" : "pokelite"} align={align}>
                     <BubbleContent className={isTurn ? "text-yellow-400 font-bold text-center text-xs" : "text-slate-200 text-xs"}>
                       {msg}
                     </BubbleContent>
