@@ -243,21 +243,18 @@ export function isWalkable(tiles, x, y) {
   return tiles[y][x] !== TILE.WALL;
 }
 
-// Move enemy 1 step toward target (simple greedy chase)
+// Move enemy 1 step toward target (8-direction greedy chase)
 export function moveEnemyToward(tiles, ex, ey, tx, ty, occupiedPositions) {
   const dirs = [
-    { dx: 0, dy: -1 },
-    { dx: 0, dy: 1 },
-    { dx: -1, dy: 0 },
-    { dx: 1, dy: 0 },
+    { dx: 0, dy: -1 }, { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+    { dx: -1, dy: -1 }, { dx: 1, dy: -1 },
+    { dx: -1, dy: 1 }, { dx: 1, dy: 1 },
   ];
 
-  // Sort dirs by distance to target
   dirs.sort((a, b) => {
-    const dxa = ex + a.dx, dya = ey + a.dy;
-    const dxb = ex + b.dx, dyb = ey + b.dy;
-    const da = Math.abs(dxa - tx) + Math.abs(dya - ty);
-    const db = Math.abs(dxb - tx) + Math.abs(dyb - ty);
+    const da = Math.max(Math.abs(ex + a.dx - tx), Math.abs(ey + a.dy - ty));
+    const db = Math.max(Math.abs(ex + b.dx - tx), Math.abs(ey + b.dy - ty));
     return da - db;
   });
 
@@ -269,5 +266,5 @@ export function moveEnemyToward(tiles, ex, ey, tx, ty, occupiedPositions) {
       return { x: nx, y: ny };
     }
   }
-  return null; // stuck
+  return null;
 }

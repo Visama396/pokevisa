@@ -64,6 +64,7 @@ export default function DungeonMap({
   visitedTiles,
   onMove,
   disabled,
+  targeting,
 }) {
   const visibleTiles = useMemo(() => {
     if (!dungeon) return new Set();
@@ -111,7 +112,8 @@ export default function DungeonMap({
     if (disabled) return;
     const dx = x - playerX;
     const dy = y - playerY;
-    if (Math.abs(dx) + Math.abs(dy) === 1) {
+    const isAdjacent = Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (dx !== 0 || dy !== 0);
+    if (isAdjacent) {
       onMove(x, y);
     }
   }
@@ -135,6 +137,7 @@ export default function DungeonMap({
             const enemy = enemyMap[key];
             const treasure = treasureMap[key];
             const goldCoin = goldMap[key];
+            const isAdjacentTile = !isPlayer && Math.abs(x - playerX) <= 1 && Math.abs(y - playerY) <= 1;
 
             let bgClass = "bg-slate-900";
             if (isVisible) {
@@ -150,9 +153,11 @@ export default function DungeonMap({
                 key={key}
                 onClick={() => handleTileClick(x, y)}
                 disabled={disabled || !isVisible}
-                className={`w-8 h-8 flex items-center justify-center ${bgClass} border border-slate-800/30 transition-colors ${
-                  !disabled && isVisible && Math.abs(x - playerX) + Math.abs(y - playerY) === 1
-                    ? "hover:bg-slate-600/40 cursor-pointer"
+                className={`w-8 h-8 flex items-center justify-center ${bgClass} border border-slate-800/30 transition-all ${
+                  !disabled && isVisible && isAdjacentTile
+                    ? targeting
+                      ? "hover:bg-red-600/40 cursor-crosshair ring-1 ring-red-500/30"
+                      : "hover:bg-slate-600/40 cursor-pointer"
                     : "cursor-default"
                 }`}
               >
@@ -174,7 +179,7 @@ export default function DungeonMap({
           });
         })}
       </div>
-      <p className="text-[10px] text-slate-500 mt-2">Click adjacent tiles to move</p>
+      <p className="text-[10px] text-slate-500 mt-2">{targeting ? "Click a tile to attack" : "Click adjacent tiles to move"}</p>
     </div>
   );
 }

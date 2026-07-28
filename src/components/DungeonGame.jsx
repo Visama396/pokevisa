@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getLanguage, subscribe } from "../stores/language";
 import { t, getTypeName } from "../stores/translations";
 import { supabase } from "../lib/supabase";
-import { generateDungeon, isWalkable, moveEnemyToward, TILE } from "../lib/dungeon";
-import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesSpeed, calcExpGain, checkLevelUp } from "../lib/moves";
+import { generateDungeon, isWalkable, moveEnemyToward, getVisibleTiles, TILE } from "../lib/dungeon";
+import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesSpeed, calcExpGain, checkLevelUp, getEffectiveness, calcDamage } from "../lib/moves";
 import { removeTeamMember, updateTeamMember, getTeam, getProfile, saveProfile } from "../lib/auth";
 import LanguageSelector from "./LanguageSelector";
 import DungeonMap from "./DungeonMap";
-import DungeonBattle from "./DungeonBattle";
 import CaptureScreen from "./CaptureScreen";
+
+const LOG_MAX = 30;
 
 export default function DungeonGame({ roomId, roomCode, playerId, isHost, accountId, accountName, team: initialTeam, onTeamUpdate, onLeave }) {
   const [language, setLanguage] = useState(getLanguage());
@@ -17,7 +18,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const [dungeon, setDungeon] = useState(null);
   const [myPlayer, setMyPlayer] = useState(null);
   const [visitedTiles, setVisitedTiles] = useState(() => new Set());
-  const [inBattle, setInBattle] = useState(null);
   const [battleResult, setBattleResult] = useState(null);
   const [captureAttempt, setCaptureAttempt] = useState(null);
   const [team, setTeam] = useState(initialTeam);
@@ -29,8 +29,19 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const [floorNum, setFloorNum] = useState(1);
   const [showStairsChoice, setShowStairsChoice] = useState(false);
   const [showSafeExit, setShowSafeExit] = useState(false);
+  const [selectedMove, setSelectedMove] = useState(null);
+  const [battleLog, setBattleLog] = useState([]);
   const channelRef = useRef(null);
   const stepCountRef = useRef(0);
+  const lastMoveRef = useRef(null);
+  const turnLockRef = useRef(false);
+  const enemyTurnRef = useRef(async () => {});
+
+  const activePokemon = team[activeTeamIndex];
+
+  function addLog(msg, side) {
+    setBattleLog((prev) => [...prev, { text: msg, side }].slice(-LOG_MAX));
+  }
 
   useEffect(() => subscribe(setLanguage), []);
 
@@ -66,10 +77,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
     const gen = generateDungeon(20, 15, room.dungeon_seed);
 
-    // Update room status
     await supabase.from("rooms").update({ status: "playing" }).eq("id", roomId);
 
-    // Set player positions
     const positions = players.map((p, i) => ({
       id: p.id,
       position_x: gen.spawnX + (i % 3),
@@ -83,7 +92,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         .eq("id", pos.id);
     }
 
-    // Save dungeon state
     await supabase.from("dungeon_state").insert({
       room_id: roomId,
       width: gen.width,
@@ -94,7 +102,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       gold: gen.gold,
     });
 
-    // Broadcast game start
     if (channelRef.current) {
       channelRef.current.send({
         type: "broadcast",
@@ -107,7 +114,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     setRoom((r) => ({ ...r, status: "playing" }));
   }, [isHost, room, roomId, players]);
 
-  // Shared helper to load dungeon from DB
   const loadDungeonFromDb = useCallback(async () => {
     const { data } = await supabase
       .from("dungeon_state")
@@ -132,7 +138,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     }
   }, [roomId]);
 
-  // Auto-generate dungeon if host and no dungeon_state exists
   useEffect(() => {
     if (!room || room.status !== "playing" || !isHost || dungeon) return;
     if (players.length === 0) return;
@@ -188,7 +193,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           });
         }
 
-        // Update local player position to match what we wrote to DB
         const myPos = positions.find((p) => p.id === myPlayer?.id);
         if (myPos) {
           setMyPlayer((prev) => ({
@@ -210,10 +214,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     const channel = supabase.channel(`room:${roomId}`);
 
     channel
-      .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState();
-        // Could use for real-time position if needed
-      })
+      .on("presence", { event: "sync" }, () => {})
       .on("broadcast", { event: "player_move" }, ({ payload }) => {
         if (payload.playerId === playerId) return;
         setPlayers((prev) =>
@@ -225,7 +226,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         );
       })
       .on("broadcast", { event: "game_start" }, () => {
-        // Reload room and load dungeon from DB
         supabase
           .from("rooms")
           .select("*")
@@ -263,59 +263,160 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     };
   }, [roomId, playerId, loadDungeonFromDb]);
 
-  // Move all enemies 1 step toward player
-  const moveEnemies = useCallback(async () => {
+  // Process enemy turn: movement + attacks
+  const enemyTurn = useCallback(async () => {
     if (!dungeon || !myPlayer) return;
 
     const px = myPlayer.position_x;
     const py = myPlayer.position_y;
-    const occupied = new Set();
-    occupied.add(`${px},${py}`);
-    for (const e of dungeon.enemies) {
-      occupied.add(`${e.x},${e.y}`);
+    const newEnemies = dungeon.enemies.map((e) => ({ ...e }));
+    const logEntries = [];
+    const occupied = new Set(newEnemies.map((e) => `${e.x},${e.y}`));
+    let currentTeam = [...team];
+    let currentIndex = activeTeamIndex;
+    let wiped = false;
+
+    for (const e of newEnemies) {
+      if (wiped) break;
+      if (currentTeam[currentIndex]?.hp <= 0) { wiped = true; break; }
+
+      const visible = getVisibleTiles(dungeon.tiles, e.x, e.y, 8);
+      if (!visible.has(`${px},${py}`)) continue;
+
+      const isAdjacent = Math.abs(e.x - px) <= 1 && Math.abs(e.y - py) <= 1 && (Math.abs(e.x - px) + Math.abs(e.y - py) > 0);
+
+      if (isAdjacent) {
+        const enemyMoves = getRandomMovesForSpecies(e.pokemonId, 3);
+        const move = enemyMoves[Math.floor(Math.random() * enemyMoves.length)];
+        const atk = 10 + e.level * 3;
+        const def = 8 + (currentTeam[currentIndex]?.level || 5) * 2;
+        const eff = getEffectiveness(move.type, [getSpeciesType(currentTeam[currentIndex]?.pokemonId || 25)]);
+        const dmg = calcDamage(move, atk, def, eff, e.level);
+
+        logEntries.push({ text: `Wild ${getSpeciesName(e.pokemonId)} used ${move.name}! ${dmg} dmg`, side: "enemy" });
+
+        const newHp = Math.max(0, (currentTeam[currentIndex]?.hp || 100) - dmg);
+        currentTeam[currentIndex] = { ...currentTeam[currentIndex], hp: newHp };
+
+        if (newHp <= 0) {
+          const name = currentTeam[currentIndex]?.nickname || getSpeciesName(currentTeam[currentIndex]?.pokemonId);
+          logEntries.push({ text: `${name} fainted!`, side: "enemy" });
+
+          if (currentTeam[currentIndex]?.id) {
+            await removeTeamMember(currentTeam[currentIndex].id);
+          }
+
+          let found = false;
+          for (let i = 0; i < currentTeam.length; i++) {
+            if (i !== currentIndex && currentTeam[i].hp > 0) {
+              currentIndex = i;
+              found = true;
+              break;
+            }
+          }
+
+          if (!found) {
+            wiped = true;
+            logEntries.push({ text: "All Pokémon fainted!", side: "enemy" });
+          }
+        }
+      } else {
+        occupied.delete(`${e.x},${e.y}`);
+        const pos = moveEnemyToward(dungeon.tiles, e.x, e.y, px, py, occupied);
+        if (pos) {
+          e.x = pos.x;
+          e.y = pos.y;
+          occupied.add(`${pos.x},${pos.y}`);
+        } else {
+          occupied.add(`${e.x},${e.y}`);
+        }
+      }
     }
 
-    const newEnemies = dungeon.enemies.map((e) => {
-      const dist = Math.abs(e.x - px) + Math.abs(e.y - py);
-      if (dist > 8) return e;
-      const pos = moveEnemyToward(dungeon.tiles, e.x, e.y, px, py, occupied);
-      if (pos) {
-        occupied.delete(`${e.x},${e.y}`);
-        occupied.add(`${pos.x},${pos.y}`);
-        return { ...e, x: pos.x, y: pos.y };
-      }
-      return e;
-    });
-
+    setTeam(currentTeam);
+    setActiveTeamIndex(currentIndex);
     setDungeon((d) => ({ ...d, enemies: newEnemies }));
+    setBattleLog((prev) => [...prev, ...logEntries].slice(-LOG_MAX));
+
+    if (currentTeam[currentIndex]) {
+      setMyPlayer((p) => ({ ...p, hp: currentTeam[currentIndex].hp, max_hp: currentTeam[currentIndex].maxHp }));
+    }
+
+    if (wiped) {
+      setBattleResult({ result: "lost" });
+    }
+
     await supabase
       .from("dungeon_state")
       .update({ enemies: newEnemies })
       .eq("room_id", roomId);
 
+    if (currentTeam[currentIndex]?.id) {
+      await updateTeamMember(currentTeam[currentIndex].id, { hp: currentTeam[currentIndex].hp });
+    }
+    await supabase
+      .from("room_players")
+      .update({ hp: currentTeam[currentIndex]?.hp || 0 })
+      .eq("player_id", playerId)
+      .eq("room_id", roomId);
+
     setEnemiesMoved(true);
-  }, [dungeon, myPlayer, roomId]);
+    turnLockRef.current = false;
+  }, [dungeon, myPlayer, team, activeTeamIndex, roomId]);
 
-  // Handle player movement
-  const handleMove = useCallback(
+  enemyTurnRef.current = enemyTurn;
+
+  // Handle tile click: move or attack
+  const handleTileClick = useCallback(
     async (x, y) => {
-      if (!dungeon || inBattle || !myPlayer || !enemiesMoved) return;
-      if (!isWalkable(dungeon.tiles, x, y)) return;
+      if (!dungeon || !myPlayer || !enemiesMoved || turnLockRef.current) return;
 
-      // Update position locally
+      const px = myPlayer.position_x;
+      const py = myPlayer.position_y;
+      const isAdjacent = Math.abs(x - px) <= 1 && Math.abs(y - py) <= 1 && (x !== px || y !== py);
+      if (!isAdjacent) return;
+
+      const isWalkableTile = isWalkable(dungeon.tiles, x, y);
+      const enemyHere = dungeon.enemies.find((e) => e.x === x && e.y === y);
+      const playerHere = players.find(
+        (p) => p.player_id !== playerId && p.position_x === x && p.position_y === y
+      );
+
+      if (!isWalkableTile) return;
+
+      // If a move is selected (attack mode)
+      if (selectedMove) {
+        turnLockRef.current = true;
+        setEnemiesMoved(false);
+        await processAttack(x, y, selectedMove, enemyHere);
+        setSelectedMove(null);
+        return;
+      }
+
+      // If tile is occupied, use last move to attack
+      if (enemyHere || playerHere) {
+        const move = lastMoveRef.current || team[activeTeamIndex]?.moves?.[0];
+        if (move) {
+          turnLockRef.current = true;
+          setEnemiesMoved(false);
+          await processAttack(x, y, move, enemyHere);
+        }
+        return;
+      }
+
+      // Move to empty tile
+      turnLockRef.current = true;
+      setEnemiesMoved(false);
+
       setMyPlayer((p) => ({ ...p, position_x: x, position_y: y }));
       setPlayers((prev) =>
         prev.map((p) =>
-          p.player_id === playerId
-            ? { ...p, position_x: x, position_y: y }
-            : p
+          p.player_id === playerId ? { ...p, position_x: x, position_y: y } : p
         )
       );
 
-      // Mark as visited
       setVisitedTiles((prev) => {
         const next = new Set(prev);
-        // Mark nearby tiles as visited too
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
             next.add(`${x + dx},${y + dy}`);
@@ -324,14 +425,12 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         return next;
       });
 
-      // Save to DB
       await supabase
         .from("room_players")
         .update({ position_x: x, position_y: y })
         .eq("player_id", playerId)
         .eq("room_id", roomId);
 
-      // Broadcast movement
       if (channelRef.current) {
         channelRef.current.send({
           type: "broadcast",
@@ -340,7 +439,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         });
       }
 
-      // Auto heal 1 HP every 2 steps
       stepCountRef.current += 1;
       if (stepCountRef.current % 2 === 0) {
         setTeam((prev) => {
@@ -359,14 +457,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         });
       }
 
-      // Enemies take their turn
-      setEnemiesMoved(false);
-      setTimeout(() => moveEnemies(), 300);
-
-      // Check for gold
-      const goldItem = dungeon.gold?.find(
-        (g) => g.x === x && g.y === y && !g.collected
-      );
+      const goldItem = dungeon.gold?.find((g) => g.x === x && g.y === y && !g.collected);
       if (goldItem) {
         setGoldCount((prev) => prev + goldItem.amount);
         setDungeon((d) => ({
@@ -385,19 +476,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           .eq("room_id", roomId);
       }
 
-      // Check for enemy encounter
-      const enemy = dungeon.enemies.find((e) => e.x === x && e.y === y);
-      if (enemy) {
-        setInBattle({ type: "enemy", data: enemy });
-        return;
-      }
-
-      // Check for treasure
-      const treasure = dungeon.treasures.find(
-        (t) => t.x === x && t.y === y && !t.opened
-      );
+      const treasure = dungeon.treasures.find((t) => t.x === x && t.y === y && !t.opened);
       if (treasure) {
-        // Open treasure
         setDungeon((d) => ({
           ...d,
           treasures: d.treasures.map((t) =>
@@ -414,158 +494,109 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           .eq("room_id", roomId);
       }
 
-      // Check for stairs
       if (dungeon.tiles[y]?.[x] === TILE.STAIRS) {
         setShowStairsChoice(true);
       }
+
+      setTimeout(() => enemyTurnRef.current(), 300);
     },
-    [dungeon, inBattle, myPlayer, playerId, roomId, enemiesMoved, moveEnemies]
+    [dungeon, myPlayer, playerId, roomId, enemiesMoved, enemyTurn, selectedMove, team, activeTeamIndex, players]
   );
 
-  // Handle battle end
-  const handleBattleEnd = useCallback(
-    async (result) => {
-      setBattleResult(result);
+  // Process an attack on a tile
+  async function processAttack(x, y, move, enemyHere) {
+    lastMoveRef.current = move;
 
-      // Sync active Pokémon HP from battle
-      if (team[activeTeamIndex]) {
-        const newHp = result.playerHp || 0;
-        setTeam((prev) => {
-          const updated = [...prev];
-          updated[activeTeamIndex] = { ...updated[activeTeamIndex], hp: newHp };
-          return updated;
-        });
-        setMyPlayer((prev) => prev ? { ...prev, hp: newHp } : prev);
-        if (team[activeTeamIndex].id) {
-          await updateTeamMember(team[activeTeamIndex].id, { hp: newHp });
+    if (enemyHere) {
+      const atk = 10 + (activePokemon?.level || 5) * 3;
+      const def = 8 + enemyHere.level * 2;
+      const eff = getEffectiveness(move.type, [getSpeciesType(enemyHere.pokemonId)]);
+      const dmg = calcDamage(move, atk, def, eff, activePokemon?.level || 5);
+
+      let effText = "";
+      if (eff > 1) effText = ` ${t("Super effective!", language)}`;
+      else if (eff < 1 && eff > 0) effText = ` ${t("Not very effective...", language)}`;
+      else if (eff === 0) effText = ` ${t("No effect!", language)}`;
+
+      addLog(`${t("You used", language)} ${move.name}! ${dmg} ${t("dmg", language)}${effText}`, "player");
+
+      const newEnemies = dungeon.enemies.map((e) => {
+        if (e.x === x && e.y === y) {
+          const newHp = e.hp - dmg;
+          if (newHp <= 0) {
+            handleEnemyDefeated(e);
+            return null;
+          }
+          return { ...e, hp: newHp };
         }
+        return e;
+      }).filter(Boolean);
+
+      setDungeon((d) => ({ ...d, enemies: newEnemies }));
+      await supabase
+        .from("dungeon_state")
+        .update({ enemies: newEnemies })
+        .eq("room_id", roomId);
+
+    } else {
+      addLog(`${t("You used", language)} ${move.name}! ${t("No effect!", language)}`, "player");
+    }
+
+    setTimeout(() => enemyTurnRef.current(), 300);
+  }
+
+  // Handle enemy defeated
+  async function handleEnemyDefeated(enemy) {
+    const pkm = activePokemon;
+    if (pkm) {
+      const expGain = calcExpGain(enemy.level);
+      const newExp = (pkm.exp || 0) + expGain;
+      const leveledUp = checkLevelUp(pkm.level || 5, newExp);
+      let newLevel = pkm.level || 5;
+      let newMaxHp = pkm.maxHp || pkm.max_hp;
+      if (leveledUp) {
+        newLevel = leveledUp;
+        newMaxHp = newMaxHp + 3;
       }
-
-      if (result.result === "won") {
-        // Gain EXP
-        if (inBattle?.type === "enemy" && team[activeTeamIndex]) {
-          const expGain = calcExpGain(inBattle.data.level);
-          const pkm = team[activeTeamIndex];
-          const newExp = (pkm.exp || 0) + expGain;
-          const leveledUp = checkLevelUp(pkm.level || 5, newExp);
-          let newLevel = pkm.level || 5;
-          let newMaxHp = pkm.maxHp;
-          if (leveledUp) {
-            newLevel = leveledUp;
-            newMaxHp = newMaxHp + 3;
-          }
-          const updatedPkm = { ...pkm, exp: newExp, level: newLevel, maxHp: newMaxHp };
-          setTeam((prev) => {
-            const updated = [...prev];
-            updated[activeTeamIndex] = updatedPkm;
-            return updated;
-          });
-          if (pkm.id) {
-            await updateTeamMember(pkm.id, { level: newLevel, maxHp: newMaxHp, exp: newExp });
-          }
-          if (leveledUp) {
-            setMyPlayer((prev) => prev ? { ...prev, level: newLevel } : prev);
-          }
-        }
-
-        // Remove enemy from dungeon
-        if (inBattle?.type === "enemy") {
-          const newEnemies = dungeon.enemies.filter(
-            (e) => !(e.x === inBattle.data.x && e.y === inBattle.data.y)
-          );
-          setDungeon((d) => ({ ...d, enemies: newEnemies }));
-
-          await supabase
-            .from("dungeon_state")
-            .update({ enemies: newEnemies })
-            .eq("room_id", roomId);
-
-          // Update player HP in DB
-          await supabase
-            .from("room_players")
-            .update({ hp: result.playerHp })
-            .eq("player_id", playerId)
-            .eq("room_id", roomId);
-
-          // Check capture chance
-          if (result.captureChance && Math.random() < result.captureChance) {
-            setTimeout(() => {
-              setCaptureAttempt(inBattle.data);
-              setInBattle(null);
-              setBattleResult(null);
-            }, 2000);
-            return;
-          }
-        }
-      } else if (result.result === "lost") {
-        // Fainted Pokémon - delete from team
-        const fainted = team[activeTeamIndex];
-        if (fainted?.id) {
-          await removeTeamMember(fainted.id);
-        }
-        const remaining = team.filter((_, i) => i !== activeTeamIndex);
-
-        // Find next alive member
-        let nextIndex = -1;
-        for (let i = 0; i < remaining.length; i++) {
-          if (remaining[i].hp > 0) { nextIndex = i; break; }
-        }
-
-        if (nextIndex >= 0) {
-          // Swap to next Pokémon - battle continues
-          setTeam(remaining);
-          if (onTeamUpdate) onTeamUpdate();
-          setActiveTeamIndex(nextIndex);
-          const nextPokemon = remaining[nextIndex];
-          setMyPlayer((p) => ({ ...p, hp: nextPokemon.hp, max_hp: nextPokemon.maxHp }));
-          setTimeout(() => setInBattle(null), 2000);
-          return;
-        } else {
-          // Team wipe - game over
-          await supabase
-            .from("room_players")
-            .update({ is_alive: false, hp: 0 })
-            .eq("player_id", playerId)
-            .eq("room_id", roomId);
-          setMyPlayer((p) => ({ ...p, is_alive: false, hp: 0 }));
-          setTimeout(() => {
-            setInBattle(null);
-            setBattleResult({ result: "lost" });
-          }, 2000);
-          return;
-        }
+      const updatedPkm = { ...pkm, exp: newExp, level: newLevel, maxHp: newMaxHp };
+      setTeam((prev) => {
+        const updated = [...prev];
+        updated[activeTeamIndex] = updatedPkm;
+        return updated;
+      });
+      if (pkm.id) {
+        await updateTeamMember(pkm.id, { level: newLevel, maxHp: newMaxHp, exp: newExp });
       }
+      if (leveledUp) {
+        setMyPlayer((p) => (p ? { ...p, level: newLevel } : p));
+      }
+    }
 
-      setTimeout(() => {
-        setInBattle(null);
-        if (result.result !== "lost") {
-          setBattleResult(null);
-        }
-      }, 2000);
-    },
-    [inBattle, dungeon, roomId, playerId, accountId, onTeamUpdate, team, activeTeamIndex]
-  );
+    addLog(`${getSpeciesName(enemy.pokemonId)} ${t("Enemy fainted!", language)}`, "player");
 
-  // Handle leaving
+    // Capture chance
+    const chance = Math.min(0.5, Math.max(0.1, 0.15 + ((activePokemon?.level || 5) - enemy.level) * 0.03));
+    if (Math.random() < chance) {
+      setTimeout(() => setCaptureAttempt(enemy), 500);
+    }
+  }
+
+  // Leave room
   const leaveRoom = useCallback(async () => {
-    // Fully heal all Pokémon before leaving
     for (const p of team) {
       if (p.hp < p.max_hp && p.id) {
         await updateTeamMember(p.id, { hp: p.max_hp });
       }
     }
 
-    // Clear session immediately so component unmounts and useEffect cleanup runs
     if (onLeave) onLeave();
 
-    // Delete player entry
     await supabase
       .from("room_players")
       .delete()
       .eq("player_id", playerId)
       .eq("room_id", roomId);
 
-    // If host is leaving with no other players, delete the entire room
     if (isHost) {
       const { count } = await supabase
         .from("room_players")
@@ -576,13 +607,12 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         await supabase.from("rooms").delete().eq("id", roomId);
       }
     }
-  }, [playerId, roomId, isHost, onLeave]);
+  }, [playerId, roomId, isHost, onLeave, team]);
 
-  // Handle capture — only 1 active Pokémon allowed, extras go to storage
+  // Capture handlers
   const handleCapture = useCallback(async () => {
     setCaptureAttempt(null);
     if (team.length >= 1) {
-      // Send to storage in DB instead
       const profile = await getProfile(accountId);
       const existingStored = profile?.stored_pokemon || [];
       await saveProfile(accountId, {
@@ -593,7 +623,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         }],
       });
     }
-    setTeam((t) => [...t, {}]); // trigger refresh
+    setTeam((t) => [...t, {}]);
     if (onTeamUpdate) onTeamUpdate();
   }, [onTeamUpdate, accountId, captureAttempt, team.length]);
 
@@ -601,13 +631,12 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     setCaptureAttempt(null);
   }, []);
 
-  // Handle stairs: leave safely
+  // Stairs handlers
   const handleLeaveSafely = useCallback(async () => {
     setShowStairsChoice(false);
     setShowSafeExit(true);
   }, []);
 
-  // Handle stairs: descend to next floor
   const handleDescend = useCallback(async () => {
     setShowStairsChoice(false);
     const nextFloor = floorNum + 1;
@@ -615,7 +644,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     const newSeed = Date.now();
     const gen = generateDungeon(20, 15, newSeed);
 
-    // Heal active Pokémon partially on descend
     setTeam((prev) => {
       return prev.map((p, i) => {
         if (i === activeTeamIndex) {
@@ -629,9 +657,10 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     setDungeon(gen);
     setVisitedTiles(new Set());
     setEnemiesMoved(true);
+    setSelectedMove(null);
+    setBattleLog([]);
     stepCountRef.current = 0;
 
-    // Update DB
     await supabase
       .from("dungeon_state")
       .update({
@@ -644,7 +673,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       })
       .eq("room_id", roomId);
 
-    // Move player to spawn
     setMyPlayer((p) => ({ ...p, position_x: gen.spawnX, position_y: gen.spawnY }));
     await supabase
       .from("room_players")
@@ -652,19 +680,15 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       .eq("player_id", playerId)
       .eq("room_id", roomId);
 
-    // Update room floor
     await supabase.from("rooms").update({ floor: nextFloor }).eq("id", roomId);
   }, [floorNum, roomId, playerId, activeTeamIndex]);
 
-  // Confirm safe exit — save to account and leave
   const handleConfirmExit = useCallback(async () => {
-    // Save gold + team to account profile
     const profile = await getProfile(accountId);
     const existingGold = profile?.inventory?.gold || 0;
     const existingItems = profile?.inventory?.items || [];
     const existingStored = profile?.stored_pokemon || [];
 
-    // Collect any captured Pokémon beyond the active one into stored
     const activePkm = team[activeTeamIndex];
     const extraPkm = team.filter((p, i) => i !== activeTeamIndex).map((p) => ({
       pokemon_id: p.pokemonId,
@@ -681,7 +705,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       stored_pokemon: [...existingStored, ...extraPkm],
     });
 
-    // Heal active Pokémon to full
     if (activePkm?.id) {
       await updateTeamMember(activePkm.id, { hp: activePkm.maxHp });
     }
@@ -788,7 +811,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     );
   }
 
-  // GAME OVERLAY (battle result)
+  // GAME OVER OVERLAY
   if (battleResult) {
     return (
       <div className="max-w-4xl mx-auto p-4 space-y-6">
@@ -848,8 +871,9 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               playerSpriteId={myPlayer?.sprite_id || 25}
               otherPlayers={otherPlayers}
               visitedTiles={visitedTiles}
-              onMove={handleMove}
-              disabled={!!inBattle || !enemiesMoved}
+              onMove={handleTileClick}
+              disabled={!enemiesMoved || turnLockRef.current}
+              targeting={selectedMove}
             />
           ) : (
             <div className="text-center text-slate-400 py-10">
@@ -860,36 +884,66 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
         {/* Sidebar */}
         <div className="w-64 space-y-3 shrink-0">
-          {/* Room code */}
           <div className="rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2 text-center">
             <p className="text-[10px] text-slate-500 uppercase">{t("Room", language)}</p>
             <p className="font-mono text-lg font-bold text-yellow-400 tracking-widest">{roomCode}</p>
           </div>
 
-          {/* Player info */}
+          {/* Player Pokémon card */}
           <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <img
-                src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${myPlayer?.sprite_id || 25}.png`}
+                src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${activePokemon?.pokemonId || myPlayer?.sprite_id || 25}.png`}
                 alt=""
                 className="w-10 h-10"
               />
               <div>
-                <p className="text-sm font-semibold text-slate-200">{getSpeciesName(team[activeTeamIndex]?.pokemonId || myPlayer?.sprite_id || 25)}</p>
-                <p className="text-[10px] text-slate-400">Lv.{myPlayer?.level || 5}</p>
+                <p className="text-sm font-semibold text-slate-200">
+                  {activePokemon?.nickname || getSpeciesName(activePokemon?.pokemonId || myPlayer?.sprite_id || 25)}
+                </p>
+                <p className="text-[10px] text-slate-400">Lv.{activePokemon?.level || myPlayer?.level || 5}</p>
               </div>
             </div>
             <div className="w-full h-2 rounded-full bg-slate-700 overflow-hidden">
               <div
-                className="h-full bg-green-500 rounded-full transition-all"
+                className="h-full rounded-full transition-all"
                 style={{
-                  width: `${Math.max(0, ((myPlayer?.hp || 100) / (myPlayer?.max_hp || 100)) * 100)}%`,
+                  width: `${Math.max(0, ((activePokemon?.hp || myPlayer?.hp || 100) / (activePokemon?.maxHp || activePokemon?.max_hp || myPlayer?.max_hp || 100)) * 100)}%`,
+                  backgroundColor: ((activePokemon?.hp || 100) / (activePokemon?.maxHp || 100)) > 0.5 ? "#22c55e" : ((activePokemon?.hp || 100) / (activePokemon?.maxHp || 100)) > 0.2 ? "#eab308" : "#ef4444",
                 }}
               />
             </div>
             <p className="text-[10px] text-slate-400 text-center">
-              HP: {myPlayer?.hp || 100}/{myPlayer?.max_hp || 100}
+              HP: {activePokemon?.hp || myPlayer?.hp || 100}/{activePokemon?.maxHp || activePokemon?.max_hp || myPlayer?.max_hp || 100}
             </p>
+
+            {/* Move buttons */}
+            {activePokemon?.moves?.length > 0 && (
+              <div className="space-y-1 pt-1 border-t border-slate-700/50">
+                <p className="text-[10px] text-slate-500 uppercase">{t("Moves", language) || "Moves"}</p>
+                <div className="grid grid-cols-2 gap-1">
+                  {activePokemon.moves.map((move) => (
+                    <button
+                      key={move.name}
+                      onClick={() => setSelectedMove(selectedMove?.name === move.name ? null : move)}
+                      className={`rounded-lg px-2 py-1.5 text-[11px] font-medium text-left transition-all ${
+                        selectedMove?.name === move.name
+                          ? "bg-red-700/60 text-red-200 ring-1 ring-red-500"
+                          : "bg-slate-700/60 text-slate-200 hover:bg-slate-600/60"
+                      }`}
+                    >
+                      <span className="block truncate">{move.name}</span>
+                      <span className="block text-[9px] text-slate-400">{move.power}</span>
+                    </button>
+                  ))}
+                </div>
+                {selectedMove && (
+                  <p className="text-[10px] text-red-400 text-center animate-pulse">
+                    {t("Select a tile to attack!", language) || "Select a tile to attack!"}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Other players */}
@@ -930,43 +984,30 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               <span className="text-yellow-400 font-semibold">{goldCount}</span>
             </div>
           </div>
-
-          {/* Controls hint */}
-          <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-3">
-            <p className="text-[10px] text-slate-500 text-center">
-              {t("dungeon-controls-hint", language)}
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* Battle overlay */}
-      {inBattle && (() => {
-        const activePokemon = team[activeTeamIndex];
-        const activeType = activePokemon ? getSpeciesType(activePokemon.pokemonId) : "normal";
-        const activeMoves = activePokemon ? activePokemon.moves : [];
-        const enemyType = getSpeciesType(inBattle.data.pokemonId);
-        return (
-          <div key={`battle-${activeTeamIndex}-${inBattle.data.pokemonId}`} className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-            <div className="max-w-lg w-full">
-              <DungeonBattle
-                enemy={{ ...inBattle.data, types: [enemyType] }}
-                playerPokemon={{
-                  name: activePokemon?.nickname || (activePokemon ? getSpeciesName(activePokemon.pokemonId) : "Player"),
-                  level: myPlayer?.level || 5,
-                  hp: activePokemon?.hp || myPlayer?.hp || 100,
-                  maxHp: activePokemon?.maxHp || myPlayer?.max_hp || 100,
-                  types: [activeType],
-                  spriteId: activePokemon?.pokemonId || myPlayer?.sprite_id || 25,
-                }}
-                playerMoves={activeMoves}
-                language={language}
-                onEnd={handleBattleEnd}
-              />
-            </div>
+      {/* Battle log */}
+      <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3 max-h-32 overflow-y-auto">
+        {battleLog.length === 0 ? (
+          <p className="text-xs text-slate-500 text-center italic">
+            {t("Wild Pokémon appeared!", language)}
+          </p>
+        ) : (
+          <div className="space-y-1">
+            {battleLog.map((entry, i) => (
+              <p
+                key={i}
+                className={`text-xs leading-relaxed ${
+                  entry.side === "player" ? "text-blue-300" : "text-red-300"
+                }`}
+              >
+                {entry.text}
+              </p>
+            ))}
           </div>
-        );
-      })()}
+        )}
+      </div>
 
       {/* Capture overlay */}
       {captureAttempt && (
@@ -1030,7 +1071,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       )}
 
       {/* Enemies moving indicator */}
-      {!enemiesMoved && !inBattle && (
+      {!enemiesMoved && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-xl bg-slate-800/90 px-4 py-2 text-xs text-slate-300 border border-slate-700">
           {t("dungeon-enemies-moving", language)}
         </div>
