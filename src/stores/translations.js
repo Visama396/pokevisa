@@ -1133,6 +1133,54 @@ const ui = {
     en: "Lv", es: "Nv", fr: "Nv", de: "Lv", it: "Lv",
     ja: "Lv", ko: "Lv", "zh-hans": "Lv", "zh-hant": "Lv",
   },
+  "Floor": {
+    en: "Floor", es: "Piso", fr: "Étage", de: "Etage", it: "Piano",
+    ja: "階", ko: "층", "zh-hans": "层", "zh-hant": "層",
+  },
+  "Gold": {
+    en: "Gold", es: "Oro", fr: "Or", de: "Gold", it: "Oro",
+    ja: "ゴールド", ko: "골드", "zh-hans": "金币", "zh-hant": "金幣",
+  },
+  "Confirm": {
+    en: "Confirm", es: "Confirmar", fr: "Confirmer", de: "Bestätigen", it: "Conferma",
+    ja: "確認", ko: "확인", "zh-hans": "确认", "zh-hant": "確認",
+  },
+  "dungeon-stairs-title": {
+    en: "Stairs found!", es: "¡Escaleras encontradas!", fr: "Escaliers trouvés !", de: "Treppe gefunden!", it: "Scale trovate!",
+    ja: "階段を発見！", ko: "계단을 찾았다!", "zh-hans": "发现楼梯！", "zh-hant": "發現樓梯！",
+  },
+  "dungeon-stairs-desc": {
+    en: "You found the exit stairs. What will you do?", es: "Encontraste las escaleras de salida. ¿Qué harás?", fr: "Vous avez trouvé les escaliers de sortie. Que faites-vous ?", de: "Du hast die Ausgangstreppe gefunden. Was wirst du tun?", it: "Hai trovato le scale d'uscita. Cosa farai?",
+    ja: "出口の階段を発見した。どうする？", ko: "출구 계단을 찾았다. 어떻게 할까?", "zh-hans": "你找到了出口楼梯。你要怎么做？", "zh-hant": "你找到了出口樓梯。你要怎麼做？",
+  },
+  "dungeon-descend": {
+    en: "Descend deeper", es: "Descender más profundo", fr: "Descendre plus profond", de: "Tiefer hinabsteigen", it: "Scendere più in profondità",
+    ja: "さらに深く降りる", ko: "더 깊이 내려가기", "zh-hans": "继续深入", "zh-hant": "繼續深入",
+  },
+  "dungeon-leave-safely": {
+    en: "Leave safely", es: "Salir seguro", fr: "Partir en sécurité", de: "Sicher verlassen", it: "Uscire in sicurezza",
+    ja: "安全に退出する", ko: "안전하게 나가기", "zh-hans": "安全离开", "zh-hant": "安全離開",
+  },
+  "dungeon-exit-title": {
+    en: "Safe Exit", es: "Salida segura", fr: "Sortie sécurisée", de: "Sicherer Ausgang", it: "Uscita sicura",
+    ja: "安全な退出", ko: "안전한 퇴장", "zh-hans": "安全出口", "zh-hant": "安全出口",
+  },
+  "dungeon-exit-saved": {
+    en: "Your gold and items have been saved!", es: "¡Tu oro y objetos han sido guardados!", fr: "Votre or et vos objets ont été sauvegardés !", de: "Dein Gold und deine Gegenstände wurden gespeichert!", it: "Il tuo oro e i tuoi oggetti sono stati salvati!",
+    ja: "ゴールドとアイテムは保存された！", ko: "골드와 아이템이 저장되었습니다!", "zh-hans": "你的金币和物品已保存！", "zh-hant": "你的金幣和物品已保存！",
+  },
+  "dungeon-storage-msg": {
+    en: "Your team is full! This Pokémon will be sent to storage.", es: "¡Tu equipo está lleno! Este Pokémon será enviado al almacén.", fr: "Votre équipe est pleine ! Ce Pokémon sera envoyé au stockage.", de: "Dein Team ist voll! Dieses Pokémon wird ins Lager geschickt.", it: "La tua squadra è piena! Questo Pokémon verrà inviato al deposito.",
+    ja: "チームがいっぱいです！このポケモンは保管庫に送られます。", ko: "팀이 가득 찼습니다! 이 포켓몬은 보관소로 보내집니다.", "zh-hans": "队伍已满！这只宝可梦将被送到仓库。", "zh-hant": "隊伍已滿！這隻寶可夢將被送到倉庫。",
+  },
+  "dungeon-send-storage": {
+    en: "Send to storage", es: "Enviar al almacén", fr: "Envoyer au stockage", de: "Ins Lager schicken", it: "Invia al deposito",
+    ja: "保管庫に送る", ko: "보관소로 보내기", "zh-hans": "送到仓库", "zh-hant": "送到倉庫",
+  },
+  "dungeon-enemies-moving": {
+    en: "Enemies are moving...", es: "Los enemigos se mueven...", fr: "Les ennemis se déplacent...", de: "Gegner bewegen sich...", it: "I nemici si muovono...",
+    ja: "敵が動いている...", ko: "적이 움직이고 있습니다...", "zh-hans": "敌人正在移动...", "zh-hant": "敵人正在移動...",
+  },
 };
 
 export function t(key, language) {

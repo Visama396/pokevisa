@@ -4,7 +4,7 @@ import { t, getTypeName } from "../stores/translations";
 import { supabase } from "../lib/supabase";
 import { generateDungeon, isWalkable, moveEnemyToward, TILE } from "../lib/dungeon";
 import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesSpeed, calcExpGain, checkLevelUp } from "../lib/moves";
-import { addTeamMember, removeTeamMember, updateTeamMember, getTeam, saveProfile, saveDungeonProgress, deleteSavedDungeon } from "../lib/auth";
+import { removeTeamMember, updateTeamMember, getTeam, getProfile, saveProfile } from "../lib/auth";
 import LanguageSelector from "./LanguageSelector";
 import DungeonMap from "./DungeonMap";
 import DungeonBattle from "./DungeonBattle";
@@ -91,6 +91,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       tiles: gen.tiles,
       enemies: gen.enemies,
       treasures: gen.treasures,
+      gold: gen.gold,
     });
 
     // Broadcast game start
@@ -121,6 +122,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         tiles: data.tiles,
         enemies: data.enemies || [],
         treasures: data.treasures || [],
+        gold: data.gold || [],
         spawnX: 1,
         spawnY: 1,
         rooms: [],
@@ -170,6 +172,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           tiles: gen.tiles,
           enemies: gen.enemies,
           treasures: gen.treasures,
+          gold: gen.gold,
         });
 
         if (insertErr) {
@@ -540,7 +543,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         }
       }, 2000);
     },
-    [inBattle, dungeon, roomId, playerId, accountId, onTeamUpdate, team]
+    [inBattle, dungeon, roomId, playerId, accountId, onTeamUpdate, team, activeTeamIndex]
   );
 
   // Handle leaving
@@ -575,12 +578,24 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     }
   }, [playerId, roomId, isHost, onLeave]);
 
-  // Handle capture
-  const handleCapture = useCallback(() => {
+  // Handle capture — only 1 active Pokémon allowed, extras go to storage
+  const handleCapture = useCallback(async () => {
     setCaptureAttempt(null);
+    if (team.length >= 1) {
+      // Send to storage in DB instead
+      const profile = await getProfile(accountId);
+      const existingStored = profile?.stored_pokemon || [];
+      await saveProfile(accountId, {
+        stored_pokemon: [...existingStored, {
+          pokemon_id: captureAttempt.pokemonId,
+          level: captureAttempt.level,
+          nickname: null,
+        }],
+      });
+    }
     setTeam((t) => [...t, {}]); // trigger refresh
     if (onTeamUpdate) onTeamUpdate();
-  }, [onTeamUpdate]);
+  }, [onTeamUpdate, accountId, captureAttempt, team.length]);
 
   const handleCaptureDecline = useCallback(() => {
     setCaptureAttempt(null);
@@ -644,14 +659,14 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   // Confirm safe exit — save to account and leave
   const handleConfirmExit = useCallback(async () => {
     // Save gold + team to account profile
-    const profile = await (await import("../lib/auth")).getProfile(accountId);
+    const profile = await getProfile(accountId);
     const existingGold = profile?.inventory?.gold || 0;
     const existingItems = profile?.inventory?.items || [];
     const existingStored = profile?.stored_pokemon || [];
 
     // Collect any captured Pokémon beyond the active one into stored
     const activePkm = team[activeTeamIndex];
-    const extraPkm = team.filter((_, i) => i !== activeTeamIndex && p.id).map((p) => ({
+    const extraPkm = team.filter((p, i) => i !== activeTeamIndex).map((p) => ({
       pokemon_id: p.pokemonId,
       nickname: p.nickname,
       level: p.level,
@@ -966,6 +981,58 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               onDecline={handleCaptureDecline}
             />
           </div>
+        </div>
+      )}
+
+      {/* Stairs choice overlay */}
+      {showStairsChoice && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="max-w-sm w-full rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4 text-center">
+            <p className="text-3xl">🔽</p>
+            <h2 className="text-xl font-bold text-slate-100">{t("dungeon-stairs-title", language)}</h2>
+            <p className="text-sm text-slate-400">{t("dungeon-stairs-desc", language)}</p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleDescend}
+                className="w-full rounded-xl bg-green-700 px-4 py-3 text-sm font-semibold text-white hover:bg-green-600 transition-colors"
+              >
+                {t("dungeon-descend", language)}
+              </button>
+              <button
+                onClick={handleLeaveSafely}
+                className="w-full rounded-xl bg-blue-700 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
+              >
+                {t("dungeon-leave-safely", language)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Safe exit overlay */}
+      {showSafeExit && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="max-w-sm w-full rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4 text-center">
+            <p className="text-3xl">🏆</p>
+            <h2 className="text-xl font-bold text-slate-100">{t("dungeon-exit-title", language)}</h2>
+            <div className="text-sm text-slate-300 space-y-2">
+              <p>💰 {t("Gold", language)}: <span className="text-yellow-400 font-bold">{goldCount}</span></p>
+              <p>{t("dungeon-exit-saved", language)}</p>
+            </div>
+            <button
+              onClick={handleConfirmExit}
+              className="w-full rounded-xl bg-blue-700 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
+            >
+              {t("Confirm", language)}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Enemies moving indicator */}
+      {!enemiesMoved && !inBattle && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-xl bg-slate-800/90 px-4 py-2 text-xs text-slate-300 border border-slate-700">
+          {t("dungeon-enemies-moving", language)}
         </div>
       )}
     </div>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { getLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { getSpeciesName, getRandomMovesForSpecies } from "../lib/moves";
-import { addTeamMember, removeTeamMember } from "../lib/auth";
+import { addTeamMember } from "../lib/auth";
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 
@@ -10,7 +10,7 @@ export default function CaptureScreen({ enemy, playerLevel, team, accountId, onC
   const [releasing, setReleasing] = useState(null);
   const [saving, setSaving] = useState(false);
   const language = getLanguage();
-  const teamFull = team.length >= 6;
+  const teamFull = team.length >= 1;
 
   const captureChance = Math.min(
     0.5,
@@ -38,36 +38,6 @@ export default function CaptureScreen({ enemy, playerLevel, team, accountId, onC
       onCapture();
     } catch (err) {
       console.error("Capture failed:", err);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleReleaseAndCapture(memberId) {
-    setSaving(true);
-    try {
-      await removeTeamMember(memberId);
-
-      const moves = getRandomMovesForSpecies(enemy.pokemonId, 2);
-      const level = Math.max(1, enemy.level + Math.floor(Math.random() * 5) - 2);
-      const hp = 15 + level * 3;
-
-      const newSlot = team.filter((p) => p.id !== memberId).length;
-
-      await addTeamMember(accountId, {
-        pokemon_id: enemy.pokemonId,
-        nickname: getSpeciesName(enemy.pokemonId),
-        level,
-        hp,
-        max_hp: hp,
-        moves,
-        slot: newSlot,
-        is_starter: false,
-      });
-
-      onCapture();
-    } catch (err) {
-      console.error("Release and capture failed:", err);
     } finally {
       setSaving(false);
     }
@@ -104,35 +74,22 @@ export default function CaptureScreen({ enemy, playerLevel, team, accountId, onC
       ) : teamFull ? (
         <div className="space-y-3">
           <p className="text-xs text-yellow-400">
-            {t("Your team is full! Release a Pokémon to make room.", language)}
+            {t("dungeon-storage-msg", language)}
           </p>
-          <div className="grid grid-cols-3 gap-2">
-            {team.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => handleReleaseAndCapture(p.id)}
-                className="flex flex-col items-center rounded-lg border border-slate-700 bg-slate-800/60 p-2 hover:border-red-500 transition-colors"
-              >
-                <img
-                  src={`${SPRITE_URL}/${p.pokemon_id}.png`}
-                  alt=""
-                  className="w-10 h-10"
-                />
-                <p className="text-[10px] text-slate-300 truncate w-full">
-                  {p.nickname || getSpeciesName(p.pokemon_id)}
-                </p>
-                <p className="text-[9px] text-red-400">
-                  {t("Release", language)}
-                </p>
-              </button>
-            ))}
-          </div>
           <button
-            onClick={onDecline}
-            className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+            onClick={onCapture}
+            className="rounded-xl bg-green-700 px-6 py-2 text-sm font-semibold text-white hover:bg-green-600 transition-colors"
           >
-            {t("Decline", language)}
+            {t("dungeon-send-storage", language)}
           </button>
+          <div>
+            <button
+              onClick={onDecline}
+              className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              {t("Decline", language)}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex gap-3 justify-center">

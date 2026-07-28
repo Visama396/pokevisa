@@ -183,6 +183,22 @@ const SPECIES_TYPES = {
   144: "ice", 145: "electric", 146: "fire",
   147: "dragon", 148: "dragon", 149: "dragon",
   150: "psychic", 151: "psychic",
+  152: "grass", 155: "fire", 158: "water",
+  239: "electric", 240: "fire",
+  252: "grass", 255: "fire", 258: "water",
+  280: "psychic", 293: "normal", 328: "ground",
+  363: "ice",
+  387: "grass", 390: "fire", 393: "water",
+  495: "grass", 498: "fire", 501: "water",
+  524: "rock", 551: "ground",
+  650: "grass", 653: "fire", 656: "water",
+  669: "fairy",
+  722: "grass", 725: "fire", 728: "water",
+  736: "bug", 761: "grass",
+  810: "grass", 813: "fire", 816: "water",
+  821: "flying", 859: "dark",
+  906: "grass", 909: "fire", 912: "water",
+  957: "fairy",
 };
 
 // Species names (for display)
@@ -253,6 +269,31 @@ const SPECIES_NAMES = {
   144: "Articuno", 145: "Zapdos", 146: "Moltres",
   147: "Dratini", 148: "Dragonair", 149: "Dragonite",
   150: "Mewtwo", 151: "Mew",
+  // Gen 2
+  152: "Chikorita", 155: "Cyndaquil", 158: "Totodile",
+  // Gen 3
+  252: "Treecko", 255: "Torchic", 258: "Mudkip",
+  280: "Ralts", 293: "Whismur", 328: "Trapinch",
+  363: "Spheal",
+  // Gen 4
+  387: "Turtwig", 390: "Chimchar", 393: "Piplup",
+  // Gen 5
+  495: "Snivy", 498: "Tepig", 501: "Oshawott",
+  524: "Roggenrola", 551: "Sandile",
+  // Gen 6
+  650: "Chespin", 653: "Fennekin", 656: "Froakie",
+  669: "Flabébé",
+  // Gen 7
+  722: "Rowlet", 725: "Litten", 728: "Popplio",
+  736: "Grubbin", 761: "Bounsweet",
+  // Gen 8
+  810: "Grookey", 813: "Scorbunny", 816: "Sobble",
+  821: "Rookidee", 859: "Impidimp",
+  // Gen 9
+  906: "Sprigatito", 909: "Fuecoco", 912: "Quaxly",
+  957: "Tinkatink",
+  // Others
+  239: "Elekid", 240: "Magby",
 };
 
 export function getSpeciesName(id) {
@@ -275,26 +316,61 @@ export function getRandomMovesForSpecies(speciesId, count = 2) {
   return shuffled.slice(0, count);
 }
 
-// Starter Pokémon with their signature + tackle
+// Starter Pokémon with their signature + tackle, assigned to quiz traits
 export const STARTERS = [
-  { pokemonId: 1, name: "Bulbasaur", types: ["grass", "poison"], moves: [{ name: "vine-whip", type: "grass", category: "physical", power: 45, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 4, name: "Charmander", types: ["fire"], moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 7, name: "Squirtle", types: ["water"], moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 25, name: "Pikachu", types: ["electric"], moves: [{ name: "thunder-shock", type: "electric", category: "special", power: 40, accuracy: 100 }, { name: "quick-attack", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 35, name: "Clefairy", types: ["fairy"], moves: [{ name: "dazzling-gleam", type: "fairy", category: "special", power: 80, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 56, name: "Mankey", types: ["fighting"], moves: [{ name: "low-kick", type: "fighting", category: "physical", power: 50, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 63, name: "Abra", types: ["psychic"], moves: [{ name: "confusion", type: "psychic", category: "special", power: 50, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 74, name: "Geodude", types: ["rock", "ground"], moves: [{ name: "rock-throw", type: "rock", category: "physical", power: 50, accuracy: 90 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 88, name: "Grimer", types: ["poison"], moves: [{ name: "sludge", type: "poison", category: "physical", power: 65, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 92, name: "Gastly", types: ["ghost", "poison"], moves: [{ name: "lick", type: "ghost", category: "physical", power: 30, accuracy: 100 }, { name: "shadow-ball", type: "ghost", category: "special", power: 80, accuracy: 100 }] },
-  { pokemonId: 10, name: "Caterpie", types: ["bug"], moves: [{ name: "bug-bite", type: "bug", category: "physical", power: 60, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 124, name: "Jynx", types: ["ice", "psychic"], moves: [{ name: "ice-punch", type: "ice", category: "physical", power: 75, accuracy: 100 }, { name: "confusion", type: "psychic", category: "special", power: 50, accuracy: 100 }] },
-  { pokemonId: 27, name: "Sandshrew", types: ["ground"], moves: [{ name: "dig", type: "ground", category: "physical", power: 80, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 21, name: "Spearow", types: ["flying", "normal"], moves: [{ name: "wing-attack", type: "flying", category: "physical", power: 60, accuracy: 100 }, { name: "quick-attack", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 81, name: "Magnemite", types: ["steel", "electric"], moves: [{ name: "metal-claw", type: "steel", category: "physical", power: 50, accuracy: 95 }, { name: "thunder-shock", type: "electric", category: "special", power: 40, accuracy: 100 }] },
-  { pokemonId: 19, name: "Rattata", types: ["normal"], moves: [{ name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }, { name: "quick-attack", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 50, name: "Diglett", types: ["ground"], moves: [{ name: "dig", type: "ground", category: "physical", power: 80, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
-  { pokemonId: 147, name: "Dratini", types: ["dragon"], moves: [{ name: "dragon-rage", type: "dragon", category: "special", power: 60, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  // brave: Charmander, Piplup, Scorbunny, Sandile, Elekid, Rowlet, Rookidee, Roggenrola
+  { pokemonId: 4, name: "Charmander", types: ["fire"], trait: "brave", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 393, name: "Piplup", types: ["water"], trait: "brave", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 813, name: "Scorbunny", types: ["fire"], trait: "brave", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 551, name: "Sandile", types: ["ground", "dark"], trait: "brave", moves: [{ name: "bite", type: "dark", category: "physical", power: 60, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 239, name: "Elekid", types: ["electric"], trait: "brave", moves: [{ name: "thunder-shock", type: "electric", category: "special", power: 40, accuracy: 100 }, { name: "quick-attack", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 722, name: "Rowlet", types: ["grass", "flying"], trait: "brave", moves: [{ name: "razor-leaf", type: "grass", category: "physical", power: 55, accuracy: 95 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 821, name: "Rookidee", types: ["flying"], trait: "brave", moves: [{ name: "wing-attack", type: "flying", category: "physical", power: 60, accuracy: 100 }, { name: "quick-attack", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 524, name: "Roggenrola", types: ["rock"], trait: "brave", moves: [{ name: "rock-throw", type: "rock", category: "physical", power: 50, accuracy: 90 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+
+  // gentle: Ralts, Bounsweet, Spheal, Whismur, Chikorita, Popplio, Tinkatink, Impidimp, Totodile
+  { pokemonId: 280, name: "Ralts", types: ["psychic", "fairy"], trait: "gentle", moves: [{ name: "confusion", type: "psychic", category: "special", power: 50, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 761, name: "Bounsweet", types: ["grass"], trait: "gentle", moves: [{ name: "razor-leaf", type: "grass", category: "physical", power: 55, accuracy: 95 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 363, name: "Spheal", types: ["ice", "water"], trait: "gentle", moves: [{ name: "ice-shard", type: "ice", category: "physical", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 293, name: "Whismur", types: ["normal"], trait: "gentle", moves: [{ name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }, { name: "quick-attack", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 152, name: "Chikorita", types: ["grass"], trait: "gentle", moves: [{ name: "razor-leaf", type: "grass", category: "physical", power: 55, accuracy: 95 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 728, name: "Popplio", types: ["water"], trait: "gentle", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 957, name: "Tinkatink", types: ["fairy"], trait: "gentle", moves: [{ name: "fairy-wind", type: "fairy", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 859, name: "Impidimp", types: ["dark", "fairy"], trait: "gentle", moves: [{ name: "bite", type: "dark", category: "physical", power: 60, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 158, name: "Totodile", types: ["water"], trait: "gentle", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+
+  // quick: Zubat, Grubbin, Trapinch, Torchic, Sobble, Grookey, Litten, Treecko, Flabébé
+  { pokemonId: 41, name: "Zubat", types: ["poison", "flying"], trait: "quick", moves: [{ name: "wing-attack", type: "flying", category: "physical", power: 60, accuracy: 100 }, { name: "quick-attack", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 736, name: "Grubbin", types: ["bug"], trait: "quick", moves: [{ name: "bug-bite", type: "bug", category: "physical", power: 60, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 328, name: "Trapinch", types: ["ground"], trait: "quick", moves: [{ name: "mud-slap", type: "ground", category: "special", power: 20, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 255, name: "Torchic", types: ["fire"], trait: "quick", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 816, name: "Sobble", types: ["water"], trait: "quick", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 810, name: "Grookey", types: ["grass"], trait: "quick", moves: [{ name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 725, name: "Litten", types: ["fire"], trait: "quick", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 252, name: "Treecko", types: ["grass"], trait: "quick", moves: [{ name: "quick-attack", type: "normal", category: "physical", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 669, name: "Flabébé", types: ["fairy"], trait: "quick", moves: [{ name: "fairy-wind", type: "fairy", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+
+  // tough: Bulbasaur, Turtwig, Mudkip, Tepig, Oshawott, Chespin, Fuecoco, Machop, Quaxly
+  { pokemonId: 1, name: "Bulbasaur", types: ["grass", "poison"], trait: "tough", moves: [{ name: "vine-whip", type: "grass", category: "physical", power: 45, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 387, name: "Turtwig", types: ["grass"], trait: "tough", moves: [{ name: "razor-leaf", type: "grass", category: "physical", power: 55, accuracy: 95 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 258, name: "Mudkip", types: ["water"], trait: "tough", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 498, name: "Tepig", types: ["fire"], trait: "tough", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 501, name: "Oshawott", types: ["water"], trait: "tough", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 650, name: "Chespin", types: ["grass"], trait: "tough", moves: [{ name: "vine-whip", type: "grass", category: "physical", power: 45, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 909, name: "Fuecoco", types: ["fire"], trait: "tough", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 66, name: "Machop", types: ["fighting"], trait: "tough", moves: [{ name: "karate-chop", type: "fighting", category: "physical", power: 50, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 912, name: "Quaxly", types: ["water"], trait: "tough", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+
+  // clever: Squirtle, Snivy, Fennekin, Magby, Poliwag, Chimchar, Froakie, Cyndaquil, Sprigatito
+  { pokemonId: 7, name: "Squirtle", types: ["water"], trait: "clever", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 495, name: "Snivy", types: ["grass"], trait: "clever", moves: [{ name: "vine-whip", type: "grass", category: "physical", power: 45, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 653, name: "Fennekin", types: ["fire"], trait: "clever", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 240, name: "Magby", types: ["fire"], trait: "clever", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 60, name: "Poliwag", types: ["water"], trait: "clever", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 390, name: "Chimchar", types: ["fire"], trait: "clever", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 656, name: "Froakie", types: ["water"], trait: "clever", moves: [{ name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 155, name: "Cyndaquil", types: ["fire"], trait: "clever", moves: [{ name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
+  { pokemonId: 906, name: "Sprigatito", types: ["grass"], trait: "clever", moves: [{ name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 }, { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 }] },
 ];
 
 // Trait → type mapping
@@ -307,8 +383,7 @@ export const TRAIT_TYPES = {
 };
 
 export function getStartersForTrait(trait) {
-  const types = TRAIT_TYPES[trait] || ["normal"];
-  return STARTERS.filter((s) => s.types.some((t) => types.includes(t)));
+  return STARTERS.filter((s) => s.trait === trait);
 }
 
 // Species base speed stats (Gen 1, approximate)
@@ -332,7 +407,23 @@ const SPECIES_SPEED = {
   127:85, 128:110, 129:80, 130:81, 131:60, 132:48, 133:55,
   134:65, 135:130, 136:65, 137:40, 138:35, 139:55, 140:80,
   141:115, 142:130, 143:30, 144:85, 145:100, 146:90, 147:50,
-  148:70, 149:80, 150:130, 151:100,
+  148:70, 149:80,   150:130, 151:100,
+  152:55, 155:65, 158:43,
+  239:95, 240:83,
+  252:65, 255:45, 258:40,
+  280:40, 293:28, 328:10,
+  363:25,
+  387:31, 390:61, 393:40,
+  495:38, 498:45, 501:45,
+  524:15, 551:65,
+  650:35, 653:61, 656:71,
+  669:42,
+  722:36, 725:70, 728:40,
+  736:46, 761:32,
+  810:65, 813:69, 816:50,
+  821:60, 859:50,
+  906:65, 909:66, 912:50,
+  957:50,
 };
 
 export function getSpeciesSpeed(id) {
