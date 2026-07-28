@@ -3,6 +3,8 @@
 // Generates grid-based dungeons with rooms and corridors
 // =====================================================
 
+import { getRandomWildPokemon } from "./moves";
+
 // Tile types
 export const TILE = {
   FLOOR: 0,
@@ -35,7 +37,7 @@ function shuffleWithRNG(arr, rng) {
 }
 
 // Generate a dungeon using BSP
-export function generateDungeon(width = 20, height = 15, seed = Date.now()) {
+export function generateDungeon(width = 20, height = 15, seed = Date.now(), floor = 1) {
   const rng = createRNG(seed);
 
   // Initialize grid with walls
@@ -140,14 +142,14 @@ export function generateDungeon(width = 20, height = 15, seed = Date.now()) {
   const enemyCount = Math.min(floorTiles.length, 5 + Math.floor(rng() * 6));
   const enemyPositions = shuffleWithRNG(floorTiles, rng).slice(0, enemyCount);
   for (const pos of enemyPositions) {
-    // Random Pokémon ID (1-151 for Gen 1)
-    const pokemonId = Math.floor(rng() * 151) + 1;
+    const wildLevel = floor + 1 + Math.floor(rng() * 4);
+    const pokemonId = getRandomWildPokemon(wildLevel, rng);
     const hp = 20 + Math.floor(rng() * 30);
     enemies.push({
       x: pos.x,
       y: pos.y,
       pokemonId,
-      level: 3 + Math.floor(rng() * 5),
+      level: wildLevel,
       hp,
       maxHp: hp,
     });

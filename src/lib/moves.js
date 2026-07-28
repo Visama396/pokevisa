@@ -430,6 +430,70 @@ export function getSpeciesSpeed(id) {
   return SPECIES_SPEED[id] || 50;
 }
 
+// Legendary Pokémon that never spawn as wild
+const LEGENDARY_IDS = new Set([144, 145, 146, 150, 151]);
+
+// Minimum level at which evolved Pokémon can appear as wild
+// Pokémon not listed default to min level 1 (basic / single-stage / stone-evolved)
+const EVOLVED_MIN_LEVEL = {
+  2: 16, 3: 32,
+  5: 16, 6: 36,
+  8: 16, 9: 36,
+  11: 7, 12: 10,
+  14: 7, 15: 10,
+  17: 18, 18: 36,
+  20: 20,
+  22: 20,
+  24: 22,
+  28: 22,
+  30: 16,
+  33: 16,
+  42: 22,
+  44: 21,
+  47: 24,
+  49: 31,
+  51: 26,
+  53: 28,
+  55: 33,
+  57: 28,
+  61: 25,
+  64: 16,
+  67: 28,
+  70: 21,
+  73: 30,
+  75: 25,
+  78: 40,
+  80: 37,
+  82: 30,
+  85: 31,
+  87: 34,
+  89: 38,
+  93: 25,
+  97: 26,
+  99: 28,
+  101: 30,
+  105: 28,
+  110: 35,
+  112: 42,
+  117: 32,
+  119: 33,
+  130: 20,
+  139: 40,
+  141: 40,
+  148: 30,
+  149: 55,
+};
+
+export function getRandomWildPokemon(level, rng = Math.random) {
+  const valid = [];
+  for (let id = 1; id <= 151; id++) {
+    if (LEGENDARY_IDS.has(id)) continue;
+    const minLevel = EVOLVED_MIN_LEVEL[id] || 1;
+    if (level >= minLevel) valid.push(id);
+  }
+  return valid[Math.floor(rng() * valid.length)];
+}
+
 // EXP formula: base EXP from defeating an enemy
 export function calcExpGain(enemyLevel) {
   return 10 + enemyLevel * 5;

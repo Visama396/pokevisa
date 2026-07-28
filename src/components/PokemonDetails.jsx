@@ -201,6 +201,80 @@ function MoveTooltipContent({ name, moveData, language }) {
   );
 }
 
+function buildEvolutionChains(chart) {
+  const nodeMap = {};
+  for (const entry of chart) {
+    nodeMap[entry.name] = { ...entry };
+  }
+
+  function walk(name, condition) {
+    const entry = nodeMap[name];
+    if (!entry) return [];
+    const current = { name: entry.name, id: entry.id, stage: entry.stage, condition };
+    if (!entry.evolvesTo || entry.evolvesTo.length === 0) {
+      return [[current]];
+    }
+    const chains = [];
+    for (const evo of entry.evolvesTo) {
+      const evoCondition = { trigger: evo.trigger, minLevel: evo.minLevel, item: evo.item, heldItem: evo.heldItem, knownMove: evo.knownMove, knownMoveType: evo.knownMoveType, location: evo.location, minHappiness: evo.minHappiness, minAffection: evo.minAffection, needsOverworldRain: evo.needsOverworldRain, partySpecies: evo.partySpecies, partyType: evo.partyType, relativePhysicalStats: evo.relativePhysicalStats, timeOfDay: evo.timeOfDay, tradeSpecies: evo.tradeSpecies, gender: evo.gender, turnUpsideDown: evo.turnUpsideDown, minBeauty: evo.minBeauty };
+      const subChains = walk(evo.name, evoCondition);
+      for (const sub of subChains) {
+        chains.push([current, ...sub]);
+      }
+    }
+    return chains;
+  }
+
+  const roots = chart.filter(e => e.stage === 1);
+  const allChains = [];
+  for (const root of roots) {
+    allChains.push(...walk(root.name, null));
+  }
+  return allChains;
+}
+
+function formatCondition(cond) {
+  if (!cond) return '';
+  const { trigger, minLevel, item, heldItem, knownMove, knownMoveType, location, minHappiness, minAffection, needsOverworldRain, partySpecies, partyType, relativePhysicalStats, timeOfDay, tradeSpecies, gender, turnUpsideDown, minBeauty } = cond;
+
+  const extras = [];
+  if (minHappiness != null || minAffection != null) extras.push('high friendship');
+  if (timeOfDay) extras.push(capitalize(timeOfDay));
+  if (knownMove) extras.push(`knowing ${knownMove.split('-').map(w => capitalize(w)).join(' ')}`);
+  if (knownMoveType) extras.push(`knowing ${capitalize(knownMoveType)} move`);
+  if (location) extras.push(location.split('-').map(w => capitalize(w)).join(' '));
+  if (partySpecies) extras.push(`with ${partySpecies.split('-').map(w => capitalize(w)).join(' ')} in party`);
+  if (partyType) extras.push(`with ${capitalize(partyType)} type in party`);
+  if (gender != null) extras.push(gender === 1 ? 'female only' : 'male only');
+  if (needsOverworldRain) extras.push('in rain');
+  if (relativePhysicalStats != null) {
+    if (relativePhysicalStats === 1) extras.push('atk > def');
+    else if (relativePhysicalStats === 0) extras.push('atk = def');
+    else if (relativePhysicalStats === -1) extras.push('atk < def');
+  }
+  if (minBeauty != null) extras.push('high Beauty');
+  if (turnUpsideDown) extras.push('upside down');
+
+  if (trigger === 'level-up') {
+    const label = minLevel != null ? `Lv. ${minLevel}` : 'Level up';
+    return extras.length > 0 ? `${label} (${extras.join(', ')})` : label;
+  }
+
+  if (trigger === 'use-item' && item) {
+    return item.split('-').map(w => capitalize(w)).join(' ');
+  }
+
+  if (trigger === 'trade') {
+    const tradeParts = [];
+    if (heldItem) tradeParts.push(`holding ${heldItem.split('-').map(w => capitalize(w)).join(' ')}`);
+    if (tradeSpecies) tradeParts.push(`for ${tradeSpecies.split('-').map(w => capitalize(w)).join(' ')}`);
+    if (item) tradeParts.push(`with ${item.split('-').map(w => capitalize(w)).join(' ')}`);
+    return `Trade${tradeParts.length > 0 ? ` (${tradeParts.join(', ')})` : ''}`;
+  }
+
+  return trigger || '';
+}
+
 export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
   const [moveData, setMoveData] = useState(null);
   const [abilityData, setAbilityData] = useState(null);
@@ -538,45 +612,105 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
       </div>
 
       {/* Row 5: Evolution Chart */}
-      {(pokemon.evolutionChart || []).length > 0 && (
-        <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-          <h2 className="text-xl font-bold mb-4">{t("Evolution Chart", language)}</h2>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            {pokemon.evolutionChart.map((evo, idx) => (
-              <span key={evo.name} className="flex items-center gap-4">
-                {idx > 0 && (
-                  <svg className="size-6 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                )}
-                <a
-                  href={`/pokedex/${evo.name}`}
-                  className="flex flex-col items-center gap-1 rounded-xl bg-slate-700/40 px-4 py-3 hover:bg-slate-700/70 hover:scale-105 transition-all"
-                >
-                  <img
-                    src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${evo.id}.png`}
-                    alt={evo.name}
-                    className="size-16 object-contain"
-                    loading="lazy"
-                  />
-                  <span className="text-sm font-semibold text-slate-200">
-                    {capitalize(evo.name.replace(/-/g, " "))}
-                  </span>
-                  <span className="text-xs text-slate-500 font-mono">
-                    {t("Stage", language)} {evo.stage}
-                  </span>
-                </a>
-              </span>
-            ))}
+      {(pokemon.evolutionChart || []).length > 0 && (() => {
+        const chains = buildEvolutionChains(pokemon.evolutionChart)
+          .filter(chain => chain.some(e => e.name === pokemon.slug));
+        if (chains.length === 0) return null;
+        const maxStage = Math.max(...chains.flat().map(e => e.stage));
+        const numCols = maxStage * 2 - 1;
+        const gridParts = Array.from({ length: numCols }, () => 'auto');
+
+        const colMerges = gridParts.map((_, col) => {
+          const isArrow = col % 2 === 1;
+          const getVal = (c) => {
+            const e = c[isArrow ? Math.ceil(col / 2) : Math.floor(col / 2)];
+            return isArrow ? e?.condition : e?.name;
+          };
+          const merges = [];
+          let i = 0;
+          while (i < chains.length) {
+            const cur = getVal(chains[i]);
+            let j = i + 1;
+            while (j < chains.length) {
+              if (isArrow ? JSON.stringify(cur) !== JSON.stringify(getVal(chains[j])) : cur !== getVal(chains[j])) break;
+              j++;
+            }
+            merges.push({ start: i, length: j - i });
+            i = j;
+          }
+          return merges;
+        });
+
+        return (
+          <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+            <h2 className="text-xl font-bold mb-4">{t("Evolution Chart", language)}</h2>
+            <div className="grid justify-center items-center gap-x-4 gap-y-2"
+              style={{
+                gridTemplateColumns: gridParts.join(' '),
+                gridTemplateRows: `repeat(${chains.length}, auto)`,
+              }}
+            >
+              {chains.flatMap((chain, ci) =>
+                gridParts.map((_, col) => {
+                  const isArrow = col % 2 === 1;
+                  const entry = chain[Math.floor(col / 2)];
+                  const merge = colMerges[col].find(m => ci >= m.start && ci < m.start + m.length);
+                  if (!merge || ci !== merge.start) return null;
+
+                  const key = `${ci}-${col}`;
+                  const style = { gridColumn: col + 1, gridRow: `${ci + 1} / span ${merge.length}` };
+
+                  if (isArrow) {
+                    const nextEntry = chain[Math.ceil(col / 2)];
+                    if (!nextEntry) return <div key={key} style={style} />;
+                    return (
+                      <div key={key} style={style} className={`flex flex-col items-center justify-center gap-0.5 ${merge.length > 1 ? 'self-center' : ''}`}>
+                        <svg className="size-5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap leading-tight">
+                          {formatCondition(nextEntry.condition)}
+                        </span>
+                      </div>
+                    );
+                  }
+                  if (!entry) return <div key={key} style={style} />;
+                  const isCurrent = entry.name === pokemon.slug;
+                  return (
+                    <a key={key} href={`/pokedex/${entry.name}`}
+                      style={style}
+                      className={`flex flex-col items-center gap-1 rounded-xl px-4 py-3 transition-all ${
+                        isCurrent
+                          ? 'bg-yellow-600/30 ring-2 ring-yellow-500/50 scale-110'
+                          : 'bg-slate-700/40 hover:bg-slate-700/70 hover:scale-105'
+                      } ${merge.length > 1 ? 'self-center' : ''}`}
+                    >
+                      <img
+                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${entry.id}.png`}
+                        alt={entry.name}
+                        className="size-14 object-contain"
+                        loading="lazy"
+                      />
+                      <span className="text-sm font-semibold text-slate-200">
+                        {capitalize(entry.name.replace(/-/g, ' '))}
+                      </span>
+                      <span className="text-xs text-slate-500 font-mono">
+                        {t("Stage", language)} {entry.stage}
+                      </span>
+                    </a>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Moves: Level Up | TM | Breeding | Tutor */}
       {(pokemon.moves?.levelUp?.length > 0 || pokemon.moves?.tm?.length > 0 || pokemon.moves?.egg?.length > 0 || pokemon.moves?.tutor?.length > 0) && (
-        <div className="flex flex-wrap gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {((moves) => moves.length > 0 && (
-            <div className="max-md:w-full md:max-xl:w-1/2 xl:flex-1 rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+            <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
               <div className="mb-4">
                 <h2 className="text-xl font-bold">{t("Moves by Level", language)}</h2>
                 <div className="flex gap-1 mt-2">
@@ -611,7 +745,7 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
             </div>
           ))(pokemon.moves?.levelUp || [])}
           {((moves) => moves.length > 0 && (
-            <div className="max-md:w-full md:max-xl:w-1/2 xl:flex-1 rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+            <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
               <div className="mb-4">
                 <h2 className="text-xl font-bold">{t("Moves by TM", language)}</h2>
                 <div className="flex gap-1 mt-2">
@@ -641,7 +775,7 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
             </div>
           ))(pokemon.moves?.tm || [])}
           {((moves) => moves.length > 0 && (
-            <div className="max-md:w-full md:max-xl:w-1/2 xl:flex-1 rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+            <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
               <div className="mb-4">
                 <h2 className="text-xl font-bold">{t("Moves by Breeding", language)}</h2>
                 <div className="flex gap-1 mt-2">
@@ -671,7 +805,7 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
             </div>
           ))(pokemon.moves?.egg || [])}
           {((moves) => moves.length > 0 && (
-            <div className="max-md:w-full md:max-xl:w-1/2 xl:flex-1 rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+            <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
               <div className="mb-4">
                 <h2 className="text-xl font-bold">{t("Moves by Tutor", language)}</h2>
                 <div className="flex gap-1 mt-2">

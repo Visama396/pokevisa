@@ -65,6 +65,7 @@ export default function DungeonMap({
   onMove,
   disabled,
   targeting,
+  damagePopups,
 }) {
   const visibleTiles = useMemo(() => {
     if (!dungeon) return new Set();
@@ -120,11 +121,12 @@ export default function DungeonMap({
 
   return (
     <div className="flex flex-col items-center">
-      <div
-        className="inline-grid gap-0 border border-slate-700 rounded-lg overflow-hidden bg-slate-900"
-        style={{ gridTemplateColumns: `repeat(${viewMaxX - viewMinX}, 2rem)` }}
-      >
-        {Array.from({ length: viewMaxY - viewMinY }, (_, vy) => {
+      <div className="relative">
+        <div
+          className="inline-grid gap-0 border border-slate-700 rounded-lg overflow-hidden bg-slate-900"
+          style={{ gridTemplateColumns: `repeat(${viewMaxX - viewMinX}, 32px)` }}
+        >
+          {Array.from({ length: viewMaxY - viewMinY }, (_, vy) => {
           const y = viewMinY + vy;
           return Array.from({ length: viewMaxX - viewMinX }, (_, vx) => {
             const x = viewMinX + vx;
@@ -153,13 +155,14 @@ export default function DungeonMap({
                 key={key}
                 onClick={() => handleTileClick(x, y)}
                 disabled={disabled || !isVisible}
-                className={`w-8 h-8 flex items-center justify-center ${bgClass} border border-slate-800/30 transition-all ${
+                className={`flex items-center justify-center ${bgClass} border border-slate-800/30 transition-all ${
                   !disabled && isVisible && isAdjacentTile
                     ? targeting
                       ? "hover:bg-red-600/40 cursor-crosshair ring-1 ring-red-500/30"
                       : "hover:bg-slate-600/40 cursor-pointer"
                     : "cursor-default"
                 }`}
+                style={{ width: 32, height: 32 }}
               >
                 {(isVisible || isVisited) && (
                   <TileContent
@@ -177,6 +180,21 @@ export default function DungeonMap({
               </button>
             );
           });
+        })}
+        </div>
+
+        {damagePopups?.map((p) => {
+          const gx = p.x - viewMinX;
+          const gy = p.y - viewMinY;
+          return (
+            <div
+              key={p.key}
+              className="absolute pointer-events-none z-10 text-red-400 font-bold text-xs animate-damage-popup"
+              style={{ left: gx * 32 + 16, top: gy * 32 }}
+            >
+              -{p.damage}
+            </div>
+          );
         })}
       </div>
       <p className="text-[10px] text-slate-500 mt-2">{targeting ? "Click a tile to attack" : "Click adjacent tiles to move"}</p>

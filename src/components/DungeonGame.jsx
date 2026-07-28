@@ -31,6 +31,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const [showSafeExit, setShowSafeExit] = useState(false);
   const [selectedMove, setSelectedMove] = useState(null);
   const [battleLog, setBattleLog] = useState([]);
+  const [damagePopups, setDamagePopups] = useState([]);
   const channelRef = useRef(null);
   const stepCountRef = useRef(0);
   const lastMoveRef = useRef(null);
@@ -41,6 +42,14 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
   function addLog(msg, side) {
     setBattleLog((prev) => [...prev, { text: msg, side }].slice(-LOG_MAX));
+  }
+
+  function showDamagePopup(x, y, damage) {
+    const key = Date.now() + Math.random();
+    setDamagePopups((prev) => [...prev, { x, y, damage, key }]);
+    setTimeout(() => {
+      setDamagePopups((prev) => prev.filter((p) => p.key !== key));
+    }, 1200);
   }
 
   useEffect(() => subscribe(setLanguage), []);
@@ -75,7 +84,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const startGame = useCallback(async () => {
     if (!isHost || !room) return;
 
-    const gen = generateDungeon(20, 15, room.dungeon_seed);
+    const gen = generateDungeon(20, 15, room.dungeon_seed, 1);
 
     await supabase.from("rooms").update({ status: "playing" }).eq("id", roomId);
 
@@ -155,7 +164,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           return;
         }
 
-        const gen = generateDungeon(20, 15, room.dungeon_seed);
+        const gen = generateDungeon(20, 15, room.dungeon_seed, 1);
 
         const positions = players.map((p, i) => ({
           id: p.id,
@@ -293,6 +302,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         const eff = getEffectiveness(move.type, [getSpeciesType(currentTeam[currentIndex]?.pokemonId || 25)]);
         const dmg = calcDamage(move, atk, def, eff, e.level);
 
+        showDamagePopup(px, py, dmg);
         logEntries.push({ text: `Wild ${getSpeciesName(e.pokemonId)} used ${move.name}! ${dmg} dmg`, side: "enemy" });
 
         const newHp = Math.max(0, (currentTeam[currentIndex]?.hp || 100) - dmg);
@@ -495,6 +505,13 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       }
 
       if (dungeon.tiles[y]?.[x] === TILE.STAIRS) {
+        if (floorNum >= 100) {
+          addLog("You conquered the dungeon!", "player");
+          setBattleResult({ result: "won", message: "Dungeon conquered!" });
+          setEnemiesMoved(true);
+          turnLockRef.current = false;
+          return;
+        }
         setShowStairsChoice(true);
       }
 
@@ -518,6 +535,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       else if (eff < 1 && eff > 0) effText = ` ${t("Not very effective...", language)}`;
       else if (eff === 0) effText = ` ${t("No effect!", language)}`;
 
+      showDamagePopup(x, y, dmg);
       addLog(`${t("You used", language)} ${move.name}! ${dmg} ${t("dmg", language)}${effText}`, "player");
 
       const newEnemies = dungeon.enemies.map((e) => {
@@ -642,7 +660,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     const nextFloor = floorNum + 1;
     setFloorNum(nextFloor);
     const newSeed = Date.now();
-    const gen = generateDungeon(20, 15, newSeed);
+    const gen = generateDungeon(20, 15, newSeed, nextFloor);
 
     setTeam((prev) => {
       return prev.map((p, i) => {
@@ -659,6 +677,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     setEnemiesMoved(true);
     setSelectedMove(null);
     setBattleLog([]);
+    setDamagePopups([]);
     stepCountRef.current = 0;
 
     await supabase
@@ -874,6 +893,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               onMove={handleTileClick}
               disabled={!enemiesMoved || turnLockRef.current}
               targeting={selectedMove}
+              damagePopups={damagePopups}
             />
           ) : (
             <div className="text-center text-slate-400 py-10">
@@ -991,7 +1011,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3 max-h-32 overflow-y-auto">
         {battleLog.length === 0 ? (
           <p className="text-xs text-slate-500 text-center italic">
-            {t("Wild Pokémon appeared!", language)}
+            {t("Select a move or move to an adjacent tile", language) || "Select a move or move to an adjacent tile"}
           </p>
         ) : (
           <div className="space-y-1">

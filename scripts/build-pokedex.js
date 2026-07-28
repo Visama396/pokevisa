@@ -51,6 +51,21 @@ async function getEvolutionStage(species) {
           minLevel: detail.min_level ?? null,
           trigger: detail.trigger?.name ?? null,
           item: detail.item?.name ?? null,
+          heldItem: detail.held_item?.name ?? null,
+          knownMove: detail.known_move?.name ?? null,
+          knownMoveType: detail.known_move_type?.name ?? null,
+          location: detail.location?.name ?? null,
+          minHappiness: detail.min_happiness ?? null,
+          minBeauty: detail.min_beauty ?? null,
+          minAffection: detail.min_affection ?? null,
+          needsOverworldRain: detail.needs_overworld_rain ?? false,
+          partySpecies: detail.party_species?.name ?? null,
+          partyType: detail.party_type?.name ?? null,
+          relativePhysicalStats: detail.relative_physical_stats ?? null,
+          timeOfDay: detail.time_of_day ?? null,
+          tradeSpecies: detail.trade_species?.name ?? null,
+          gender: detail.gender ?? null,
+          turnUpsideDown: detail.turn_upside_down ?? false,
         };
       });
       members.push({
@@ -106,6 +121,21 @@ async function getEvolutionChart(evolutionChainUrl) {
           minLevel: detail.min_level ?? null,
           trigger: detail.trigger?.name ?? null,
           item: detail.item?.name ?? null,
+          heldItem: detail.held_item?.name ?? null,
+          knownMove: detail.known_move?.name ?? null,
+          knownMoveType: detail.known_move_type?.name ?? null,
+          location: detail.location?.name ?? null,
+          minHappiness: detail.min_happiness ?? null,
+          minBeauty: detail.min_beauty ?? null,
+          minAffection: detail.min_affection ?? null,
+          needsOverworldRain: detail.needs_overworld_rain ?? false,
+          partySpecies: detail.party_species?.name ?? null,
+          partyType: detail.party_type?.name ?? null,
+          relativePhysicalStats: detail.relative_physical_stats ?? null,
+          timeOfDay: detail.time_of_day ?? null,
+          tradeSpecies: detail.trade_species?.name ?? null,
+          gender: detail.gender ?? null,
+          turnUpsideDown: detail.turn_upside_down ?? false,
         };
       });
       members.push({
