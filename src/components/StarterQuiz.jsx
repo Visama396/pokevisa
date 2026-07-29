@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { getLanguage } from "../stores/language";
 import { t } from "../stores/translations";
-import { getStartersForTrait } from "../lib/moves";
+import { getStartersForTrait, getMovesAtLevel } from "../lib/moves";
+import { computeStats } from "../lib/pokedex";
 import PokeTypeBadge from "./PokeTypeBadge";
 import { addTeamMember, saveProfile } from "../lib/auth";
 
@@ -151,19 +152,23 @@ export default function StarterQuiz({ accountId, onComplete }) {
   async function handlePickStarter(starter) {
     setSaving(true);
     try {
+      const [stats, moves] = await Promise.all([
+        computeStats(starter.pokemonId, 5),
+        getMovesAtLevel(starter.pokemonId, 5),
+      ]);
+
       await saveProfile(accountId, {
         quiz_result: trait,
         starter_id: starter.pokemonId,
       });
 
-      const baseHp = 20 + starter.pokemonId % 10;
       await addTeamMember(accountId, {
         pokemon_id: starter.pokemonId,
         nickname: starter.name,
         level: 5,
-        hp: baseHp,
-        max_hp: baseHp,
-        moves: starter.moves,
+        hp: stats.hp,
+        max_hp: stats.maxHp,
+        moves,
         slot: 0,
         is_starter: true,
       });

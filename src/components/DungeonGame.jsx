@@ -3,7 +3,8 @@ import { getLanguage, subscribe } from "../stores/language";
 import { t, getTypeName } from "../stores/translations";
 import { supabase } from "../lib/supabase";
 import { generateDungeon, isWalkable, moveEnemyToward, getVisibleTiles, TILE } from "../lib/dungeon";
-import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesSpeed, calcExpGain, checkLevelUp, getEffectiveness, calcDamage } from "../lib/moves";
+import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesTypes, getSpeciesSpeed, getMovesAtLevel, getMoveName, calcExpGain, checkLevelUp, getEffectiveness, calcDamage, getStabMultiplier } from "../lib/moves";
+import { ensureLoaded, computeStats } from "../lib/pokedex";
 import { removeTeamMember, updateTeamMember, getTeam, getProfile, saveProfile } from "../lib/auth";
 import LanguageSelector from "./LanguageSelector";
 import DungeonMap from "./DungeonMap";
@@ -32,6 +33,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const [selectedMove, setSelectedMove] = useState(null);
   const [battleLog, setBattleLog] = useState([]);
   const [damagePopups, setDamagePopups] = useState([]);
+  const [pokedexReady, setPokedexReady] = useState(false);
+  const [moveData, setMoveData] = useState(null);
   const channelRef = useRef(null);
   const stepCountRef = useRef(0);
   const lastMoveRef = useRef(null);
@@ -85,6 +88,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     if (!isHost || !room) return;
 
     const gen = generateDungeon(20, 15, room.dungeon_seed, 1);
+    gen.enemies = await enrichEnemies(gen.enemies);
 
     await supabase.from("rooms").update({ status: "playing" }).eq("id", roomId);
 
@@ -131,11 +135,15 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       .maybeSingle();
 
     if (data) {
+      let enemies = data.enemies || [];
+      if (enemies.some(e => e.atk === undefined) && pokedexReady) {
+        enemies = await enrichEnemies(enemies);
+      }
       setDungeon({
         width: data.width,
         height: data.height,
         tiles: data.tiles,
-        enemies: data.enemies || [],
+        enemies,
         treasures: data.treasures || [],
         gold: data.gold || [],
         spawnX: 1,
@@ -146,6 +154,32 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       });
     }
   }, [roomId]);
+
+  useEffect(() => {
+    ensureLoaded().then(() => setPokedexReady(true));
+    fetch("/moves.json").then(r => r.json()).then(setMoveData).catch(() => {});
+  }, []);
+
+  async function enrichPokemon(p) {
+    const stats = await computeStats(p.pokemonId, p.level);
+    if (p.moves && p.moves.length > 0) {
+      return { ...p, ...stats };
+    }
+    const moves = await getMovesAtLevel(p.pokemonId, p.level);
+    return { ...p, ...stats, moves };
+  }
+
+  async function enrichEnemies(enemies) {
+    return Promise.all(enemies.map(enrichPokemon));
+  }
+
+  // Enrich team from DB (backward compat)
+  useEffect(() => {
+    if (!pokedexReady || team.length === 0) return;
+    if (team.some(p => p.atk === undefined)) {
+      Promise.all(team.map(enrichPokemon)).then(enriched => setTeam(enriched));
+    }
+  }, [pokedexReady]);
 
   useEffect(() => {
     if (!room || room.status !== "playing" || !isHost || dungeon) return;
@@ -165,6 +199,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         }
 
         const gen = generateDungeon(20, 15, room.dungeon_seed, 1);
+        gen.enemies = await enrichEnemies(gen.enemies);
 
         const positions = players.map((p, i) => ({
           id: p.id,
@@ -295,15 +330,17 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       const isAdjacent = Math.abs(e.x - px) <= 1 && Math.abs(e.y - py) <= 1 && (Math.abs(e.x - px) + Math.abs(e.y - py) > 0);
 
       if (isAdjacent) {
-        const enemyMoves = getRandomMovesForSpecies(e.pokemonId, 3);
+        const enemyMoves = e.moves || getRandomMovesForSpecies(e.pokemonId, 3);
         const move = enemyMoves[Math.floor(Math.random() * enemyMoves.length)];
-        const atk = 10 + e.level * 3;
-        const def = 8 + (currentTeam[currentIndex]?.level || 5) * 2;
-        const eff = getEffectiveness(move.type, [getSpeciesType(currentTeam[currentIndex]?.pokemonId || 25)]);
-        const dmg = calcDamage(move, atk, def, eff, e.level);
+        const atkStat = move.category === "physical" ? (e.atk || 10 + e.level * 3) : (e.spa || 10 + e.level * 3);
+        const defStat = move.category === "physical" ? (currentTeam[currentIndex]?.def || 8 + (currentTeam[currentIndex]?.level || 5) * 2) : (currentTeam[currentIndex]?.spd || 8 + (currentTeam[currentIndex]?.level || 5) * 2);
+        const defenderTypes = currentTeam[currentIndex]?.types || getSpeciesTypes(currentTeam[currentIndex]?.pokemonId || 25);
+        const eff = getEffectiveness(move.type, defenderTypes);
+        const stab = getStabMultiplier(move.type, e.types || getSpeciesTypes(e.pokemonId));
+        const dmg = calcDamage(move, atkStat, defStat, eff, e.level, stab);
 
         showDamagePopup(px, py, dmg);
-        logEntries.push({ text: `Wild ${getSpeciesName(e.pokemonId)} used ${move.name}! ${dmg} dmg`, side: "enemy" });
+        logEntries.push({ text: `Wild ${getSpeciesName(e.pokemonId)} used ${getMoveName(move, language, moveData)}! ${dmg} dmg`, side: "enemy" });
 
         const newHp = Math.max(0, (currentTeam[currentIndex]?.hp || 100) - dmg);
         currentTeam[currentIndex] = { ...currentTeam[currentIndex], hp: newHp };
@@ -525,10 +562,12 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     lastMoveRef.current = move;
 
     if (enemyHere) {
-      const atk = 10 + (activePokemon?.level || 5) * 3;
-      const def = 8 + enemyHere.level * 2;
-      const eff = getEffectiveness(move.type, [getSpeciesType(enemyHere.pokemonId)]);
-      const dmg = calcDamage(move, atk, def, eff, activePokemon?.level || 5);
+      const atkStat = move.category === "physical" ? (activePokemon?.atk || 10 + (activePokemon?.level || 5) * 3) : (activePokemon?.spa || 10 + (activePokemon?.level || 5) * 3);
+      const defStat = move.category === "physical" ? (enemyHere.def || 8 + enemyHere.level * 2) : (enemyHere.spd || 8 + enemyHere.level * 2);
+      const defenderTypes = enemyHere.types || getSpeciesTypes(enemyHere.pokemonId);
+      const eff = getEffectiveness(move.type, defenderTypes);
+      const stab = getStabMultiplier(move.type, activePokemon?.types || getSpeciesTypes(activePokemon?.pokemonId || 25));
+      const dmg = calcDamage(move, atkStat, defStat, eff, activePokemon?.level || 5, stab);
 
       let effText = "";
       if (eff > 1) effText = ` ${t("Super effective!", language)}`;
@@ -536,7 +575,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       else if (eff === 0) effText = ` ${t("No effect!", language)}`;
 
       showDamagePopup(x, y, dmg);
-      addLog(`${t("You used", language)} ${move.name}! ${dmg} ${t("dmg", language)}${effText}`, "player");
+      addLog(`${t("You used", language)} ${getMoveName(move, language, moveData)}! ${dmg} ${t("dmg", language)}${effText}`, "player");
 
       const newEnemies = dungeon.enemies.map((e) => {
         if (e.x === x && e.y === y) {
@@ -571,19 +610,21 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       const newExp = (pkm.exp || 0) + expGain;
       const leveledUp = checkLevelUp(pkm.level || 5, newExp);
       let newLevel = pkm.level || 5;
-      let newMaxHp = pkm.maxHp || pkm.max_hp;
       if (leveledUp) {
         newLevel = leveledUp;
-        newMaxHp = newMaxHp + 3;
       }
-      const updatedPkm = { ...pkm, exp: newExp, level: newLevel, maxHp: newMaxHp };
+      const [newStats, newMoves] = await Promise.all([
+        computeStats(pkm.pokemonId, newLevel),
+        getMovesAtLevel(pkm.pokemonId, newLevel),
+      ]);
+      const updatedPkm = { ...pkm, ...newStats, moves: newMoves, exp: newExp, hp: Math.max(pkm.hp, newStats.maxHp) };
       setTeam((prev) => {
         const updated = [...prev];
         updated[activeTeamIndex] = updatedPkm;
         return updated;
       });
       if (pkm.id) {
-        await updateTeamMember(pkm.id, { level: newLevel, maxHp: newMaxHp, exp: newExp });
+        await updateTeamMember(pkm.id, { level: newLevel, maxHp: newStats.maxHp, hp: Math.max(pkm.hp, newStats.maxHp), exp: newExp, moves: newMoves });
       }
       if (leveledUp) {
         setMyPlayer((p) => (p ? { ...p, level: newLevel } : p));
@@ -661,6 +702,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     setFloorNum(nextFloor);
     const newSeed = Date.now();
     const gen = generateDungeon(20, 15, newSeed, nextFloor);
+    gen.enemies = await enrichEnemies(gen.enemies);
 
     setTeam((prev) => {
       return prev.map((p, i) => {
@@ -952,7 +994,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
                           : "bg-slate-700/60 text-slate-200 hover:bg-slate-600/60"
                       }`}
                     >
-                      <span className="block truncate">{move.name}</span>
+                      <span className="block truncate">{getMoveName(move, language, moveData)}</span>
                       <span className="block text-[9px] text-slate-400">{move.power}</span>
                     </button>
                   ))}

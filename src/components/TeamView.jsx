@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { getSpeciesName } from "../lib/moves";
@@ -6,10 +6,42 @@ import { updateTeamMember, removeTeamMember } from "../lib/auth";
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 
+const typeToColor = {
+  normal: "bg-gray-400 text-gray-900",
+  fire: "bg-orange-500 text-white",
+  water: "bg-blue-500 text-white",
+  electric: "bg-yellow-400 text-yellow-900",
+  grass: "bg-green-500 text-white",
+  ice: "bg-cyan-300 text-cyan-900",
+  fighting: "bg-red-600 text-white",
+  poison: "bg-purple-600 text-white",
+  ground: "bg-amber-600 text-white",
+  flying: "bg-indigo-400 text-white",
+  psychic: "bg-pink-500 text-white",
+  bug: "bg-lime-500 text-white",
+  rock: "bg-yellow-700 text-white",
+  ghost: "bg-purple-700 text-white",
+  dragon: "bg-indigo-600 text-white",
+  dark: "bg-gray-700 text-white",
+  steel: "bg-gray-400 text-gray-900",
+  fairy: "bg-pink-400 text-white",
+};
+
 export default function TeamView({ team, onUpdate }) {
   const [editing, setEditing] = useState(null);
   const [nickname, setNickname] = useState("");
+  const [moveData, setMoveData] = useState(null);
   const language = getLanguage();
+
+  useEffect(() => {
+    fetch("/moves.json").then(r => r.json()).then(setMoveData).catch(() => {});
+  }, []);
+
+  function getMoveName(move) {
+    if (!move) return "";
+    const m = moveData?.[move.key || move.name];
+    return m?.names?.[language] || m?.names?.en || move.name?.replace(/-/g, " ") || "";
+  }
 
   async function handleRename(id) {
     if (!nickname.trim()) return;
@@ -78,6 +110,17 @@ export default function TeamView({ team, onUpdate }) {
           <p className="text-[10px] text-slate-400 text-center">
             HP: {p.hp}/{p.max_hp}
           </p>
+
+          <div className="flex flex-wrap gap-1 justify-center">
+            {p.moves?.slice(0, 4).map((move) => (
+              <span
+                key={move.name}
+                className={`${typeToColor[move.type] || "bg-slate-600 text-white"} rounded px-1.5 py-[1px] text-[9px] font-semibold uppercase leading-tight`}
+              >
+                {getMoveName(move)}
+              </span>
+            ))}
+          </div>
 
           <div className="flex gap-1">
             <button

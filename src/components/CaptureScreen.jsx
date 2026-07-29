@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { getLanguage } from "../stores/language";
 import { t } from "../stores/translations";
-import { getSpeciesName, getRandomMovesForSpecies } from "../lib/moves";
+import { getSpeciesName, getMovesAtLevel } from "../lib/moves";
+import { computeStats } from "../lib/pokedex";
 import { addTeamMember } from "../lib/auth";
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
@@ -20,16 +21,18 @@ export default function CaptureScreen({ enemy, playerLevel, team, accountId, onC
   async function handleCapture() {
     setSaving(true);
     try {
-      const moves = getRandomMovesForSpecies(enemy.pokemonId, 2);
       const level = Math.max(1, enemy.level + Math.floor(Math.random() * 5) - 2);
-      const hp = 15 + level * 3;
+      const [stats, moves] = await Promise.all([
+        computeStats(enemy.pokemonId, level),
+        getMovesAtLevel(enemy.pokemonId, level),
+      ]);
 
       await addTeamMember(accountId, {
         pokemon_id: enemy.pokemonId,
         nickname: getSpeciesName(enemy.pokemonId),
         level,
-        hp,
-        max_hp: hp,
+        hp: stats.hp,
+        max_hp: stats.maxHp,
         moves,
         slot: team.length,
         is_starter: false,

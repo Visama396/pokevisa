@@ -190,6 +190,7 @@ function MoveTooltipContent({ name, moveData, language }) {
         <div className="flex items-center gap-2 text-slate-300">
           <PokeTypeBadge type={info.type} language={language} />
           <MoveIcon name={name} moveData={moveData} />
+          {info.power != null && <span>{t("Power", language)}: {info.power}</span>}
           {info.accuracy != null && <span>{t("Accuracy", language)}: {info.accuracy}</span>}
           {info.pp != null && <span>PP: {info.pp}</span>}
         </div>

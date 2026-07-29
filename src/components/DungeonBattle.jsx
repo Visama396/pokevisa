@@ -1,73 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { getLanguage } from "../stores/language";
 import { t, getStatLabel, getTypeName } from "../stores/translations";
-import { getSpeciesName } from "../lib/moves";
+import { getSpeciesName, getEffectiveness, calcDamage, getStabMultiplier, getMovesForType, getSpeciesTypes } from "../lib/moves";
 import { BubbleGroup, Bubble, BubbleContent } from "../../components/ui/bubble";
 
-// Minimal local copy of moves we need for the MVP
-const MOVE_LIST = [
-  { name: "tackle", type: "normal", category: "physical", power: 40, accuracy: 100 },
-  { name: "scratch", type: "normal", category: "physical", power: 40, accuracy: 100 },
-  { name: "ember", type: "fire", category: "special", power: 40, accuracy: 100 },
-  { name: "water-gun", type: "water", category: "special", power: 40, accuracy: 100 },
-  { name: "vine-whip", type: "grass", category: "physical", power: 45, accuracy: 100 },
-  { name: "thunder-shock", type: "electric", category: "special", power: 40, accuracy: 100 },
-  { name: "bite", type: "dark", category: "physical", power: 60, accuracy: 100 },
-  { name: "confusion", type: "psychic", category: "special", power: 50, accuracy: 100 },
-  { name: "wing-attack", type: "flying", category: "physical", power: 60, accuracy: 100 },
-  { name: "rock-throw", type: "rock", category: "physical", power: 50, accuracy: 90 },
-  { name: "aurora-beam", type: "ice", category: "special", power: 65, accuracy: 100 },
-  { name: "sludge", type: "poison", category: "physical", power: 65, accuracy: 100 },
-  { name: "dig", type: "ground", category: "physical", power: 80, accuracy: 100 },
-  { name: "dragon-rage", type: "dragon", category: "special", power: 60, accuracy: 100 },
-  { name: "shadow-ball", type: "ghost", category: "special", power: 80, accuracy: 100 },
-  { name: "iron-tail", type: "steel", category: "physical", power: 100, accuracy: 75 },
-  { name: "dazzling-gleam", type: "fairy", category: "special", power: 80, accuracy: 100 },
-  { name: "crunch", type: "dark", category: "physical", power: 80, accuracy: 100 },
-];
-
-const TYPE_CHART = {
-  normal: { rock: 0.5, ghost: 0, steel: 0.5 },
-  fire: { fire: 0.5, water: 0.5, grass: 2, ice: 2, bug: 2, rock: 0.5, dragon: 0.5, steel: 2 },
-  water: { fire: 2, water: 0.5, grass: 0.5, ground: 2, rock: 2, dragon: 0.5 },
-  grass: { fire: 0.5, water: 2, grass: 0.5, poison: 0.5, ground: 2, flying: 0.5, bug: 0.5, rock: 2, dragon: 0.5, steel: 0.5 },
-  electric: { water: 2, grass: 0.5, electric: 0.5, ground: 0, flying: 2, dragon: 0.5 },
-  ice: { fire: 0.5, water: 0.5, grass: 2, ice: 0.5, ground: 2, flying: 2, dragon: 2, steel: 0.5 },
-  fighting: { normal: 2, ice: 2, poison: 0.5, flying: 0.5, psychic: 0.5, bug: 0.5, rock: 2, ghost: 0, dark: 2, steel: 2, fairy: 0.5 },
-  poison: { grass: 2, poison: 0.5, ground: 0.5, rock: 0.5, ghost: 0.5, steel: 0, fairy: 2 },
-  ground: { fire: 2, electric: 2, grass: 0.5, poison: 2, flying: 0, bug: 0.5, rock: 2, steel: 2 },
-  flying: { electric: 0.5, grass: 2, fighting: 2, bug: 2, rock: 0.5, steel: 0.5 },
-  psychic: { fighting: 2, poison: 2, psychic: 0.5, dark: 0, steel: 0.5 },
-  bug: { fire: 0.5, grass: 2, fighting: 0.5, poison: 0.5, flying: 0.5, psychic: 2, ghost: 0.5, dark: 2, steel: 0.5, fairy: 0.5 },
-  rock: { fire: 2, ice: 2, fighting: 0.5, ground: 0.5, flying: 2, bug: 2, steel: 0.5 },
-  ghost: { normal: 0, psychic: 2, ghost: 2, dark: 0.5 },
-  dragon: { dragon: 2, steel: 0.5, fairy: 0 },
-  dark: { fighting: 0.5, psychic: 2, ghost: 2, dark: 0.5, fairy: 0.5 },
-  steel: { fire: 0.5, water: 0.5, electric: 0.5, ice: 2, rock: 2, steel: 0.5, fairy: 2 },
-  fairy: { fire: 0.5, fighting: 2, poison: 0.5, dragon: 2, dark: 2, steel: 0.5 },
-};
-
-function getEffectiveness(moveType, defenderTypes) {
-  let mult = 1;
-  for (const defType of defenderTypes) {
-    const chart = TYPE_CHART[moveType];
-    if (chart && chart[defType] !== undefined) {
-      mult *= chart[defType];
-    }
-  }
-  return mult;
-}
-
-function calcDamage(power, atk, def, effectiveness, level = 5) {
-  if (power === 0) return 0;
-  const base = ((2 * level / 5 + 2) * power * (atk / Math.max(def, 1))) / 50 + 2;
-  const stab = 1.25;
-  const random = 0.85 + Math.random() * 0.15;
-  return Math.max(1, Math.floor(base * stab * effectiveness * random));
-}
-
 function pickEnemyMoves(level) {
-  const shuffled = [...MOVE_LIST].sort(() => Math.random() - 0.5);
+  const allTypes = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
+  const pool = allTypes.flatMap(t => getMovesForType(t));
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, 2 + Math.floor(Math.random() * 2));
 }
 
@@ -82,7 +22,9 @@ export default function DungeonBattle({ enemy, playerPokemon, language, onEnd, p
   const [fled, setFled] = useState(false);
   const [enemyMoves] = useState(() => pickEnemyMoves(enemy.level));
   const [playerMoves] = useState(() => playerMovesProp || (() => {
-    const shuffled = [...MOVE_LIST].sort(() => Math.random() - 0.5);
+    const allTypes = ["normal", "fire", "water", "electric", "grass", "ice", "fighting", "poison", "ground", "flying", "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"];
+    const pool = allTypes.flatMap(t => getMovesForType(t));
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 4);
   })());
 
@@ -98,10 +40,11 @@ export default function DungeonBattle({ enemy, playerPokemon, language, onEnd, p
 
   const enemyAttack = useCallback(() => {
     const move = enemyMoves[Math.floor(Math.random() * enemyMoves.length)];
-    const atk = 10 + enemy.level * 3;
-    const def = 8 + playerPokemon.level * 2;
-    const effectiveness = getEffectiveness(move.type, playerPokemon.types || ["normal"]);
-    const dmg = calcDamage(move.power, atk, def, effectiveness, enemy.level);
+    const atkStat = move.category === "physical" ? (enemy.atk || 10 + enemy.level * 3) : (enemy.spa || 10 + enemy.level * 3);
+    const defStat = move.category === "physical" ? (playerPokemon.def || 8 + playerPokemon.level * 2) : (playerPokemon.spd || 8 + playerPokemon.level * 2);
+    const effectiveness = getEffectiveness(move.type, playerPokemon.types || getSpeciesTypes(playerPokemon.pokemonId || 25));
+    const stab = getStabMultiplier(move.type, enemy.types || getSpeciesTypes(enemy.pokemonId));
+    const dmg = calcDamage(move, atkStat, defStat, effectiveness, enemy.level, stab);
 
     setPlayerHp((prev) => {
       const next = Math.max(0, prev - dmg);
@@ -120,10 +63,11 @@ export default function DungeonBattle({ enemy, playerPokemon, language, onEnd, p
   const handleAttack = useCallback((move) => {
     if (!isPlayerTurn || battleOver) return;
 
-    const atk = 10 + playerPokemon.level * 3;
-    const def = 8 + enemy.level * 2;
+    const atkStat = move.category === "physical" ? (playerPokemon.atk || 10 + playerPokemon.level * 3) : (playerPokemon.spa || 10 + playerPokemon.level * 3);
+    const defStat = move.category === "physical" ? (enemy.def || 8 + enemy.level * 2) : (enemy.spd || 8 + enemy.level * 2);
     const effectiveness = getEffectiveness(move.type, enemyPokemon.types);
-    const dmg = calcDamage(move.power, atk, def, effectiveness, playerPokemon.level);
+    const stab = getStabMultiplier(move.type, playerPokemon.types || getSpeciesTypes(playerPokemon.pokemonId || 25));
+    const dmg = calcDamage(move, atkStat, defStat, effectiveness, playerPokemon.level, stab);
 
     let effText = "";
     if (effectiveness > 1) effText = ` ${t("Super effective!", language)}`;
