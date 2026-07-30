@@ -198,6 +198,8 @@ export default function DungeonLobby({ accountId, accountName, team, onTeamUpdat
         hp: starterHp,
         max_hp: starterMaxHp,
         is_host: false,
+        position_x: 1,
+        position_y: 1,
       });
 
       if (joinErr) throw joinErr;

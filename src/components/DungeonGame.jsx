@@ -40,6 +40,12 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const lastMoveRef = useRef(null);
   const turnLockRef = useRef(false);
   const enemyTurnRef = useRef(async () => {});
+  const [turnPlayerId, setTurnPlayerId] = useState(null);
+  const actedThisRoundRef = useRef(false);
+  const turnIndexRef = useRef(0);
+  const advanceTurnRef = useRef(async () => {});
+  const teamRef = useRef(initialTeam);
+  const activeTeamIndexRef = useRef(0);
 
   const activePokemon = team[activeTeamIndex];
 
@@ -186,7 +192,15 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   }, [pokedexReady]);
 
   useEffect(() => {
-    if (!room || room.status !== "playing" || !isHost || dungeon) return;
+    if (!room || room.status !== "playing" || dungeon) return;
+
+    // Non-host: load existing dungeon state directly (handles late joiners
+    // who might miss the game_start broadcast)
+    if (!isHost) {
+      loadDungeonFromDb();
+      return;
+    }
+
     if (players.length === 0) return;
 
     async function autoStart() {
@@ -257,12 +271,38 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     autoStart();
   }, [room, isHost, players, dungeon, roomId, loadDungeonFromDb, myPlayer]);
 
+  // Start turn system when dungeon first loads on the host
+  useEffect(() => {
+    if (!dungeon || turnPlayerId || !isHost || players.length === 0) return;
+    if (!channelRef.current) return;
+
+    turnIndexRef.current = 0;
+    actedThisRoundRef.current = false;
+    const first = players[0];
+    setTurnPlayerId(first.player_id);
+    channelRef.current.send({
+      type: "broadcast",
+      event: "turn_advance",
+      payload: { playerId: first.player_id },
+    });
+  }, [dungeon, isHost, players, turnPlayerId]);
+
+  // If current turn player disconnects, advance to next
+  useEffect(() => {
+    if (!isHost || !turnPlayerId || players.length === 0) return;
+    if (!players.find((p) => p.player_id === turnPlayerId)) {
+      advanceTurnRef.current();
+    }
+  }, [players, turnPlayerId, isHost]);
+
+  useEffect(() => { teamRef.current = team; }, [team]);
+  useEffect(() => { activeTeamIndexRef.current = activeTeamIndex; }, [activeTeamIndex]);
+
   // Supabase Realtime channel
   useEffect(() => {
     const channel = supabase.channel(`room:${roomId}`);
 
     channel
-      .on("presence", { event: "sync" }, () => {})
       .on("broadcast", { event: "player_move" }, ({ payload }) => {
         if (payload.playerId === playerId) return;
         setPlayers((prev) =>
@@ -284,18 +324,89 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           });
         loadDungeonFromDb();
       })
+      .on("broadcast", { event: "player_joined" }, () => {
+        supabase
+          .from("room_players")
+          .select("*")
+          .eq("room_id", roomId)
+          .order("joined_at")
+          .then(({ data }) => {
+            if (data) {
+              setPlayers(data);
+              const me = data.find((p) => p.player_id === playerId);
+              if (me) setMyPlayer(me);
+            }
+          });
+      })
+      .on("broadcast", { event: "enemy_update" }, ({ payload }) => {
+        setDungeon((prev) => prev ? { ...prev, enemies: payload.enemies } : prev);
+      })
       .on("broadcast", { event: "player_left" }, ({ payload }) => {
         setPlayers((prev) => prev.filter((p) => p.player_id !== payload.playerId));
+      })
+      .on("broadcast", { event: "pvp_damage" }, async ({ payload }) => {
+        if (payload.targetPlayerId !== playerId) return;
+        let currentTeam = [...teamRef.current];
+        let currentIndex = activeTeamIndexRef.current;
+        if (!currentTeam[currentIndex]) return;
+        const newHp = Math.max(0, (currentTeam[currentIndex].hp || 100) - payload.damage);
+        currentTeam[currentIndex] = { ...currentTeam[currentIndex], hp: newHp };
+        if (newHp <= 0) {
+          const name = currentTeam[currentIndex]?.nickname || getSpeciesName(currentTeam[currentIndex]?.pokemonId);
+          addLog(`${name} ${t("fainted", language)} ${t("from", language)} ${payload.attackerName || t("opponent", language)}!`, "enemy");
+          if (currentTeam[currentIndex]?.id) await removeTeamMember(currentTeam[currentIndex].id);
+          let found = false;
+          for (let i = 0; i < currentTeam.length; i++) {
+            if (i !== currentIndex && currentTeam[i].hp > 0) { currentIndex = i; found = true; break; }
+          }
+          if (!found) { setBattleResult({ result: "lost" }); }
+        } else {
+          addLog(`${payload.attackerName || t("Opponent", language)} ${t("used", language)} ${payload.moveName || "attack"}! ${payload.damage} ${t("dmg", language)}`, "enemy");
+        }
+        setTeam(currentTeam);
+        setActiveTeamIndex(currentIndex);
+        if (currentTeam[currentIndex]) {
+          setMyPlayer((p) => ({ ...p, hp: currentTeam[currentIndex].hp }));
+        }
+        if (currentTeam[currentIndex]?.id) await updateTeamMember(currentTeam[currentIndex].id, { hp: currentTeam[currentIndex].hp });
+        await supabase.from("room_players").update({ hp: currentTeam[currentIndex]?.hp || 0 }).eq("player_id", playerId).eq("room_id", roomId);
+      })
+      .on("broadcast", { event: "turn_advance" }, ({ payload }) => {
+        setTurnPlayerId(payload.playerId);
+        turnLockRef.current = false;
+        setEnemiesMoved(true);
+        actedThisRoundRef.current = false;
+      })
+      .on("broadcast", { event: "turn_acted" }, async () => {
+        if (!isHost) return;
+        await advanceTurnRef.current();
+      })
+      .on("broadcast", { event: "enemy_turn_done" }, ({ payload }) => {
+        setDungeon((prev) => prev ? { ...prev, enemies: payload.enemies } : prev);
+        turnLockRef.current = false;
+        setEnemiesMoved(true);
       })
       .on("broadcast", { event: "game_over" }, ({ payload }) => {
         setBattleResult(payload);
       })
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "dungeon_state",
+        filter: `room_id=eq.${roomId}`,
+      }, () => { loadDungeonFromDb(); })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
+          channel.send({
+            type: "broadcast",
+            event: "player_joined",
+            payload: { playerId },
+          });
           channel.track({
             player_id: playerId,
             online_at: new Date().toISOString(),
           });
+          loadDungeonFromDb();
         }
       });
 
@@ -402,6 +513,12 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       .update({ enemies: newEnemies })
       .eq("room_id", roomId);
 
+    channelRef.current?.send({
+      type: "broadcast",
+      event: "enemy_update",
+      payload: { enemies: newEnemies },
+    });
+
     if (currentTeam[currentIndex]?.id) {
       await updateTeamMember(currentTeam[currentIndex].id, { hp: currentTeam[currentIndex].hp });
     }
@@ -417,10 +534,148 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
   enemyTurnRef.current = enemyTurn;
 
+  // --- Turn coordination (async functions, not useCallback — called via refs) ---
+
+  async function advanceTurn() {
+    if (!isHost || players.length === 0) return;
+    turnIndexRef.current += 1;
+
+    if (turnIndexRef.current >= players.length) {
+      turnIndexRef.current = 0;
+      turnLockRef.current = true;
+      setEnemiesMoved(false);
+      await doEnemyTurn();
+    } else {
+      const next = players[turnIndexRef.current];
+      actedThisRoundRef.current = false;
+      setTurnPlayerId(next.player_id);
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "turn_advance",
+        payload: { playerId: next.player_id },
+      });
+    }
+  }
+  advanceTurnRef.current = advanceTurn;
+
+  // Host moves all enemies toward the nearest player and broadcasts positions
+  async function doEnemyTurn() {
+    if (!dungeon) return;
+
+    const newEnemies = dungeon.enemies.map((e) => ({ ...e }));
+    const occupied = new Set(newEnemies.map((e) => `${e.x},${e.y}`));
+    for (const p of players) {
+      if (p.is_alive !== false) occupied.add(`${p.position_x},${p.position_y}`);
+    }
+
+    for (const e of newEnemies) {
+      let nearest = null;
+      let nearestDist = Infinity;
+      for (const p of players) {
+        if (p.is_alive === false) continue;
+        const d = Math.abs(e.x - p.position_x) + Math.abs(e.y - p.position_y);
+        if (d < nearestDist) { nearestDist = d; nearest = p; }
+      }
+      if (!nearest) continue;
+      const visible = getVisibleTiles(dungeon.tiles, e.x, e.y, 8);
+      if (!visible.has(`${nearest.position_x},${nearest.position_y}`)) continue;
+
+      if (Math.abs(e.x - nearest.position_x) <= 1 && Math.abs(e.y - nearest.position_y) <= 1) continue;
+
+      occupied.delete(`${e.x},${e.y}`);
+      const pos = moveEnemyToward(dungeon.tiles, e.x, e.y, nearest.position_x, nearest.position_y, occupied);
+      if (pos) { e.x = pos.x; e.y = pos.y; occupied.add(`${pos.x},${pos.y}`); }
+      else { occupied.add(`${e.x},${e.y}`); }
+    }
+
+    await supabase.from("dungeon_state").update({ enemies: newEnemies }).eq("room_id", roomId);
+
+    channelRef.current?.send({
+      type: "broadcast",
+      event: "enemy_turn_done",
+      payload: { enemies: newEnemies },
+    });
+
+    setDungeon((d) => d ? { ...d, enemies: newEnemies } : d);
+    setTimeout(() => processEnemyAttacks(newEnemies), 150);
+  }
+
+  // Per-client: enemies adjacent to the local player attack
+  async function processEnemyAttacks(enemies) {
+    if (!myPlayer || !dungeon) { finishTurn(); return; }
+
+    const px = myPlayer.position_x;
+    const py = myPlayer.position_y;
+    const logEntries = [];
+    let currentTeam = [...team];
+    let currentIndex = activeTeamIndex;
+    let wiped = false;
+
+    for (const e of enemies) {
+      if (wiped) break;
+      if (currentTeam[currentIndex]?.hp <= 0) { wiped = true; break; }
+      if (Math.abs(e.x - px) > 1 || Math.abs(e.y - py) > 1) continue;
+
+      const enemyMoves = e.moves || getRandomMovesForSpecies(e.pokemonId, 3);
+      const move = enemyMoves[Math.floor(Math.random() * enemyMoves.length)];
+      const defStat = move.category === "physical"
+        ? (currentTeam[currentIndex]?.def || 8 + (currentTeam[currentIndex]?.level || 5) * 2)
+        : (currentTeam[currentIndex]?.spd || 8 + (currentTeam[currentIndex]?.level || 5) * 2);
+      const defenderTypes = currentTeam[currentIndex]?.types || getSpeciesTypes(currentTeam[currentIndex]?.pokemonId || 25);
+      const eff = getEffectiveness(move.type, defenderTypes);
+      const stab = getStabMultiplier(move.type, e.types || getSpeciesTypes(e.pokemonId));
+      const dmg = calcDamage(move, e.atk || 10 + e.level * 3, defStat, eff, e.level, stab);
+
+      showDamagePopup(px, py, dmg);
+      logEntries.push({ text: `Wild ${getSpeciesName(e.pokemonId)} used ${getMoveName(move, language, moveData)}! ${dmg} dmg`, side: "enemy" });
+
+      const newHp = Math.max(0, (currentTeam[currentIndex]?.hp || 100) - dmg);
+      currentTeam[currentIndex] = { ...currentTeam[currentIndex], hp: newHp };
+
+      if (newHp <= 0) {
+        const name = currentTeam[currentIndex]?.nickname || getSpeciesName(currentTeam[currentIndex]?.pokemonId);
+        logEntries.push({ text: `${name} fainted!`, side: "enemy" });
+        if (currentTeam[currentIndex]?.id) await removeTeamMember(currentTeam[currentIndex].id);
+        let found = false;
+        for (let i = 0; i < currentTeam.length; i++) {
+          if (i !== currentIndex && currentTeam[i].hp > 0) { currentIndex = i; found = true; break; }
+        }
+        if (!found) { wiped = true; logEntries.push({ text: "All Pokémon fainted!", side: "enemy" }); }
+      }
+    }
+
+    setTeam(currentTeam);
+    setActiveTeamIndex(currentIndex);
+    setBattleLog((prev) => [...prev, ...logEntries].slice(-LOG_MAX));
+    if (currentTeam[currentIndex]) {
+      setMyPlayer((p) => ({ ...p, hp: currentTeam[currentIndex].hp, max_hp: currentTeam[currentIndex].maxHp ?? currentTeam[currentIndex].max_hp ?? p.max_hp ?? 1 }));
+    }
+    if (wiped) { setBattleResult({ result: "lost" }); }
+    if (currentTeam[currentIndex]?.id) await updateTeamMember(currentTeam[currentIndex].id, { hp: currentTeam[currentIndex].hp });
+    await supabase.from("room_players").update({ hp: currentTeam[currentIndex]?.hp || 0 }).eq("player_id", playerId).eq("room_id", roomId);
+    finishTurn();
+  }
+
+  function finishTurn() {
+    setEnemiesMoved(true);
+    turnLockRef.current = false;
+    if (isHost && players.length > 0) {
+      turnIndexRef.current = 0;
+      actedThisRoundRef.current = false;
+      setTurnPlayerId(players[0].player_id);
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "turn_advance",
+        payload: { playerId: players[0].player_id },
+      });
+    }
+  }
+
   // Handle tile click: move or attack
   const handleTileClick = useCallback(
     async (x, y) => {
       if (!dungeon || !myPlayer || !enemiesMoved || turnLockRef.current) return;
+      if (turnPlayerId !== playerId || actedThisRoundRef.current) return;
 
       const px = myPlayer.position_x;
       const py = myPlayer.position_y;
@@ -441,6 +696,9 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         setEnemiesMoved(false);
         await processAttack(x, y, selectedMove, enemyHere);
         setSelectedMove(null);
+        actedThisRoundRef.current = true;
+        channelRef.current?.send({ type: "broadcast", event: "turn_acted", payload: { playerId } });
+        if (isHost) advanceTurnRef.current();
         return;
       }
 
@@ -450,8 +708,11 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         if (move) {
           turnLockRef.current = true;
           setEnemiesMoved(false);
-          await processAttack(x, y, move, enemyHere);
+          await processAttack(x, y, move, enemyHere, playerHere);
         }
+        actedThisRoundRef.current = true;
+        channelRef.current?.send({ type: "broadcast", event: "turn_acted", payload: { playerId } });
+        if (isHost) advanceTurnRef.current();
         return;
       }
 
@@ -556,13 +817,15 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         setShowStairsChoice(true);
       }
 
-      setTimeout(() => enemyTurnRef.current(), 300);
+      actedThisRoundRef.current = true;
+      channelRef.current?.send({ type: "broadcast", event: "turn_acted", payload: { playerId } });
+      if (isHost) advanceTurnRef.current();
     },
-    [dungeon, myPlayer, playerId, roomId, enemiesMoved, enemyTurn, selectedMove, team, activeTeamIndex, players]
+    [dungeon, myPlayer, playerId, roomId, enemiesMoved, enemyTurn, selectedMove, team, activeTeamIndex, players, turnPlayerId, isHost]
   );
 
   // Process an attack on a tile
-  async function processAttack(x, y, move, enemyHere) {
+  async function processAttack(x, y, move, enemyHere, playerHere) {
     lastMoveRef.current = move;
 
     if (enemyHere) {
@@ -599,11 +862,38 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         .update({ enemies: newEnemies })
         .eq("room_id", roomId);
 
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "enemy_update",
+        payload: { enemies: newEnemies },
+      });
+
+    } else if (playerHere) {
+      const defStat = move.category === "physical"
+        ? (playerHere.def || 8 + (playerHere.level || 5) * 2)
+        : (playerHere.spd || 8 + (playerHere.level || 5) * 2);
+      const defenderTypes = getSpeciesTypes(playerHere.sprite_id || 25);
+      const eff = getEffectiveness(move.type, defenderTypes);
+      const stab = getStabMultiplier(move.type, activePokemon?.types || getSpeciesTypes(activePokemon?.pokemonId || 25));
+      const dmg = calcDamage(move, activePokemon, { def: defStat, spd: defStat, types: defenderTypes }, eff, activePokemon?.level || 5, stab);
+
+      let effText = "";
+      if (eff > 1) effText = ` ${t("Super effective!", language)}`;
+      else if (eff < 1 && eff > 0) effText = ` ${t("Not very effective...", language)}`;
+      else if (eff === 0) effText = ` ${t("No effect!", language)}`;
+
+      showDamagePopup(x, y, dmg);
+      addLog(`${t("You used", language)} ${getMoveName(move, language, moveData)}! ${dmg} ${t("dmg", language)} ${t("to", language)} ${playerHere.player_name}${effText}`, "player");
+
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "pvp_damage",
+        payload: { targetPlayerId: playerHere.player_id, attackerPlayerId: playerId, damage: dmg, moveName: move.name, eff, attackerName: myPlayer?.player_name },
+      });
+
     } else {
       addLog(`${t("You used", language)} ${move.name}! ${t("No effect!", language)}`, "player");
     }
-
-    setTimeout(() => enemyTurnRef.current(), 300);
   }
 
   // Handle enemy defeated
@@ -645,8 +935,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     }
   }
 
-  // Leave room
-  const leaveRoom = useCallback(async () => {
+  // Return to village (does not delete room_players — Dungeon.jsx handles that)
+  const returnToVillage = useCallback(async () => {
     for (const p of team) {
       const maxHp = p.maxHp ?? p.max_hp ?? 1;
       if (p.hp < maxHp && p.id) {
@@ -655,24 +945,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     }
 
     if (onLeave) onLeave();
-
-    await supabase
-      .from("room_players")
-      .delete()
-      .eq("player_id", playerId)
-      .eq("room_id", roomId);
-
-    if (isHost) {
-      const { count } = await supabase
-        .from("room_players")
-        .select("*", { count: "exact", head: true })
-        .eq("room_id", roomId);
-
-      if (!count || count === 0) {
-        await supabase.from("rooms").delete().eq("id", roomId);
-      }
-    }
-  }, [playerId, roomId, isHost, onLeave, team]);
+  }, [onLeave, team]);
 
   // Capture handlers
   const handleCapture = useCallback(async () => {
@@ -779,12 +1052,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
     setShowSafeExit(false);
     if (onLeave) onLeave();
-
-    await supabase
-      .from("room_players")
-      .delete()
-      .eq("player_id", playerId)
-      .eq("room_id", roomId);
   }, [accountId, goldCount, team, activeTeamIndex, playerId, roomId, onLeave]);
 
   if (!room) {
@@ -804,7 +1071,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         <div className="flex items-center justify-between">
           <button
-            onClick={leaveRoom}
+            onClick={returnToVillage}
             className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
           >
             ← {t("Back", language)}
@@ -896,7 +1163,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           </h2>
           {battleResult.result === "lost" && (
             <button
-              onClick={leaveRoom}
+              onClick={returnToVillage}
               className="rounded-xl bg-slate-700 px-6 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-600 transition-colors"
             >
               {t("Back", language)}

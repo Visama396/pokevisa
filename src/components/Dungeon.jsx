@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import AuthScreen from "./AuthScreen";
 import StarterQuiz from "./StarterQuiz";
-import DungeonLobby from "./DungeonLobby";
 import DungeonGame from "./DungeonGame";
+import VillageGame from "./VillageGame";
 import { getProfile, getTeam, resetProfile } from "../lib/auth";
+import { generateDungeon } from "../lib/dungeon";
+import { VILLAGE_SPAWN } from "../lib/village";
+import { supabase } from "../lib/supabase";
 
 export default function Dungeon() {
   const [account, setAccount] = useState(null);
@@ -11,6 +14,7 @@ export default function Dungeon() {
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
+  const [inDungeon, setInDungeon] = useState(false);
 
   // Restore session from localStorage
   useEffect(() => {
@@ -57,6 +61,7 @@ export default function Dungeon() {
     setProfile(null);
     setTeam([]);
     setSession(null);
+    setInDungeon(false);
     localStorage.removeItem("pokevisa_account");
   }
 
@@ -64,12 +69,57 @@ export default function Dungeon() {
     loadAccountData(account.id);
   }
 
-  function handleTeamUpdate() {
+  function handleJoin(roomInfo) {
+    setSession(roomInfo);
+    setInDungeon(false);
+  }
+
+  async function handleStartDungeon() {
+    if (!session) return;
+
+    if (session.isHost) {
+      const seed = Math.floor(Math.random() * 999999);
+      const dungeon = generateDungeon(20, 15, seed, 1);
+
+      await supabase.from("dungeon_state").insert({
+        room_id: session.roomId,
+        ...dungeon,
+        floor: 1,
+      });
+
+      await supabase
+        .from("rooms")
+        .update({ status: "playing", dungeon_seed: seed, floor: 1 })
+        .eq("id", session.roomId);
+    }
+
+    setInDungeon(true);
+  }
+
+  async function handleDungeonEnd() {
+    if (!session) { setInDungeon(false); return; }
+
+    await supabase
+      .from("room_players")
+      .update({ position_x: VILLAGE_SPAWN.x, position_y: VILLAGE_SPAWN.y })
+      .eq("player_id", session.playerId)
+      .eq("room_id", session.roomId);
+
+    await supabase
+      .from("rooms")
+      .update({ status: "lobby" })
+      .eq("id", session.roomId);
+
+    await supabase
+      .from("dungeon_state")
+      .delete()
+      .eq("room_id", session.roomId);
+
+    setInDungeon(false);
     loadAccountData(account.id);
   }
 
-  function handleSessionEnd() {
-    setSession(null);
+  function handleDungeonTeamUpdate() {
     loadAccountData(account.id);
   }
 
@@ -81,18 +131,15 @@ export default function Dungeon() {
     );
   }
 
-  // Not logged in
   if (!account) {
     return <AuthScreen onAuth={handleAuth} />;
   }
 
-  // Logged in but hasn't done the quiz
   if (!profile || !profile.starter_id) {
     return <StarterQuiz accountId={account.id} onComplete={handleQuizComplete} />;
   }
 
-  // In a game session
-  if (session) {
+  if (session && inDungeon) {
     return (
       <DungeonGame
         roomId={session.roomId}
@@ -102,20 +149,21 @@ export default function Dungeon() {
         accountId={account.id}
         accountName={account.display_name}
         team={team}
-        onTeamUpdate={handleTeamUpdate}
-        onLeave={handleSessionEnd}
+        onTeamUpdate={handleDungeonTeamUpdate}
+        onLeave={handleDungeonEnd}
       />
     );
   }
 
-  // Main lobby
   return (
-    <DungeonLobby
+    <VillageGame
+      session={session}
       accountId={account.id}
       accountName={account.display_name}
       team={team}
-      onTeamUpdate={handleTeamUpdate}
-      onJoin={setSession}
+      onTeamUpdate={handleDungeonTeamUpdate}
+      onJoin={handleJoin}
+      onStartDungeon={handleStartDungeon}
       onLogout={handleLogout}
     />
   );
