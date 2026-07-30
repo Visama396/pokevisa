@@ -1023,6 +1023,10 @@ const ui = {
     "zh-hans": "无需邮箱。别忘记密码！",
     "zh-hant": "無需郵箱。別忘記密碼！",
   },
+  "Change Password": {
+    en: "Change Password", es: "Cambiar Contraseña", fr: "Changer le mot de passe", de: "Passwort ändern", it: "Cambia Password",
+    ja: "パスワード変更", ko: "비밀번호 변경", "zh-hans": "修改密码", "zh-hant": "修改密碼",
+  },
   "Logout": {
     en: "Logout", es: "Cerrar sesión", fr: "Déconnexion", de: "Abmelden", it: "Esci",
     ja: "ログアウト", ko: "로그아웃", "zh-hans": "退出", "zh-hant": "登出",

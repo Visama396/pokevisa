@@ -4,6 +4,7 @@ import { t } from "../stores/translations";
 import { supabase } from "../lib/supabase";
 import LanguageSelector from "./LanguageSelector";
 import TeamView from "./TeamView";
+import ChangePasswordDialog from "./ChangePasswordDialog";
 import { getSpeciesName } from "../lib/moves";
 
 function generateRoomCode() {
@@ -21,6 +22,7 @@ export default function DungeonLobby({ accountId, accountName, team, onTeamUpdat
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState("");
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const playerId = accountId;
 
   useEffect(() => subscribe(setLanguage), []);
@@ -224,6 +226,12 @@ export default function DungeonLobby({ accountId, accountName, team, onTeamUpdat
         <div className="flex items-center gap-3">
           <LanguageSelector />
           <button
+            onClick={() => setShowChangePassword(true)}
+            className="text-xs text-slate-400 hover:text-yellow-400 transition-colors"
+          >
+            {t("Change Password", language)}
+          </button>
+          <button
             onClick={onLogout}
             className="text-xs text-slate-400 hover:text-red-400 transition-colors"
           >
@@ -322,6 +330,13 @@ export default function DungeonLobby({ accountId, accountName, team, onTeamUpdat
         <p>🤝 {t("dungeon-rule3", language)}</p>
         <p>💀 {t("dungeon-rule4", language)}</p>
       </div>
+
+      {showChangePassword && (
+        <ChangePasswordDialog
+          accountId={accountId}
+          onClose={() => setShowChangePassword(false)}
+        />
+      )}
     </div>
   );
 }

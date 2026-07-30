@@ -898,12 +898,12 @@ export default function Pokeroguelite() {
     const newLevel = (pkm.level || 5) + 1;
     const dexEntry = getDexEntry(pkm.slug);
     if (!dexEntry) return { pkm: { ...pkm, level: newLevel }, evolved: false, evolutions: [] };
-    const baseHp = dexEntry.baseStats.find(s => s.name === "hp")?.value || 50;
-    const baseAtk = dexEntry.baseStats.find(s => s.name === "attack")?.value || 50;
-    const baseDef = dexEntry.baseStats.find(s => s.name === "defense")?.value || 50;
-    const baseSpa = dexEntry.baseStats.find(s => s.name === "special-attack")?.value || 50;
-    const baseSpd = dexEntry.baseStats.find(s => s.name === "special-defense")?.value || 50;
-    const baseSpe = dexEntry.baseStats.find(s => s.name === "speed")?.value || 50;
+    const baseHp = dexEntry.baseStats.find(s => s.name === "hp")?.value;
+    const baseAtk = dexEntry.baseStats.find(s => s.name === "attack")?.value;
+    const baseDef = dexEntry.baseStats.find(s => s.name === "defense")?.value;
+    const baseSpa = dexEntry.baseStats.find(s => s.name === "special-attack")?.value;
+    const baseSpd = dexEntry.baseStats.find(s => s.name === "special-defense")?.value;
+    const baseSpe = dexEntry.baseStats.find(s => s.name === "speed")?.value;
     const newMaxHp = calcStat(baseHp, newLevel, true);
     const hpGain = newMaxHp - pkm.maxHp;
     const leveled = {
@@ -922,12 +922,12 @@ export default function Pokeroguelite() {
       const minLevel = evoEntry.minLevel || 22;
       if (newLevel >= minLevel) {
         const newDex = evoEntry;
-        const eBaseHp = newDex.baseStats.find(s => s.name === "hp")?.value || 50;
-        const eBaseAtk = newDex.baseStats.find(s => s.name === "attack")?.value || 50;
-        const eBaseDef = newDex.baseStats.find(s => s.name === "defense")?.value || 50;
-        const eBaseSpa = newDex.baseStats.find(s => s.name === "special-attack")?.value || 50;
-        const eBaseSpd = newDex.baseStats.find(s => s.name === "special-defense")?.value || 50;
-        const eBaseSpe = newDex.baseStats.find(s => s.name === "speed")?.value || 50;
+        const eBaseHp = newDex.baseStats.find(s => s.name === "hp")?.value;
+        const eBaseAtk = newDex.baseStats.find(s => s.name === "attack")?.value;
+        const eBaseDef = newDex.baseStats.find(s => s.name === "defense")?.value;
+        const eBaseSpa = newDex.baseStats.find(s => s.name === "special-attack")?.value;
+        const eBaseSpd = newDex.baseStats.find(s => s.name === "special-defense")?.value;
+        const eBaseSpe = newDex.baseStats.find(s => s.name === "speed")?.value;
         const eMaxHp = calcStat(eBaseHp, newLevel, true);
         return {
           pkm: {
@@ -952,12 +952,12 @@ export default function Pokeroguelite() {
   }
 
   function evolveToPokemon(pkm, newDex, newLevel) {
-    const eBaseHp = newDex.baseStats.find(s => s.name === "hp")?.value || 50;
-    const eBaseAtk = newDex.baseStats.find(s => s.name === "attack")?.value || 50;
-    const eBaseDef = newDex.baseStats.find(s => s.name === "defense")?.value || 50;
-    const eBaseSpa = newDex.baseStats.find(s => s.name === "special-attack")?.value || 50;
-    const eBaseSpd = newDex.baseStats.find(s => s.name === "special-defense")?.value || 50;
-    const eBaseSpe = newDex.baseStats.find(s => s.name === "speed")?.value || 50;
+    const eBaseHp = newDex.baseStats.find(s => s.name === "hp")?.value;
+    const eBaseAtk = newDex.baseStats.find(s => s.name === "attack")?.value;
+    const eBaseDef = newDex.baseStats.find(s => s.name === "defense")?.value;
+    const eBaseSpa = newDex.baseStats.find(s => s.name === "special-attack")?.value;
+    const eBaseSpd = newDex.baseStats.find(s => s.name === "special-defense")?.value;
+    const eBaseSpe = newDex.baseStats.find(s => s.name === "speed")?.value;
     const eMaxHp = calcStat(eBaseHp, newLevel, true);
     return {
       ...pkm,

@@ -136,6 +136,22 @@ export async function saveDungeonProgress(accountId, dungeonData) {
   return error;
 }
 
+export async function changePassword(accountId, currentPassword, newPassword) {
+  const currentHash = await hashPassword(currentPassword);
+  const newHash = await hashPassword(newPassword);
+
+  const { data, error } = await supabase.rpc("change_password", {
+    p_account_id: accountId,
+    p_current_password_hash: currentHash,
+    p_new_password_hash: newHash,
+  });
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "Current password is incorrect" };
+
+  return { success: true };
+}
+
 export async function deleteSavedDungeon(accountId) {
   const { error } = await supabase
     .from("saved_dungeons")
