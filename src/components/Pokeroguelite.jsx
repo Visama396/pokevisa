@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getLanguage, subscribe } from "../stores/language";
 import { t, getTypeName, getStatLabel } from "../stores/translations";
+import HomeButton from "./HomeButton";
 import PokeTypeBadge from "./PokeTypeBadge";
 import LanguageSelector from "./LanguageSelector";
+import { calcStat } from "../lib/pokedex";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "../../components/ui/tooltip";
 import { BubbleGroup, Bubble, BubbleContent } from "../../components/ui/bubble";
 
@@ -126,12 +128,6 @@ function buildEvolutionData() {
     }
   }
   return { levelEvo, condEvo };
-}
-
-function calcStat(baseStat, level, isHP = false) {
-  const base = Math.floor(baseStat);
-  if (isHP) return base + 20 + Math.floor((level - 1) * 2);
-  return base + Math.floor((level - 1) * 1.5);
 }
 
 function getDexEntry(slug) {
@@ -1085,6 +1081,9 @@ export default function Pokeroguelite() {
   if (state.screen === "title") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4">
+        <div className="absolute top-4 left-4">
+          <HomeButton />
+        </div>
         <div className="absolute top-4 right-4">
           <LanguageSelector />
         </div>
@@ -1138,7 +1137,10 @@ export default function Pokeroguelite() {
       <div className="h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4">
         <div className="max-w-4xl mx-auto w-full flex flex-col flex-1 overflow-hidden">
           <div className="flex items-center justify-between mb-4 bg-slate-800/80 backdrop-blur rounded-xl p-3 border border-slate-700 flex-shrink-0">
-            <div className="text-white font-bold">{FLOOR_NAMES[floor] || "Unknown"}</div>
+            <div className="flex items-center gap-3">
+              <HomeButton />
+              <div className="text-white font-bold">{FLOOR_NAMES[floor] || "Unknown"}</div>
+            </div>
             {team.length > 0 && (
               <div className="flex gap-1">
                 {team.map((pkm, i) => (

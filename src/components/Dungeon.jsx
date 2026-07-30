@@ -36,7 +36,8 @@ export default function Dungeon() {
     setLoading(true);
     try {
       const [prof, tm] = await Promise.all([getProfile(accountId), getTeam(accountId)]);
-      if (tm.length === 0 && prof) {
+      // Only reset profile if the quiz starter creation failed mid-way
+      if (tm.length === 0 && prof && prof.starter_id) {
         await resetProfile(accountId);
         setProfile(null);
       } else {

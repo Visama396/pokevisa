@@ -1,14 +1,11 @@
 import { useState } from "react";
 import { getLanguage } from "../stores/language";
 import { t } from "../stores/translations";
-import { getSpeciesName, getMovesAtLevel } from "../lib/moves";
-import { computeStats, pickNature } from "../lib/pokedex";
-import { addTeamMember } from "../lib/auth";
+import { getSpeciesName } from "../lib/moves";
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 
 export default function CaptureScreen({ enemy, playerLevel, team, accountId, onCapture, onDecline }) {
-  const [releasing, setReleasing] = useState(null);
   const [saving, setSaving] = useState(false);
   const language = getLanguage();
   const teamFull = team.length >= 1;
@@ -18,28 +15,9 @@ export default function CaptureScreen({ enemy, playerLevel, team, accountId, onC
     Math.max(0.1, 0.15 + (playerLevel - enemy.level) * 0.03)
   );
 
-  async function handleCapture() {
+  async function handleCaptureToClub() {
     setSaving(true);
     try {
-      const level = Math.max(1, enemy.level + Math.floor(Math.random() * 5) - 2);
-      const nature = enemy.nature || pickNature(enemy.pokemonId + '-' + level + '-' + accountId);
-      const [stats, moves] = await Promise.all([
-        computeStats(enemy.pokemonId, level, nature),
-        getMovesAtLevel(enemy.pokemonId, level),
-      ]);
-
-      await addTeamMember(accountId, {
-        pokemon_id: enemy.pokemonId,
-        nickname: getSpeciesName(enemy.pokemonId),
-        level,
-        hp: stats.hp,
-        max_hp: stats.maxHp,
-        nature,
-        moves,
-        slot: team.length,
-        is_starter: false,
-      });
-
       onCapture();
     } catch (err) {
       console.error("Capture failed:", err);
@@ -76,40 +54,27 @@ export default function CaptureScreen({ enemy, playerLevel, team, accountId, onC
 
       {saving ? (
         <p className="text-xs text-slate-400">{t("Saving...", language)}</p>
-      ) : teamFull ? (
+      ) : (
         <div className="space-y-3">
-          <p className="text-xs text-yellow-400">
-            {t("dungeon-storage-msg", language)}
-          </p>
-          <button
-            onClick={onCapture}
-            className="rounded-xl bg-green-700 px-6 py-2 text-sm font-semibold text-white hover:bg-green-600 transition-colors"
-          >
-            {t("dungeon-send-storage", language)}
-          </button>
-          <div>
+          {teamFull && (
+            <p className="text-xs text-yellow-400">
+              {t("dungeon-storage-msg", language)}
+            </p>
+          )}
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={handleCaptureToClub}
+              className="rounded-xl bg-green-700 px-6 py-2 text-sm font-semibold text-white hover:bg-green-600 transition-colors"
+            >
+              {t("dungeon-send-storage", language) || "Send to Club"}
+            </button>
             <button
               onClick={onDecline}
-              className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+              className="rounded-xl bg-slate-700 px-6 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-600 transition-colors"
             >
               {t("Decline", language)}
             </button>
           </div>
-        </div>
-      ) : (
-        <div className="flex gap-3 justify-center">
-          <button
-            onClick={handleCapture}
-            className="rounded-xl bg-green-700 px-6 py-2 text-sm font-semibold text-white hover:bg-green-600 transition-colors"
-          >
-            {t("Add to team", language)}
-          </button>
-          <button
-            onClick={onDecline}
-            className="rounded-xl bg-slate-700 px-6 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-600 transition-colors"
-          >
-            {t("Decline", language)}
-          </button>
         </div>
       )}
     </div>

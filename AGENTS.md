@@ -8,6 +8,13 @@ astro dev --background
 
 Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
 
+**Do not run `astro build` during development.** The user runs `bun run dev` and `astro build` (or `npx astro build`) breaks the running dev server and adds unnecessary files. Test changes by visiting `localhost:4321` instead.
+
+## Code Style
+
+- **Comment and document new features.** When adding a new feature, add a brief comment explaining what it does and why, and where is used.
+- **Reuse existing components.** Before creating something new, check if a matching component already exists in the project (e.g. `components/ui/`). Use it or extend it instead of duplicating.
+
 ## Documentation
 
 Full documentation: https://docs.astro.build

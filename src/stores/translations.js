@@ -1,3 +1,9 @@
+// Translation and localization data for all 9 supported languages.
+// Key-based lookup: every UI string has a unique key that maps to translations
+// in every language. The `t(key, language)` function on line 1248 performs the lookup.
+//
+// Used by every component that renders user-facing text.
+
 export const typeNames = {
   normal: { en: "Normal", es: "Normal", fr: "Normal", de: "Normal", it: "Normale", ja: "ノーマル", ko: "노말", "zh-hans": "一般", "zh-hant": "一般" },
   fire: { en: "Fire", es: "Fuego", fr: "Feu", de: "Feuer", it: "Fuoco", ja: "ほのお", ko: "불꽃", "zh-hans": "火", "zh-hant": "火" },
@@ -201,14 +207,6 @@ const ui = {
     en: "Try a different search term", es: "Prueba con otro término", fr: "Essayez un autre terme", de: "Versuche einen anderen Begriff", it: "Prova con un altro termine",
     ja: "別の検索語をお試しください", ko: "다른 검색어를 시도해보세요", "zh-hans": "请尝试其他搜索词", "zh-hant": "請嘗試其他搜尋詞",
   },
-  "Showing": {
-    en: "Showing", es: "Mostrando", fr: "Affichage", de: "Zeige", it: "Mostrando",
-    ja: "表示中", ko: "표시 중", "zh-hans": "显示", "zh-hant": "顯示",
-  },
-  "of": {
-    en: "of", es: "de", fr: "sur", de: "von", it: "di",
-    ja: "の", ko: "중", "zh-hans": "，共", "zh-hant": "，共",
-  },
   "Pokémon": {
     en: "Pokémon", es: "Pokémon", fr: "Pokémon", de: "Pokémon", it: "Pokémon",
     ja: "ポケモン", ko: "포켓몬", "zh-hans": "宝可梦", "zh-hant": "寶可夢",
@@ -289,13 +287,13 @@ const ui = {
     en: "Correct", es: "Acertados", fr: "Trouvés", de: "Richtig", it: "Corretti",
     ja: "正解数", ko: "정답 수", "zh-hans": "正确", "zh-hant": "正確",
   },
+  "Yesterday's Pokémon was": {
+    en: "Yesterday's Pokémon was", es: "El Pokémon de ayer fue", fr: "Le Pokémon d'hier était", de: "Das gestrige Pokémon war", it: "Il Pokémon di ieri era",
+    ja: "昨日のポケモンは", ko: "어제의 포켓몬은", "zh-hans": "昨天的宝可梦是", "zh-hant": "昨天的寶可夢是",
+  },
   "Continue in Arcade": {
     en: "Continue in Arcade", es: "Continuar en Arcade", fr: "Continuer en Arcade", de: "Im Arcade-Modus weitermachen", it: "Continua in Arcade",
     ja: "アーケードを続ける", ko: "아케이드 계속하기", "zh-hans": "继续街机模式", "zh-hant": "繼續街機模式",
-  },
-  "Play Again": {
-    en: "Play Again", es: "Jugar de nuevo", fr: "Rejouer", de: "Nochmal spielen", it: "Gioca ancora",
-    ja: "もう一度プレイ", ko: "다시 플레이", "zh-hans": "再玩一次", "zh-hant": "再玩一次",
   },
   "Back to Classic": {
     en: "Back to Classic", es: "Volver al Clásico", fr: "Retour au Classique", de: "Zurück zum Klassik", it: "Torna al Classico",
@@ -415,10 +413,6 @@ const ui = {
   "Floors Cleared": {
     en: "Floors Cleared", es: "Rutas Completadas", fr: "Routes Terminées", de: "Abschnitte geschafft", it: "Percorsi Completati",
     ja: "クリアしたルート", ko: "클리어한 루트", "zh-hans": "已通关路线", "zh-hant": "已通關路線",
-  },
-  "Play Again": {
-    en: "Play Again", es: "Jugar de nuevo", fr: "Rejouer", de: "Nochmal spielen", it: "Gioca ancora",
-    ja: "もう一度プレイ", ko: "다시 플레이", "zh-hans": "再玩一次", "zh-hant": "再玩一次",
   },
   "Try Again": {
     en: "Try Again", es: "Intentar de nuevo", fr: "Réessayer", de: "Erneut versuchen", it: "Riprova",
@@ -888,10 +882,6 @@ const ui = {
     "zh-hans": "没有可用房间。创建一个吧！",
     "zh-hant": "沒有可用房間。創建一個吧！",
   },
-  "Victory!": {
-    en: "Victory!", es: "¡Victoria!", fr: "Victoire !", de: "Sieg!", it: "Vittoria!",
-    ja: "勝利！", ko: "승리!", "zh-hans": "胜利！", "zh-hant": "勝利！",
-  },
   "Stats Battle": {
     en: "Stats Battle", es: "Batalla de Stats", fr: "Bataille de Stats", de: "Stat-Kampf", it: "Battaglia Stat",
     ja: "ステータスバトル", ko: "스탯 배틀", "zh-hans": "属性对战", "zh-hant": "屬性對戰",
@@ -908,10 +898,6 @@ const ui = {
     en: "Round", es: "Ronda", fr: "Tour", de: "Runde", it: "Turno",
     ja: "ラウンド", ko: "라운드", "zh-hans": "回合", "zh-hant": "回合",
   },
-  "Correct!": {
-    en: "Correct!", es: "¡Correcto!", fr: "Correct !", de: "Richtig!", it: "Corretto!",
-    ja: "正解！", ko: "정답!", "zh-hans": "正确！", "zh-hant": "正確！",
-  },
   "Wrong!": {
     en: "Wrong!", es: "¡Incorrecto!", fr: "Faux !", de: "Falsch!", it: "Sbagliato!",
     ja: "不正解！", ko: "오답!", "zh-hans": "错误！", "zh-hant": "錯誤！",
@@ -919,10 +905,6 @@ const ui = {
   "Play": {
     en: "Play", es: "Jugar", fr: "Jouer", de: "Spielen", it: "Gioca",
     ja: "プレイ", ko: "플레이", "zh-hans": "开始", "zh-hant": "開始",
-  },
-  "Play Again": {
-    en: "Play Again", es: "Jugar de nuevo", fr: "Rejouer", de: "Nochmal spielen", it: "Gioca ancora",
-    ja: "もう一度プレイ", ko: "다시 플레이", "zh-hans": "再玩一次", "zh-hant": "再玩一次",
   },
   "Total Score": {
     en: "Total Score", es: "Puntuación Total", fr: "Score Total", de: "Gesamtpunktzahl", it: "Punteggio Totale",
@@ -1030,10 +1012,6 @@ const ui = {
   "Logout": {
     en: "Logout", es: "Cerrar sesión", fr: "Déconnexion", de: "Abmelden", it: "Esci",
     ja: "ログアウト", ko: "로그아웃", "zh-hans": "退出", "zh-hant": "登出",
-  },
-  "Your Team": {
-    en: "Your Team", es: "Tu Equipo", fr: "Votre Équipe", de: "Dein Team", it: "La Tua Squadra",
-    ja: "あなたのチーム", ko: "내 팀", "zh-hans": "你的队伍", "zh-hant": "你的隊伍",
   },
   "Pokémon": {
     en: "Pokémon", es: "Pokémon", fr: "Pokémon", de: "Pokémon", it: "Pokémon",
@@ -1181,12 +1159,101 @@ const ui = {
     en: "Send to storage", es: "Enviar al almacén", fr: "Envoyer au stockage", de: "Ins Lager schicken", it: "Invia al deposito",
     ja: "保管庫に送る", ko: "보관소로 보내기", "zh-hans": "送到仓库", "zh-hant": "送到倉庫",
   },
+  "Enjoy Pokémon in different ways": {
+    en: "Enjoy Pokémon in different ways", es: "Disfruta Pokémon de diferentes maneras", fr: "Profitez de Pokémon de différentes manières", de: "Genieße Pokémon auf verschiedene Weise", it: "Goditi Pokémon in diversi modi",
+    ja: "ポケモンをさまざまな方法で楽しもう", ko: "다양한 방법으로 포켓몬을 즐기세요", "zh-hans": "以不同的方式享受宝可梦", "zh-hant": "以不同的方式享受寶可夢",
+  },
   "dungeon-enemies-moving": {
     en: "Enemies are moving...", es: "Los enemigos se mueven...", fr: "Les ennemis se déplacent...", de: "Gegner bewegen sich...", it: "I nemici si muovono...",
     ja: "敵が動いている...", ko: "적이 움직이고 있습니다...", "zh-hans": "敌人正在移动...", "zh-hant": "敵人正在移動...",
   },
+  "Pokedle": {
+    en: "Pokedle", es: "Pokedle", fr: "Pokedle", de: "Pokedle", it: "Pokedle",
+    ja: "ポケドル", ko: "포케들", "zh-hans": "宝可梦猜谜", "zh-hant": "寶可夢猜謎",
+  },
+  "Dexmaster": {
+    en: "Dexmaster", es: "Dexmaster", fr: "Dexmaster", de: "Dexmaster", it: "Dexmaster",
+    ja: "デックスマスター", ko: "덱스마스터", "zh-hans": "图鉴大师", "zh-hant": "圖鑑大師",
+  },
+  "Pokéroguelite": {
+    en: "Pokéroguelite", es: "Pokéroguelite", fr: "Pokéroguelite", de: "Pokéroguelite", it: "Pokéroguelite",
+    ja: "ポケローグライト", ko: "포케로그라이트", "zh-hans": "宝可梦肉鸽", "zh-hant": "寶可夢肉鴿",
+  },
+  "Patch Notes": {
+    en: "Patch Notes", es: "Notas del Parche", fr: "Notes de Mise à Jour", de: "Patch-Notizen", it: "Note di Aggiornamento",
+    ja: "パッチノート", ko: "패치 노트", "zh-hans": "更新日志", "zh-hant": "更新日誌",
+  },
+  "Search and explore Pokemon by name, type, generation, stats, and more": {
+    en: "Search and explore Pokemon by name, type, generation, stats, and more",
+    es: "Busca y explora Pokémon por nombre, tipo, generación, estadísticas y más",
+    fr: "Recherchez et explorez les Pokémon par nom, type, génération, statistiques et plus",
+    de: "Suche und erkunde Pokémon nach Name, Typ, Generation, Werten und mehr",
+    it: "Cerca ed esplora i Pokémon per nome, tipo, generazione, statistiche e altro",
+    ja: "名前、タイプ、世代、ステータスなどでポケモンを検索・探索",
+    ko: "이름, 타입, 세대, 스탯 등으로 포켓몬 검색 및 탐색",
+    "zh-hans": "按名称、属性、世代、种族值等搜索和探索宝可梦",
+    "zh-hant": "按名稱、屬性、世代、種族值等搜索和探索寶可夢",
+  },
+  "Daily Pokemon guessing game — test your knowledge": {
+    en: "Daily Pokemon guessing game — test your knowledge",
+    es: "Juego diario de adivinanzas Pokémon — pon a prueba tu conocimiento",
+    fr: "Jeu de devinettes Pokémon quotidien — testez vos connaissances",
+    de: "Tägliches Pokémon-Ratespiel — teste dein Wissen",
+    it: "Gioco di indovinelli Pokémon quotidiano — metti alla prova le tue conoscenze",
+    ja: "毎日ポケモン当てクイズ — 知識を試そう",
+    ko: "매일 포켓몬 맞추기 게임 — 지식을 테스트하세요",
+    "zh-hans": "每日宝可梦猜谜游戏 — 测试你的知识",
+    "zh-hant": "每日寶可夢猜謎遊戲 — 測試你的知識",
+  },
+  "Track your progress and master the Pokedex": {
+    en: "Track your progress and master the Pokedex",
+    es: "Sigue tu progreso y domina la Pokédex",
+    fr: "Suivez votre progression et maîtrisez le Pokédex",
+    de: "Verfolge deinen Fortschritt und meistere den Pokédex",
+    it: "Tieni traccia dei tuoi progressi e padroneggia il Pokédex",
+    ja: "進行状況を追跡し、ポケモン図鑑をマスター",
+    ko: "진행 상황을 추적하고 포켓몬도감을 마스터하세요",
+    "zh-hans": "追踪进度，掌握宝可梦图鉴",
+    "zh-hant": "追蹤進度，掌握寶可夢圖鑑",
+  },
+  "Team-based roguelite with Slay the Spire-style map progression": {
+    en: "Team-based roguelite with Slay the Spire-style map progression",
+    es: "Roguelite por equipos con progresión de mapa estilo Slay the Spire",
+    fr: "Roguelite en équipe avec progression de carte style Slay the Spire",
+    de: "Team-basierter Roguelite mit Kartenfortschritt im Slay the Spire-Stil",
+    it: "Roguelite a squadre con progressione della mappa stile Slay the Spire",
+    ja: "Slay the Spire風マップ進行のチーム制ローグライト",
+    ko: "Slay the Spire 스타일 맵 진행의 팀 기반 로그라이트",
+    "zh-hans": "团队肉鸽，杀戮尖塔风格地图推进",
+    "zh-hant": "團隊肉鴿，殺戮尖塔風格地圖推進",
+  },
+  "Compare Pokemon stats and prove your knowledge": {
+    en: "Compare Pokemon stats and prove your knowledge",
+    es: "Compara estadísticas Pokémon y demuestra tu conocimiento",
+    fr: "Comparez les statistiques des Pokémon et prouvez vos connaissances",
+    de: "Vergleiche Pokémon-Werte und beweise dein Wissen",
+    it: "Confronta le statistiche dei Pokémon e dimostra la tua conoscenza",
+    ja: "ポケモンのステータスを比較して知識を証明",
+    ko: "포켓몬 스탯을 비교하고 지식을 증명하세요",
+    "zh-hans": "比较宝可梦种族值，证明你的知识",
+    "zh-hant": "比較寶可夢種族值，證明你的知識",
+  },
+  "Multiplayer dungeon exploration with friends": {
+    en: "Multiplayer dungeon exploration with friends",
+    es: "Exploración de mazmorras multijugador con amigos",
+    fr: "Exploration de donjons multijoueur entre amis",
+    de: "Multiplayer-Dungeon-Erkundung mit Freunden",
+    it: "Esplorazione di dungeon multiplayer con gli amici",
+    ja: "フレンドと一緒にマルチプレイダンジョン探索",
+    ko: "친구와 함께하는 멀티플레이어 던전 탐험",
+    "zh-hans": "与朋友一起多人地牢探索",
+    "zh-hant": "與朋友一起多人地牢探索",
+  },
 };
 
+// Looks up a translation key for the given language.
+// Falls back to English, then to the key itself if no translation exists.
+// Used by every component via `import { t } from "../stores/translations"`.
 export function t(key, language) {
   return ui[key]?.[language] || ui[key]?.en || key;
 }

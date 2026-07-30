@@ -26,6 +26,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const [allReady, setAllReady] = useState(false);
   const [error, setError] = useState("");
   const [goldCount, setGoldCount] = useState(0);
+  const [dungeonItems, setDungeonItems] = useState([]);
   const [enemiesMoved, setEnemiesMoved] = useState(true);
   const [floorNum, setFloorNum] = useState(1);
   const [showStairsChoice, setShowStairsChoice] = useState(false);
@@ -790,6 +791,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
       const treasure = dungeon.treasures.find((t) => t.x === x && t.y === y && !t.opened);
       if (treasure) {
+        setDungeonItems((prev) => [...prev, treasure.item]);
         setDungeon((d) => ({
           ...d,
           treasures: d.treasures.map((t) =>
@@ -950,20 +952,17 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   // Capture handlers
   const handleCapture = useCallback(async () => {
     setCaptureAttempt(null);
-    if (team.length >= 1) {
-      const profile = await getProfile(accountId);
-      const existingStored = profile?.stored_pokemon || [];
-      await saveProfile(accountId, {
-        stored_pokemon: [...existingStored, {
-          pokemon_id: captureAttempt.pokemonId,
-          level: captureAttempt.level,
-          nickname: null,
-        }],
-      });
-    }
-    setTeam((t) => [...t, {}]);
+    const profile = await getProfile(accountId);
+    const existingStored = profile?.stored_pokemon || [];
+    await saveProfile(accountId, {
+      stored_pokemon: [...existingStored, {
+        pokemon_id: captureAttempt.pokemonId,
+        level: captureAttempt.level,
+        nickname: null,
+      }],
+    });
     if (onTeamUpdate) onTeamUpdate();
-  }, [onTeamUpdate, accountId, captureAttempt, team.length]);
+  }, [onTeamUpdate, accountId, captureAttempt]);
 
   const handleCaptureDecline = useCallback(() => {
     setCaptureAttempt(null);
@@ -1041,7 +1040,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     await saveProfile(accountId, {
       inventory: {
         gold: existingGold + goldCount,
-        items: existingItems,
+        items: [...existingItems, ...dungeonItems],
       },
       stored_pokemon: [...existingStored, ...extraPkm],
     });
@@ -1052,7 +1051,37 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
     setShowSafeExit(false);
     if (onLeave) onLeave();
-  }, [accountId, goldCount, team, activeTeamIndex, playerId, roomId, onLeave]);
+  }, [accountId, goldCount, dungeonItems, team, activeTeamIndex, playerId, roomId, onLeave]);
+
+  const leaveRoom = useCallback(async () => {
+    // Save gold + items to profile, heal team, return to village
+    const profile = await getProfile(accountId);
+    const existingGold = profile?.inventory?.gold || 0;
+    const existingItems = profile?.inventory?.items || [];
+    const existingStored = profile?.stored_pokemon || [];
+
+    const activePkm = team[activeTeamIndex];
+    const extraPkm = team.filter((p, i) => i !== activeTeamIndex).map((p) => ({
+      pokemon_id: p.pokemonId,
+      nickname: p.nickname,
+      level: p.level,
+      moves: p.moves,
+    }));
+
+    await saveProfile(accountId, {
+      inventory: {
+        gold: existingGold + goldCount,
+        items: [...existingItems, ...dungeonItems],
+      },
+      stored_pokemon: [...existingStored, ...extraPkm],
+    });
+
+    if (activePkm?.id) {
+      await updateTeamMember(activePkm.id, { hp: activePkm.maxHp });
+    }
+
+    if (onLeave) onLeave();
+  }, [accountId, goldCount, dungeonItems, team, activeTeamIndex, onLeave]);
 
   if (!room) {
     return (
@@ -1309,7 +1338,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
             </div>
           )}
 
-          {/* Floor & Gold */}
+          {/* Floor & Gold & Items */}
           <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-3 space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-slate-400">{t("Floor", language)}</span>
@@ -1318,6 +1347,10 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
             <div className="flex justify-between text-xs">
               <span className="text-slate-400">💰 {t("Gold", language)}</span>
               <span className="text-yellow-400 font-semibold">{goldCount}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-400">📦 Items</span>
+              <span className="text-blue-400 font-semibold">{dungeonItems.length}</span>
             </div>
           </div>
         </div>
@@ -1394,6 +1427,9 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
             <h2 className="text-xl font-bold text-slate-100">{t("dungeon-exit-title", language)}</h2>
             <div className="text-sm text-slate-300 space-y-2">
               <p>💰 {t("Gold", language)}: <span className="text-yellow-400 font-bold">{goldCount}</span></p>
+              {dungeonItems.length > 0 && (
+                <p>📦 Items collected: <span className="text-blue-400 font-bold">{dungeonItems.length}</span></p>
+              )}
               <p>{t("dungeon-exit-saved", language)}</p>
             </div>
             <button

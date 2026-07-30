@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 
 import DexItem from "./DexItem";
+import HomeButton from "./HomeButton";
 import LanguageSelector from "./LanguageSelector";
 import { formatDexEntryNumber } from "../utils/dexentrynumber";
+import { normalize } from "../utils/normalize";
 import { getLanguage, subscribe } from "../stores/language";
-import { t } from "../stores/translations";
+import { t, typeNames } from "../stores/translations";
 
 export default function Dex() {
   const [filteredPokemons, setFilteredPokemons] = useState([]);
@@ -33,34 +35,29 @@ export default function Dex() {
   }, []);
 
   useEffect(() => {
-    const q = query.toLowerCase().trim();
-    if (!q) {
+    const raw = query.trim();
+    if (!raw) {
       setFilteredPokemons(pokemons);
       return;
     }
+    const terms = raw.split(",").map(t => normalize(t)).filter(Boolean);
     const filtered = pokemons.filter((pokemon) => {
-      const names = Object.values(pokemon.names).join(" ").toLowerCase();
+      const name = normalize(pokemon.names[language] || pokemon.names.en || "");
+      const translatedTypes = pokemon.types.map(t => normalize(typeNames[t]?.[language] || typeNames[t]?.en || "")).join(" ");
       const types = pokemon.types.join(" ");
       const id = pokemon.id.toString();
       const formattedId = formatDexEntryNumber(pokemon.id);
-      return names.includes(q) || types.includes(q) || id.includes(q) || formattedId.includes(q);
+      const haystack = [name, types, translatedTypes, id, formattedId].join(" ");
+      return terms.some(term => haystack.includes(term));
     });
     setFilteredPokemons(filtered);
-  }, [query, pokemons]);
+  }, [query, language, pokemons]);
 
   return (
     <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto">
       <header className="sticky top-0 z-10 -mx-4 px-4 py-3 bg-slate-900/95 backdrop-blur-sm space-y-2">
         <div className="flex items-center justify-between">
-          <a
-            href="/"
-            className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
-          >
-            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            {t("Home", language)}
-          </a>
+          <HomeButton />
           <LanguageSelector />
         </div>
         <div className="relative max-w-md mx-auto">
@@ -93,16 +90,11 @@ export default function Dex() {
           <p className="text-sm">{t("Try a different search term", language)}</p>
         </div>
       ) : (
-        <>
-          <p className="text-sm text-slate-500 text-center">
-            {t("Showing", language)} {filteredPokemons.length} {t("of", language)} {pokemons.length} {t("Pokémon", language)}
-          </p>
-          <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {filteredPokemons.map((pokemon) => (
-              <DexItem key={pokemon.id} pokemon={pokemon} language={language} />
-            ))}
-          </section>
-        </>
+        <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {filteredPokemons.map((pokemon) => (
+            <DexItem key={pokemon.id} pokemon={pokemon} language={language} />
+          ))}
+        </section>
       )}
     </div>
   );

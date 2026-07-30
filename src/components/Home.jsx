@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getLanguage, subscribe } from "../stores/language";
 import { t } from "../stores/translations";
+import LanguageSelector from "./LanguageSelector";
 
 const GAMES = [
   {
@@ -63,6 +64,23 @@ const COLOR_MAP = {
 };
 
 const CHANGELOG = [
+  {
+    date: "2026-07-30",
+    title: "Search improvements + code cleanup",
+    items: [
+      "Pokedex search now supports translated type names (search 'fuego' for Fire Pokémon)",
+      "Pokedex search is accent-insensitive ('psiquico' matches Psíquico type)",
+      "Pokedex search supports multi-filtering with commas ('char,venu,emp' shows all matching)",
+      "Removed 'Showing X of Y Pokémon' counter from Pokedex search results",
+      "PokéWordle classic mode now shows yesterday's Pokémon below the guess counter",
+      "Added language selector to the Home page",
+      "Game card titles and descriptions are now translated",
+      "Pokéroguelite now uses the real Pokémon stat formula (neutral natures)",
+      "Consolidated duplicate translation entries",
+      "Extracted reusable HomeButton component used across all game screens",
+      "Added documentation comments to shared utilities",
+    ],
+  },
   {
     date: "2026-07-30",
     title: "Community Center + Village",
@@ -146,9 +164,14 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center min-h-[80vh] gap-12 px-4 py-12">
-      <div className="text-center space-y-2">
-        <h1 className="text-5xl font-bold tracking-tight">Visadex</h1>
-        <p className="text-xl text-slate-400">{t("Choose your adventure", language)}</p>
+      <div className="relative w-full max-w-4xl flex items-start justify-center">
+        <div className="text-center space-y-2">
+          <h1 className="text-5xl font-bold tracking-tight">Pokédex</h1>
+          <p className="text-xl text-slate-400">{t("Enjoy Pokémon in different ways", language)}</p>
+        </div>
+        <div className="absolute right-0 top-0">
+          <LanguageSelector />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
@@ -166,9 +189,9 @@ export default function Home() {
                 <span className="text-5xl">{game.emoji}</span>
               )}
               <span className={`text-2xl font-semibold transition-colors ${hoverColor.split(" ").pop()}`}>
-                {game.titleKey}
+                {t(game.titleKey, language)}
               </span>
-              <span className="text-sm text-slate-400">{game.descKey}</span>
+              <span className="text-sm text-slate-400">{t(game.descKey, language)}</span>
             </a>
           );
         })}
@@ -180,7 +203,7 @@ export default function Home() {
           className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300 transition-colors mx-auto"
         >
           <span className={`transition-transform ${showChangelog ? "rotate-90" : ""}`}>▸</span>
-          Patch Notes
+          {t("Patch Notes", language)}
         </button>
 
         {showChangelog && (

@@ -3,6 +3,7 @@ import { Toaster, toast } from "sonner";
 import { normalize } from "../utils/normalize";
 import { getLanguage, subscribe } from "../stores/language";
 import { t } from "../stores/translations";
+import HomeButton from "./HomeButton";
 import LanguageSelector from "./LanguageSelector";
 import PokeTypeBadge from "./PokeTypeBadge";
 
@@ -367,15 +368,7 @@ export default function DexMaster() {
       <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm pb-4 space-y-4">
         <header className="space-y-2">
           <div className="flex items-center justify-between">
-            <a
-              href="/"
-              className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
-            >
-              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              {t("Home", language)}
-            </a>
+            <HomeButton />
             <LanguageSelector />
           </div>
           <div className="flex items-center justify-between">

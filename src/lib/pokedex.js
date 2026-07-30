@@ -1,6 +1,11 @@
+// Shared Pokémon data loading, stat calculation, and nature system.
+// Used by: DungeonGame, Pokeroguelite, StarterQuiz, CaptureScreen, PokemonDetails
+// and any component that needs accurate stat computation.
+
 let cache = null
 let loading = null
 
+// Loads pokedex.json once and caches it. Subsequent calls return the cached data.
 export async function ensureLoaded() {
   if (cache) return cache
   if (!loading) loading = fetch('/pokedex.json').then(r => r.json())
@@ -8,11 +13,15 @@ export async function ensureLoaded() {
   return cache
 }
 
+// Returns a single Pokémon entry by its numeric id.
 export function getFromCache(id) {
   if (!cache) return null
   return cache.find(e => e.id === id) || null
 }
 
+// Pokémon natures with their stat modifiers.
+// up: the stat that gets x1.1, down: the stat that gets x0.9.
+// Neutral natures (hardy, docile, serious, bashful, quirky) have up === down.
 const NATURES = {
   hardy:   { up: 'atk', down: 'atk' },
   lonely:  { up: 'atk', down: 'def' },
@@ -43,16 +52,20 @@ const NATURES = {
 
 const NATURE_NAMES = Object.keys(NATURES)
 
+// Simple string hash used for deterministic nature picking.
 function hashStr(s) {
   let h = 0
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i)
   return Math.abs(h)
 }
 
+// Deterministically pick a nature from a seed string.
+// Used by DungeonGame when generating wild Pokémon (same Pokémon always gets the same nature).
 export function pickNature(seed) {
   return NATURE_NAMES[hashStr(String(seed)) % NATURE_NAMES.length]
 }
 
+// Returns the stat modifier (1.0, 1.1, or 0.9) for a given nature and stat.
 function natureMod(nature, stat) {
   if (stat === 'hp') return 1.0
   const n = NATURES[nature]
@@ -63,17 +76,26 @@ function natureMod(nature, stat) {
   return 1.0
 }
 
+// Accurate Pokémon stat formula from the games.
+// HP:  floor(((2 * base + 100) * level) / 100) + 10
+// Other:  max(1, floor((floor((2 * base * level) / 100) + 5) * mod))
+// mod is the nature multiplier (1.0 for neutral).
+// Used by: DungeonGame, Pokeroguelite, StarterQuiz, CaptureScreen, PokemonDetails
 export function calcStat(baseStat, level, isHP = false, mod = 1.0) {
   const base = Math.floor(baseStat)
   if (isHP) return Math.floor(((2 * base + 100) * level) / 100) + 10
   return Math.max(1, Math.floor((Math.floor((2 * base * level) / 100) + 5) * mod))
 }
 
+// Returns the types of a Pokémon by id.
 export async function getTypes(id) {
   const entry = await ensureLoaded().then(() => getFromCache(id))
   return entry?.types || ['normal']
 }
 
+// Computes all 6 stats for a Pokémon at a given level with a specific nature.
+// Used by: DungeonGame (real combat), StarterQuiz, CaptureScreen.
+// Pokeroguelite uses calcStat directly (neutral natures only).
 export async function computeStats(pokemonId, level, nature) {
   await ensureLoaded()
   const entry = getFromCache(pokemonId)
@@ -88,6 +110,7 @@ export async function computeStats(pokemonId, level, nature) {
   const baseSpd = entry.baseStats.find(s => s.name === 'special-defense')?.value || 50
   const baseSpe = entry.baseStats.find(s => s.name === 'speed')?.value || 50
 
+  // Shedinja (id 292) always has exactly 1 HP
   const hp = pokemonId === 292 ? 1 : calcStat(baseHp, level, true)
   return {
     pokemonId,
@@ -103,5 +126,3 @@ export async function computeStats(pokemonId, level, nature) {
     types: entry.types || ['normal'],
   }
 }
-
-

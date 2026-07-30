@@ -52,10 +52,14 @@ export const VILLAGE_TILES = (() => {
 })();
 
 export const NPC_POSITIONS = [
-  { id: "mart", name: "Shopkeep", x: 4, y: 4, label: "Poké Mart", spriteId: 129 },
+  { id: "mart", name: "Shopkeep", x: 4, y: 4, label: "Shop", spriteId: 352 },
   { id: "moves", name: "Tutor", x: 11, y: 3, label: "Move Changer", spriteId: 61 },
   { id: "name", name: "Rater", x: 21, y: 4, label: "Name Rater", spriteId: 108 },
-  { id: "adventure", name: "Explorer", x: 7, y: 14, label: "Adventure", spriteId: 95 },
+  { id: "bank", name: "Persian", x: 5, y: 5, label: "Bank", spriteId: 53 },
+  { id: "storage", name: "Kangaskhan", x: 25, y: 4, label: "Kangaskhan Storage", spriteId: 115 },
+  { id: "club", name: "Wigglytuff", x: 13, y: 10, label: "Club Wigglytuff", spriteId: 40 },
+  { id: "quiz-reset", name: "Xatu", x: 22, y: 3, label: "Quiz Reset", spriteId: 178 },
+  { id: "adventure", name: "Explorer", x: 7, y: 14, label: "Adventure", spriteId: 297 },
 ];
 
 export const VILLAGE_SPAWN = { x: 15, y: 10 };
@@ -65,4 +69,5 @@ export const SHOP_ITEMS = [
   { id: "super-potion", name: "Super Potion", description: "Heal 50 HP", price: 150, effect: { heal: 50 } },
   { id: "full-heal", name: "Full Heal", description: "Cure all status & heal to full", price: 500, effect: { heal: "full" } },
   { id: "revive", name: "Revive", description: "Revive fainted Pokémon (50% HP)", price: 800, effect: { revive: true, healRatio: 0.5 } },
+  { id: "orb", name: "Orb", description: "Throw at a wild Pokémon to deal 30 damage", price: 100, effect: { damage: 30 } },
 ];

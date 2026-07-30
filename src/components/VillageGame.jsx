@@ -17,6 +17,7 @@ import { getLanguage, subscribe } from "../stores/language";
 import { t } from "../stores/translations";
 import VillageMap from "./VillageMap";
 import LanguageSelector from "./LanguageSelector";
+import { Bubble, BubbleContent } from "../../components/ui/bubble";
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 
@@ -38,6 +39,16 @@ export default function VillageGame({
 
   // NPC interaction state
   const [activeNPC, setActiveNPC] = useState(null);
+  const [storageSelectedItem, setStorageSelectedItem] = useState(null);
+  const [bankDeposit, setBankDeposit] = useState("");
+  const [bankWithdraw, setBankWithdraw] = useState("");
+  const [showQuizResetConfirm, setShowQuizResetConfirm] = useState(false);
+
+  // Chat state
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
+  const chatEndRef = useRef(null);
 
   const showSetup = !session;
 
@@ -337,6 +348,17 @@ export default function VillageGame({
       .on("broadcast", { event: "player_left" }, ({ payload }) => {
         setPlayers((prev) => prev.filter((p) => p.player_id !== payload.playerId));
       })
+      .on("broadcast", { event: "chat_message" }, ({ payload }) => {
+        setMessages((prev) => [...prev, { id: Date.now(), playerName: payload.playerName, text: payload.text }]);
+      })
+      // Presence sync: detect abrupt disconnects (tab close, network drop)
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const onlineIds = new Set(
+          Object.values(state).flatMap((p) => p.map((p2) => p2.player_id))
+        );
+        setPlayers((prev) => prev.filter((p) => onlineIds.has(p.player_id)));
+      })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           channel.send({
@@ -362,6 +384,11 @@ export default function VillageGame({
       supabase.removeChannel(channel);
     };
   }, [session]);
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Load room data when session is set
   useEffect(() => {
@@ -423,6 +450,110 @@ export default function VillageGame({
 
   function closeNPC() {
     setActiveNPC(null);
+    setStorageSelectedItem(null);
+    setBankDeposit("");
+    setBankWithdraw("");
+    setShowQuizResetConfirm(false);
+  }
+
+  // Storage
+  async function handleUseStorageItem(itemId, pkm) {
+    const shopItem = SHOP_ITEMS.find((s) => s.id === itemId);
+    if (!shopItem) return;
+
+    if (shopItem.effect.heal === "full") {
+      const maxHp = pkm.maxHp || pkm.max_hp || 100;
+      await updateTeamMember(pkm.id, { hp: maxHp });
+    } else if (shopItem.effect.heal) {
+      const maxHp = pkm.maxHp || pkm.max_hp || 100;
+      const newHp = Math.min(maxHp, (pkm.hp || 0) + shopItem.effect.heal);
+      await updateTeamMember(pkm.id, { hp: newHp });
+    } else if (shopItem.effect.revive) {
+      await updateTeamMember(pkm.id, { hp: Math.floor((pkm.maxHp || pkm.max_hp || 100) * shopItem.effect.healRatio) });
+    }
+
+    const items = profile?.inventory?.items || [];
+    const idx = items.indexOf(itemId);
+    if (idx === -1) return;
+    const newItems = [...items];
+    newItems.splice(idx, 1);
+    await saveProfile(accountId, { inventory: { gold: profile?.inventory?.gold || 0, items: newItems } });
+    setProfile((p) => p ? { ...p, inventory: { gold: p.inventory?.gold || 0, items: newItems } } : p);
+    setStorageSelectedItem(null);
+    loadTeam();
+  }
+
+  // Bank
+  async function handleBankDeposit() {
+    const amount = parseInt(bankDeposit, 10);
+    if (!amount || amount <= 0) return;
+    const currentGold = profile?.inventory?.gold || 0;
+    if (amount > currentGold) { setError("Not enough gold!"); setTimeout(() => setError(""), 2000); return; }
+    const newGold = currentGold - amount;
+    const bankGold = (profile?.bank_gold || 0) + amount;
+    await saveProfile(accountId, { inventory: { gold: newGold, items: profile?.inventory?.items || [] }, bank_gold: bankGold });
+    setProfile((p) => p ? { ...p, inventory: { ...p.inventory, gold: newGold }, bank_gold: bankGold } : p);
+    setBankDeposit("");
+  }
+
+  async function handleBankWithdraw() {
+    const amount = parseInt(bankWithdraw, 10);
+    if (!amount || amount <= 0) return;
+    const bankGold = profile?.bank_gold || 0;
+    if (amount > bankGold) { setError("Not enough in bank!"); setTimeout(() => setError(""), 2000); return; }
+    const currentGold = (profile?.inventory?.gold || 0) + amount;
+    const newBankGold = bankGold - amount;
+    await saveProfile(accountId, { inventory: { gold: currentGold, items: profile?.inventory?.items || [] }, bank_gold: newBankGold });
+    setProfile((p) => p ? { ...p, inventory: { ...p.inventory, gold: currentGold }, bank_gold: newBankGold } : p);
+    setBankWithdraw("");
+  }
+
+  // Club Wigglytuff — swap active partner from the club pool
+  async function handleMakeActive(storedPkm) {
+    // Collect current team members to move to club
+    const existingStored = profile?.stored_pokemon || [];
+    const membersToStore = team.filter((m) => m.id).map((m) => ({
+      pokemon_id: m.pokemonId || m.pokemon_id,
+      level: m.level || 5,
+      nickname: m.nickname || null,
+      moves: m.moves || [],
+      hp: m.hp,
+      max_hp: m.maxHp || m.max_hp,
+    }));
+    // Remove current team from DB
+    for (const member of team) {
+      if (member.id) await removeTeamMember(member.id);
+    }
+    // Add selected club Pokémon to team
+    await addTeamMember(accountId, {
+      pokemon_id: storedPkm.pokemon_id,
+      nickname: storedPkm.nickname || getSpeciesName(storedPkm.pokemon_id),
+      level: storedPkm.level || 5,
+      hp: storedPkm.hp || 100,
+      max_hp: storedPkm.max_hp || 100,
+      nature: storedPkm.nature || null,
+      moves: storedPkm.moves || [],
+      slot: 0,
+      is_starter: false,
+    });
+    // Update club: add old team members, remove the one that became active
+    const remaining = existingStored.filter((p) => p !== storedPkm);
+    await saveProfile(accountId, { stored_pokemon: [...remaining, ...membersToStore] });
+    loadTeam();
+  }
+
+  // Quiz Reset
+  async function handleQuizReset() {
+    await saveProfile(accountId, { starter_id: null, quiz_result: null });
+    const teamMembers = await getTeam(accountId);
+    for (const member of teamMembers) {
+      if (member.is_starter) {
+        await removeTeamMember(member.id);
+      }
+    }
+    setShowQuizResetConfirm(false);
+    setActiveNPC(null);
+    if (onTeamUpdate) onTeamUpdate();
   }
 
   // Shop
@@ -491,6 +622,17 @@ export default function VillageGame({
     setNewNickname("");
     setActiveNPC(null);
     loadTeam();
+  }
+
+  // Chat
+  async function sendChat() {
+    if (!chatInput.trim() || !channelRef.current) return;
+    await channelRef.current.send({
+      type: "broadcast",
+      event: "chat_message",
+      payload: { playerName: accountName, text: chatInput.trim() },
+    });
+    setChatInput("");
   }
 
   // Adventure
@@ -652,7 +794,10 @@ export default function VillageGame({
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-stone-100">Poké Mart</h2>
+              <div className="flex items-center gap-2">
+                <img src={`${SPRITE_URL}/352.png`} alt="" className="w-6 h-6" />
+                <h2 className="text-lg font-bold text-stone-100">Shop</h2>
+              </div>
               <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
             </div>
             <p className="text-xs text-stone-400">💰 {profile?.inventory?.gold || 0} gold</p>
@@ -712,6 +857,68 @@ export default function VillageGame({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Bank (Persian) ─── */}
+      {activeNPC && activeNPC.id === "bank" && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <img src={`${SPRITE_URL}/53.png`} alt="" className="w-6 h-6" />
+                <h2 className="text-lg font-bold text-stone-100">Bank</h2>
+              </div>
+              <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-center text-sm">
+              <div className="rounded-xl bg-stone-700/40 p-3">
+                <p className="text-[10px] text-stone-400">Pocket</p>
+                <p className="text-yellow-400 font-bold">💰 {profile?.inventory?.gold || 0}</p>
+              </div>
+              <div className="rounded-xl bg-stone-700/40 p-3">
+                <p className="text-[10px] text-stone-400">Bank</p>
+                <p className="text-blue-400 font-bold">🏦 {profile?.bank_gold || 0}</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  value={bankDeposit}
+                  onChange={(e) => setBankDeposit(e.target.value)}
+                  placeholder="Deposit amount"
+                  className="flex-1 min-w-0 rounded-lg bg-stone-700/60 border border-stone-600 px-3 py-2 text-xs text-stone-100 placeholder:text-stone-500"
+                />
+                <button
+                  onClick={handleBankDeposit}
+                  disabled={!bankDeposit || parseInt(bankDeposit) <= 0 || parseInt(bankDeposit) > (profile?.inventory?.gold || 0)}
+                  className="rounded-lg bg-green-800 px-3 py-2 text-xs text-green-200 hover:bg-green-700 disabled:opacity-40 transition-colors"
+                >
+                  Deposit
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  value={bankWithdraw}
+                  onChange={(e) => setBankWithdraw(e.target.value)}
+                  placeholder="Withdraw amount"
+                  className="flex-1 min-w-0 rounded-lg bg-stone-700/60 border border-stone-600 px-3 py-2 text-xs text-stone-100 placeholder:text-stone-500"
+                />
+                <button
+                  onClick={handleBankWithdraw}
+                  disabled={!bankWithdraw || parseInt(bankWithdraw) <= 0 || parseInt(bankWithdraw) > (profile?.bank_gold || 0)}
+                  className="rounded-lg bg-blue-800 px-3 py-2 text-xs text-blue-200 hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                >
+                  Withdraw
+                </button>
+              </div>
+            </div>
+            <p className="text-[10px] text-stone-500 text-center">Gold in the bank is safe if you die in a dungeon.</p>
           </div>
         </div>
       )}
@@ -820,6 +1027,241 @@ export default function VillageGame({
                   Confirm
                 </button>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Chat toggle button ─── */}
+      <button
+        onClick={() => setChatOpen((o) => !o)}
+        className="fixed bottom-4 right-4 z-50 rounded-full bg-stone-700 px-4 py-2 text-xs text-stone-300 shadow-lg hover:bg-stone-600 transition-colors"
+      >
+        {chatOpen ? "Close" : "Chat"}
+      </button>
+
+      {/* ─── Chat panel ─── */}
+      {chatOpen && (
+        <div className="fixed bottom-16 right-4 z-50 w-72 rounded-xl border border-stone-700 bg-stone-800/95 backdrop-blur shadow-xl flex flex-col">
+          <div className="flex items-center justify-between border-b border-stone-700 px-3 py-2">
+            <span className="text-xs font-semibold text-stone-300">Chat</span>
+            <button onClick={() => setChatOpen(false)} className="text-stone-500 hover:text-stone-300 text-sm">&times;</button>
+          </div>
+          <div className="flex-1 overflow-y-auto max-h-60 px-3 py-2 space-y-1.5">
+            {messages.length === 0 && (
+              <p className="text-[10px] text-stone-500 text-center">No messages yet</p>
+            )}
+            {messages.map((msg) => {
+              const isOwn = msg.playerName === accountName;
+              return (
+                <Bubble key={msg.id} variant={isOwn ? "dungeon-player" : "dungeon-enemy"} align={isOwn ? "end" : "start"}>
+                  <span className="text-[10px] text-stone-500 px-1">{msg.playerName}</span>
+                  <BubbleContent>{msg.text}</BubbleContent>
+                </Bubble>
+              );
+            })}
+            <div ref={chatEndRef} />
+          </div>
+          <form
+            onSubmit={(e) => { e.preventDefault(); sendChat(); }}
+            className="flex gap-1.5 border-t border-stone-700 p-2"
+          >
+            <input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Type a message..."
+              maxLength={200}
+              className="flex-1 min-w-0 rounded-lg bg-stone-700/60 border border-stone-600 px-2.5 py-1.5 text-xs text-stone-100 placeholder:text-stone-500"
+            />
+            <button
+              type="submit"
+              disabled={!chatInput.trim()}
+              className="rounded-lg bg-blue-700 px-2.5 py-1.5 text-xs text-white hover:bg-blue-600 disabled:opacity-40 transition-colors"
+            >
+              Send
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* ─── Kangaskhan Storage ─── */}
+      {activeNPC && activeNPC.id === "storage" && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <img src={`${SPRITE_URL}/115.png`} alt="" className="w-6 h-6" />
+                <h2 className="text-lg font-bold text-stone-100">Kangaskhan Storage</h2>
+              </div>
+              <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
+            </div>
+
+            {!storageSelectedItem ? (
+              <>
+                <p className="text-xs text-stone-400">
+                  Items in storage: <span className="text-stone-200 font-semibold">{(profile?.inventory?.items || []).length}</span>
+                </p>
+                {(profile?.inventory?.items || []).length === 0 ? (
+                  <p className="text-xs text-stone-500 text-center py-4">No items in storage. Find some in dungeons!</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {(() => {
+                      // Group items by type with counts
+                      const counts = {};
+                      for (const id of profile.inventory.items) {
+                        counts[id] = (counts[id] || 0) + 1;
+                      }
+                      return Object.entries(counts).map(([itemId, count]) => {
+                        const shopItem = SHOP_ITEMS.find((s) => s.id === itemId);
+                        if (!shopItem) return null;
+                        return (
+                          <div
+                            key={itemId}
+                            className="flex items-center justify-between rounded-xl bg-stone-700/40 p-3"
+                          >
+                            <div>
+                              <p className="text-sm text-stone-200 font-medium">{shopItem.name}</p>
+                              <p className="text-[10px] text-stone-400">{shopItem.description}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-stone-500">×{count}</span>
+                              <button
+                                onClick={() => setStorageSelectedItem(itemId)}
+                                className="rounded-lg bg-blue-800 px-2.5 py-1.5 text-xs text-blue-200 hover:bg-blue-700 transition-colors"
+                              >
+                                Use
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-stone-400">Choose a Pokémon to use this item on:</p>
+                {team.map((pkm, i) => (
+                  <button
+                    key={pkm.id || i}
+                    onClick={() => handleUseStorageItem(storageSelectedItem, pkm)}
+                    className="w-full rounded-lg bg-stone-700/40 px-3 py-2 text-xs text-stone-300 hover:bg-stone-600/40 text-left flex items-center gap-2"
+                  >
+                    <img src={`${SPRITE_URL}/${pkm.pokemonId || pkm.pokemon_id || 25}.png`} alt="" className="w-5 h-5" />
+                    <span>{pkm.nickname || getSpeciesName(pkm.pokemonId || pkm.pokemon_id)}</span>
+                    <span className="ml-auto text-stone-500">HP {pkm.hp || 0}/{pkm.maxHp || pkm.max_hp || 100}</span>
+                  </button>
+                ))}
+                <button
+                  onClick={() => setStorageSelectedItem(null)}
+                  className="w-full rounded-lg bg-stone-700 px-3 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
+                >
+                  Back
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Club Wigglytuff ─── */}
+      {activeNPC && activeNPC.id === "club" && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <img src={`${SPRITE_URL}/40.png`} alt="" className="w-6 h-6" />
+                <h2 className="text-lg font-bold text-stone-100">Club Wigglytuff</h2>
+              </div>
+              <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
+            </div>
+            <p className="text-xs text-stone-400">
+              Wild Pokémon that want to join you wait here — they're safe even if you faint in a dungeon. Choose one to adventure with.
+            </p>
+
+            {/* Current active partner */}
+            {team[0] && (
+              <div className="rounded-xl bg-stone-700/60 border border-stone-600 p-3 flex items-center gap-3">
+                <img src={`${SPRITE_URL}/${team[0].pokemonId || team[0].pokemon_id || 25}.png`} alt="" className="w-8 h-8" />
+                <div>
+                  <p className="text-sm text-stone-200 font-semibold">{team[0].nickname || getSpeciesName(team[0].pokemonId || team[0].pokemon_id)}</p>
+                  <p className="text-[10px] text-stone-400">Active partner · Lv.{team[0].level || 5}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Club pool */}
+            <p className="text-xs text-stone-500">Club members ({profile?.stored_pokemon?.length || 0})</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {(profile?.stored_pokemon || []).length === 0 ? (
+                <p className="text-xs text-stone-500 text-center py-4">No one here yet. Catch some wild Pokémon in dungeons!</p>
+              ) : (
+                (profile?.stored_pokemon || []).map((pkm, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-xl bg-stone-700/40 p-3">
+                    <div className="flex items-center gap-2">
+                      <img src={`${SPRITE_URL}/${pkm.pokemon_id}.png`} alt="" className="w-6 h-6" />
+                      <div>
+                        <p className="text-sm text-stone-200">{getSpeciesName(pkm.pokemon_id)}</p>
+                        <p className="text-[10px] text-stone-500">Lv.{pkm.level || 5}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleMakeActive(pkm)}
+                      className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
+                    >
+                      Make Active
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Quiz Reset (Xatu) ─── */}
+      {activeNPC && activeNPC.id === "quiz-reset" && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <img src={`${SPRITE_URL}/178.png`} alt="" className="w-8 h-8" />
+              <h2 className="text-lg font-bold text-stone-100">Quiz Reset</h2>
+            </div>
+            {!showQuizResetConfirm ? (
+              <>
+                <p className="text-sm text-stone-300">
+                  Xatu can erase your memory of the starter quiz, letting you choose a new partner.
+                </p>
+                <p className="text-xs text-amber-400">
+                  Your starter Pokémon will be released. Other Pokémon and items are safe.
+                </p>
+                <button
+                  onClick={() => setShowQuizResetConfirm(true)}
+                  className="w-full rounded-xl bg-red-800 px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-700 transition-colors"
+                >
+                  Reset Quiz
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-amber-400 font-semibold">Are you sure?</p>
+                <p className="text-xs text-stone-400">This will delete your starter Pokémon. This cannot be undone.</p>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={handleQuizReset}
+                    className="w-full rounded-xl bg-red-800 px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-700 transition-colors"
+                  >
+                    Yes, Reset Everything
+                  </button>
+                  <button
+                    onClick={() => setShowQuizResetConfirm(false)}
+                    className="w-full rounded-xl bg-stone-700 px-4 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>

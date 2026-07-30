@@ -3,6 +3,7 @@ import { randomEntryNumber } from "../utils/randomEntryNumber";
 import { normalize } from "../utils/normalize";
 import { getLanguage, subscribe } from "../stores/language";
 import { t, getTypeName } from "../stores/translations";
+import HomeButton from "./HomeButton";
 import LanguageSelector from "./LanguageSelector";
 import PokedleGuess from "./PokedleGuess";
 
@@ -49,6 +50,7 @@ export default function Pokewordle() {
   const [pokemons, setPokemons] = useState([]);
   const [abilities, setAbilities] = useState({});
   const [currentPokemon, setCurrentPokemon] = useState(null);
+  const [yesterdayPokemon, setYesterdayPokemon] = useState(null);
   const [guess, setGuess] = useState("");
   const [guesses, setGuesses] = useState([]);
   const [gameOver, setGameOver] = useState(false);
@@ -89,6 +91,9 @@ export default function Pokewordle() {
       } else {
         setCurrentPokemon(data[randomEntryNumber()]);
       }
+
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      setYesterdayPokemon(data[randomEntryNumber(yesterday)]);
     });
   }, []);
 
@@ -245,15 +250,7 @@ export default function Pokewordle() {
     <div className="max-w-4xl mx-auto p-4 space-y-6">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <a
-            href="/"
-            className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
-          >
-            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            {t("Home", language)}
-          </a>
+          <HomeButton />
           <LanguageSelector />
         </div>
         <div className="text-center space-y-2">
@@ -263,9 +260,17 @@ export default function Pokewordle() {
               Arcade — {t("Streak", language)}: {streak} — {t("Correct", language)}: {totalCorrect}
             </p>
           ) : (
-            <p className="text-sm text-slate-400">
-              {t("Guess today's Pokémon —", language)} {guesses.length}/{MAX_GUESSES}
-            </p>
+            <>
+              <p className="text-sm text-slate-400">
+                {t("Guess today's Pokémon —", language)} {guesses.length}/{MAX_GUESSES}
+              </p>
+              {yesterdayPokemon && (
+                <p className="text-xs text-slate-500">
+                  {t("Yesterday's Pokémon was", language)}{" "}
+                  <span className="text-slate-400">{yesterdayPokemon.names[language] || yesterdayPokemon.names.en}</span>
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
