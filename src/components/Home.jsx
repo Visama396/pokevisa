@@ -76,6 +76,66 @@ const CHANGELOG = [
       "Turn-based combat fully synchronized across all players",
     ],
   },
+  {
+    date: "2026-07-29",
+    title: "Pokedex overhaul + account system",
+    items: [
+      "Pokedex now uses the true stat formula from the games (IVs, EVs, nature)",
+      "All 9 generations of Pokémon added with updated movesets and abilities",
+      "Added conditional evolution display (trade evolutions, stone evos, etc.)",
+      "Account system with registration, login, and team management",
+      "Starter Pokémon selection quiz for new players",
+      "Gold and inventory system with item rewards from dungeons",
+      "Fixed Pokedex search edge cases and Pokémon detail view",
+      "Added language selector to all game screens",
+      "Multiple language support (English, Spanish, French, German, Italian, Japanese, Korean, Chinese)",
+    ],
+  },
+  {
+    date: "2026-07-28",
+    title: "Dungeon Crawler turn-based combat",
+    items: [
+      "Turn-based multiplayer combat system with player/enemy turn coordination",
+      "Enemy movement AI chases nearest visible player",
+      "Real-time player position sync via Supabase Realtime",
+      "Fog of war with raycasting visibility per player",
+      "Treasure chests and gold coins on dungeon floors",
+      "Staircase progression with safe exit or continue deeper",
+      "Wild Pokémon capture on defeat (chance-based)",
+      "Battle log with damage numbers and effectiveness text",
+    ],
+  },
+  {
+    date: "2026-07-27",
+    title: "Pokedle — daily guessing game",
+    items: [
+      "Classic mode: guess the daily Pokémon with feedback",
+      "Arcade mode: unlimited streak-based guessing",
+      "Game state saved locally between sessions",
+      "Added evolution stage column to help narrow guesses",
+    ],
+  },
+  {
+    date: "2026-07-26",
+    title: "Dexmaster + Pokéroguelite",
+    items: [
+      "Dexmaster progress tracker with generation filters",
+      "Added hint system for hard-to-find Pokémon",
+      "Pokéroguelite mode: Slay the Spire-style map with encounters, trainers, items, and move upgrades",
+      "Team-based roguelite progression with randomized nodes",
+      "Stats Battle: compare two Pokémon and prove your knowledge",
+    ],
+  },
+  {
+    date: "2026-07-25",
+    title: "Stats Battle + UI polish",
+    items: [
+      "Stats Battle game mode added",
+      "Improved bubble colors for better readability",
+      "UI fixes across Pokedex and Pokedle",
+      "Pokedle classic mode state persistence fixed",
+    ],
+  },
 ];
 
 export default function Home() {
