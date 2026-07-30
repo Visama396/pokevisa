@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { getLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { getStartersForTrait, getMovesAtLevel } from "../lib/moves";
-import { computeStats } from "../lib/pokedex";
+import { computeStats, pickNature } from "../lib/pokedex";
 import PokeTypeBadge from "./PokeTypeBadge";
 import { addTeamMember, saveProfile } from "../lib/auth";
 
@@ -152,8 +152,9 @@ export default function StarterQuiz({ accountId, onComplete }) {
   async function handlePickStarter(starter) {
     setSaving(true);
     try {
+      const nature = pickNature(accountId + '-' + starter.pokemonId);
       const [stats, moves] = await Promise.all([
-        computeStats(starter.pokemonId, 5),
+        computeStats(starter.pokemonId, 5, nature),
         getMovesAtLevel(starter.pokemonId, 5),
       ]);
 
@@ -168,6 +169,7 @@ export default function StarterQuiz({ accountId, onComplete }) {
         level: 5,
         hp: stats.hp,
         max_hp: stats.maxHp,
+        nature,
         moves,
         slot: 0,
         is_starter: true,

@@ -4,7 +4,7 @@ import { t, getTypeName } from "../stores/translations";
 import { supabase } from "../lib/supabase";
 import { generateDungeon, isWalkable, moveEnemyToward, getVisibleTiles, TILE } from "../lib/dungeon";
 import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesTypes, getSpeciesSpeed, getMovesAtLevel, getMoveName, calcExpGain, checkLevelUp, getEffectiveness, calcDamage, getStabMultiplier } from "../lib/moves";
-import { ensureLoaded, computeStats } from "../lib/pokedex";
+import { ensureLoaded, computeStats, pickNature } from "../lib/pokedex";
 import { removeTeamMember, updateTeamMember, getTeam, getProfile, saveProfile } from "../lib/auth";
 import LanguageSelector from "./LanguageSelector";
 import DungeonMap from "./DungeonMap";
@@ -161,12 +161,16 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   }, []);
 
   async function enrichPokemon(p) {
-    const stats = await computeStats(p.pokemonId, p.level);
+    const pokemonId = p.pokemonId ?? p.pokemon_id;
+    if (!pokemonId) return p;
+    const nature = (p.nature && p.nature !== '_') ? p.nature : pickNature(p.id || `${pokemonId}-${p.x||0}-${p.y||0}`);
+    const currentHp = p.hp;
+    const stats = await computeStats(pokemonId, p.level, nature);
     if (p.moves && p.moves.length > 0) {
-      return { ...p, ...stats };
+      return { ...p, ...stats, hp: currentHp, maxHp: stats.maxHp };
     }
-    const moves = await getMovesAtLevel(p.pokemonId, p.level);
-    return { ...p, ...stats, moves };
+    const moves = await getMovesAtLevel(pokemonId, p.level);
+    return { ...p, ...stats, hp: currentHp, maxHp: stats.maxHp, moves };
   }
 
   async function enrichEnemies(enemies) {
@@ -386,7 +390,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     setBattleLog((prev) => [...prev, ...logEntries].slice(-LOG_MAX));
 
     if (currentTeam[currentIndex]) {
-      setMyPlayer((p) => ({ ...p, hp: currentTeam[currentIndex].hp, max_hp: currentTeam[currentIndex].maxHp }));
+      setMyPlayer((p) => ({ ...p, hp: currentTeam[currentIndex].hp, max_hp: currentTeam[currentIndex].maxHp ?? currentTeam[currentIndex].max_hp ?? p.max_hp ?? 1 }));
     }
 
     if (wiped) {
@@ -613,9 +617,10 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       if (leveledUp) {
         newLevel = leveledUp;
       }
+      const pokemonId = pkm.pokemonId ?? pkm.pokemon_id;
       const [newStats, newMoves] = await Promise.all([
-        computeStats(pkm.pokemonId, newLevel),
-        getMovesAtLevel(pkm.pokemonId, newLevel),
+        computeStats(pokemonId, newLevel, pkm.nature),
+        getMovesAtLevel(pokemonId, newLevel),
       ]);
       const updatedPkm = { ...pkm, ...newStats, moves: newMoves, exp: newExp, hp: Math.max(pkm.hp, newStats.maxHp) };
       setTeam((prev) => {
@@ -624,7 +629,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         return updated;
       });
       if (pkm.id) {
-        await updateTeamMember(pkm.id, { level: newLevel, maxHp: newStats.maxHp, hp: Math.max(pkm.hp, newStats.maxHp), exp: newExp, moves: newMoves });
+        await updateTeamMember(pkm.id, { level: newLevel, max_hp: newStats.maxHp, hp: Math.max(pkm.hp, newStats.maxHp), exp: newExp, moves: newMoves });
       }
       if (leveledUp) {
         setMyPlayer((p) => (p ? { ...p, level: newLevel } : p));
@@ -643,8 +648,9 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   // Leave room
   const leaveRoom = useCallback(async () => {
     for (const p of team) {
-      if (p.hp < p.max_hp && p.id) {
-        await updateTeamMember(p.id, { hp: p.max_hp });
+      const maxHp = p.maxHp ?? p.max_hp ?? 1;
+      if (p.hp < maxHp && p.id) {
+        await updateTeamMember(p.id, { hp: maxHp });
       }
     }
 
@@ -707,8 +713,9 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     setTeam((prev) => {
       return prev.map((p, i) => {
         if (i === activeTeamIndex) {
-          const healAmount = Math.floor(p.maxHp * 0.3);
-          return { ...p, hp: Math.min(p.maxHp, p.hp + healAmount) };
+          const maxHp = p.maxHp ?? p.max_hp ?? 1;
+          const healAmount = Math.floor(maxHp * 0.3);
+          return { ...p, hp: Math.min(maxHp, p.hp + healAmount) };
         }
         return p;
       });
@@ -963,20 +970,20 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
                 <p className="text-sm font-semibold text-slate-200">
                   {activePokemon?.nickname || getSpeciesName(activePokemon?.pokemonId || myPlayer?.sprite_id || 25)}
                 </p>
-                <p className="text-[10px] text-slate-400">Lv.{activePokemon?.level || myPlayer?.level || 5}</p>
+                <p className="text-[10px] text-slate-400">Lv.{activePokemon?.level || myPlayer?.level || 5}{activePokemon?.nature ? ` · ${activePokemon.nature}` : ''}</p>
               </div>
             </div>
             <div className="w-full h-2 rounded-full bg-slate-700 overflow-hidden">
               <div
                 className="h-full rounded-full transition-all"
                 style={{
-                  width: `${Math.max(0, ((activePokemon?.hp || myPlayer?.hp || 100) / (activePokemon?.maxHp || activePokemon?.max_hp || myPlayer?.max_hp || 100)) * 100)}%`,
-                  backgroundColor: ((activePokemon?.hp || 100) / (activePokemon?.maxHp || 100)) > 0.5 ? "#22c55e" : ((activePokemon?.hp || 100) / (activePokemon?.maxHp || 100)) > 0.2 ? "#eab308" : "#ef4444",
+                  width: `${Math.max(0, ((activePokemon?.hp ?? myPlayer?.hp ?? 0) / (activePokemon?.maxHp ?? activePokemon?.max_hp ?? myPlayer?.max_hp ?? 1)) * 100)}%`,
+                  backgroundColor: ((activePokemon?.hp ?? myPlayer?.hp ?? 0) / (activePokemon?.maxHp ?? activePokemon?.max_hp ?? myPlayer?.max_hp ?? 1)) > 0.5 ? "#22c55e" : ((activePokemon?.hp ?? myPlayer?.hp ?? 0) / (activePokemon?.maxHp ?? activePokemon?.max_hp ?? myPlayer?.max_hp ?? 1)) > 0.2 ? "#eab308" : "#ef4444",
                 }}
               />
             </div>
             <p className="text-[10px] text-slate-400 text-center">
-              HP: {activePokemon?.hp || myPlayer?.hp || 100}/{activePokemon?.maxHp || activePokemon?.max_hp || myPlayer?.max_hp || 100}
+              HP: {activePokemon?.hp ?? myPlayer?.hp ?? 0}/{activePokemon?.maxHp ?? activePokemon?.max_hp ?? myPlayer?.max_hp ?? 0}
             </p>
 
             {/* Move buttons */}
@@ -1025,7 +1032,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
                       <div
                         className={`h-full rounded-full ${p.is_alive ? "bg-green-500" : "bg-red-500"}`}
                         style={{
-                          width: `${Math.max(0, ((p.hp || 100) / (p.max_hp || 100)) * 100)}%`,
+                          width: `${Math.max(0, ((p.hp ?? 0) / (p.max_hp ?? 1)) * 100)}%`,
                         }}
                       />
                     </div>

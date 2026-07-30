@@ -124,7 +124,7 @@ export default function DungeonBattle({ enemy, playerPokemon, language, onEnd, p
             />
             <div className="flex-1">
               <p className="text-sm font-semibold text-slate-200">
-                {enemyPokemon.name} <span className="text-slate-400">Lv.{enemy.level}</span>
+                {enemyPokemon.name} <span className="text-slate-400">Lv.{enemy.level}{enemy.nature ? ` · ${enemy.nature}` : ''}</span>
               </p>
               <div className="w-full h-2 rounded-full bg-slate-700 overflow-hidden">
                 <div className={`h-full rounded-full transition-all ${enemyHpColor}`} style={{ width: `${enemyHpPct}%` }} />
@@ -139,7 +139,7 @@ export default function DungeonBattle({ enemy, playerPokemon, language, onEnd, p
           <div className="flex items-center justify-end gap-2">
             <div className="flex-1">
               <p className="text-sm font-semibold text-slate-200">
-                {playerPokemon.name} <span className="text-slate-400">Lv.{playerPokemon.level}</span>
+                {playerPokemon.name} <span className="text-slate-400">Lv.{playerPokemon.level}{playerPokemon.nature ? ` · ${playerPokemon.nature}` : ''}</span>
               </p>
               <div className="w-full h-2 rounded-full bg-slate-700 overflow-hidden">
                 <div className={`h-full rounded-full transition-all ${playerHpColor}`} style={{ width: `${playerHpPct}%` }} />

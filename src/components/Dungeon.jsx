@@ -30,15 +30,20 @@ export default function Dungeon() {
 
   async function loadAccountData(accountId) {
     setLoading(true);
-    const [prof, tm] = await Promise.all([getProfile(accountId), getTeam(accountId)]);
-    if (tm.length === 0 && prof) {
-      await resetProfile(accountId);
-      setProfile(null);
-    } else {
-      setProfile(prof);
+    try {
+      const [prof, tm] = await Promise.all([getProfile(accountId), getTeam(accountId)]);
+      if (tm.length === 0 && prof) {
+        await resetProfile(accountId);
+        setProfile(null);
+      } else {
+        setProfile(prof);
+      }
+      setTeam(tm);
+    } catch (err) {
+      console.error("Failed to load account data:", err);
+    } finally {
+      setLoading(false);
     }
-    setTeam(tm);
-    setLoading(false);
   }
 
   function handleAuth(acc) {

@@ -97,7 +97,7 @@ export default function TeamView({ team, onUpdate }) {
                   {p.nickname || getSpeciesName(p.pokemon_id)}
                 </p>
               )}
-              <p className="text-[10px] text-slate-400">Lv.{p.level}</p>
+              <p className="text-[10px] text-slate-400">Lv.{p.level} · {p.nature || "hardy"}</p>
             </div>
           </div>
 
