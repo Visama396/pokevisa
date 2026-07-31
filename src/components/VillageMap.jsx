@@ -1,12 +1,11 @@
 import { TILE } from "../lib/dungeon";
 import { VILLAGE_TILES, NPC_POSITIONS, VILLAGE_WIDTH, VILLAGE_HEIGHT } from "../lib/village";
+import SpriteImg from "./SpriteImg";
 
 const TILE_COLORS = {
   [TILE.FLOOR]: "bg-green-900/30",
   [TILE.WALL]: "bg-stone-800",
 };
-
-const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 
 export default function VillageMap({
   playerX, playerY, playerSpriteId,
@@ -75,29 +74,12 @@ export default function VillageMap({
                   }`}
                   style={{ width: 32, height: 32 }}
                 >
-                  {isPlayer && (
-                    <img
-                      src={`${SPRITE_URL}/${playerSpriteId}.png`}
-                      alt=""
-                      className="w-6 h-6 object-contain"
-                      title="You"
-                    />
-                  )}
+                  {isPlayer && <SpriteImg id={playerSpriteId} size={30} title="You" />}
                   {otherInfo && !isPlayer && (
-                    <img
-                      src={`${SPRITE_URL}/${otherInfo.spriteId || 25}.png`}
-                      alt=""
-                      className="w-5 h-5 object-contain"
-                      title={otherInfo.name}
-                    />
+                    <SpriteImg id={otherInfo.spriteId || 25} size={26} title={otherInfo.name} />
                   )}
                   {npc && !isPlayer && !otherInfo && (
-                    <img
-                      src={`${SPRITE_URL}/${npc.spriteId}.png`}
-                      alt=""
-                      className="w-6 h-6 object-contain"
-                      title={npc.label}
-                    />
+                    <SpriteImg id={npc.spriteId} size={26} title={npc.label} />
                   )}
                   {tile === TILE.WALL && (
                     <div className="text-stone-700 text-[10px] leading-none">⬛</div>

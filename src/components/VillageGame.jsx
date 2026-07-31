@@ -27,9 +27,12 @@ export default function VillageGame({
 }) {
   const [language, setLanguage] = useState(getLanguage());
   const channelRef = useRef(null);
+  const playersRef = useRef([]);
+  const offlineCleanupRef = useRef(null);
 
   useEffect(() => subscribe(setLanguage), []);
   const [players, setPlayers] = useState([]);
+  useEffect(() => { playersRef.current = players; }, [players]);
   const [myPlayer, setMyPlayer] = useState(null);
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
@@ -43,6 +46,10 @@ export default function VillageGame({
   const [bankDeposit, setBankDeposit] = useState("");
   const [bankWithdraw, setBankWithdraw] = useState("");
   const [showQuizResetConfirm, setShowQuizResetConfirm] = useState(false);
+
+  // Adventure (dungeon modes): which action is running + friend's room code
+  const [actionBusy, setActionBusy] = useState(null);
+  const [friendCode, setFriendCode] = useState("");
 
   // Chat state
   const [messages, setMessages] = useState([]);
@@ -369,13 +376,36 @@ export default function VillageGame({
       .on("broadcast", { event: "chat_message" }, ({ payload }) => {
         setMessages((prev) => [...prev, { id: Date.now(), playerName: payload.playerName, text: payload.text }]);
       })
-      // Presence sync: detect abrupt disconnects (tab close, network drop)
+      // Presence sync: detect abrupt disconnects (tab close, network drop).
+      // Filter them from the local list and, after a grace period, remove them
+      // from room_players so stale players don't get carried into the dungeon.
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
         const onlineIds = new Set(
           Object.values(state).flatMap((p) => p.map((p2) => p2.player_id))
         );
+        // Never treat ourselves as offline while connected.
+        onlineIds.add(session.playerId);
         setPlayers((prev) => prev.filter((p) => onlineIds.has(p.player_id)));
+
+        const offline = playersRef.current.filter(
+          (p) => p.player_id !== session.playerId && !onlineIds.has(p.player_id)
+        );
+        if (offline.length > 0) {
+          // Grace delay so the brief village->dungeon presence gap doesn't
+          // delete players who are actively transitioning.
+          if (offlineCleanupRef.current) clearTimeout(offlineCleanupRef.current);
+          offlineCleanupRef.current = setTimeout(() => {
+            supabase
+              .from("room_players")
+              .delete()
+              .in("player_id", offline.map((p) => p.player_id))
+              .eq("room_id", session.roomId);
+          }, 8000);
+        } else if (offlineCleanupRef.current) {
+          clearTimeout(offlineCleanupRef.current);
+          offlineCleanupRef.current = null;
+        }
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
@@ -472,6 +502,7 @@ export default function VillageGame({
     setBankDeposit("");
     setBankWithdraw("");
     setShowQuizResetConfirm(false);
+    setFriendCode("");
   }
 
   // Storage
@@ -653,27 +684,232 @@ export default function VillageGame({
     setChatInput("");
   }
 
-  // Adventure
-  async function handleStartAdventure() {
-    if (!session || !session.isHost) {
-      setError("Only the host can start an adventure!");
-      setTimeout(() => setError(""), 2000);
-      return;
-    }
+  // ─── Adventure (dungeon modes) ───
+  // Each player adventures on their own. A dungeon room is created on the fly
+  // (host), joined by code as a coop friend, or joined at random as an invader.
+
+  function requireTeam() {
     if (team.length === 0) {
       setError("You need at least one Pokémon!");
       setTimeout(() => setError(""), 2000);
+      return false;
+    }
+    return true;
+  }
+
+  // Fetch the dungeon spawn so late joiners appear on a safe tile.
+  async function getDungeonSpawn(roomId) {
+    const { data } = await supabase
+      .from("dungeon_state")
+      .select("spawn_x, spawn_y")
+      .eq("room_id", roomId)
+      .maybeSingle();
+    return { x: data?.spawn_x ?? 1, y: data?.spawn_y ?? 1 };
+  }
+
+  // "Go to a dungeon": host a brand-new solo dungeon room.
+  async function startSoloDungeon() {
+    if (!requireTeam()) return;
+    setActionBusy("solo");
+    setError("");
+    try {
+      const code = generateRoomCode();
+      const seed = Math.floor(Math.random() * 999999);
+
+      // Leave any previous room so reconnect always routes back to this dungeon.
+      await supabase.from("room_players").delete().eq("player_id", accountId);
+
+      const { data: roomData, error: roomErr } = await supabase
+        .from("rooms")
+        .insert({
+          code,
+          host_id: accountId,
+          dungeon_seed: seed,
+          max_players: 4,
+          status: "playing",
+          floor: 1,
+        })
+        .select()
+        .single();
+
+      if (roomErr) { setError(roomErr.message); return; }
+
+      const spriteId = team[0]?.pokemonId || team[0]?.pokemon_id || 25;
+      const { error: playerErr } = await supabase.from("room_players").insert({
+        room_id: roomData.id,
+        player_id: accountId,
+        player_name: accountName,
+        is_host: true,
+        is_invader: false,
+        sprite_id: spriteId,
+        level: team[0]?.level || 5,
+        hp: team[0]?.hp || 100,
+        max_hp: team[0]?.maxHp || team[0]?.max_hp || 100,
+        position_x: 1,
+        position_y: 1,
+      });
+
+      if (playerErr) { setError(playerErr.message); return; }
+
+      closeNPC();
+      if (onJoin) onJoin({ roomId: roomData.id, roomCode: code, playerId: accountId, isHost: true });
+      if (onStartDungeon) onStartDungeon();
+    } catch (err) {
+      console.error("Solo dungeon error:", err);
+      setError(err.message || "Could not start dungeon");
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
+  // "Invade a dungeon": join a random running dungeon as an invader (PvP on).
+  async function invadeDungeon() {
+    if (!requireTeam()) return;
+    setActionBusy("invade");
+    setError("");
+    try {
+      const { data: openRooms } = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("status", "playing")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      const candidates = [];
+      for (const r of openRooms || []) {
+        const { count } = await supabase
+          .from("room_players")
+          .select("*", { count: "exact", head: true })
+          .eq("room_id", r.id);
+        if (count < r.max_players) candidates.push(r);
+      }
+
+      if (candidates.length === 0) {
+        setError(t("No rooms available. Create one instead!", language));
+        return;
+      }
+
+      const room = candidates[Math.floor(Math.random() * candidates.length)];
+
+      const { data: existing } = await supabase
+        .from("room_players")
+        .select("id")
+        .eq("room_id", room.id)
+        .eq("player_id", accountId)
+        .maybeSingle();
+      if (existing) {
+        setError(t("You're already in that dungeon!", language));
+        return;
+      }
+
+      // Leave any previous room so reconnect routes back to this dungeon.
+      await supabase.from("room_players").delete().eq("player_id", accountId);
+
+      const spawn = await getDungeonSpawn(room.id);
+      const spriteId = team[0]?.pokemonId || team[0]?.pokemon_id || 25;
+      const { error: playerErr } = await supabase.from("room_players").insert({
+        room_id: room.id,
+        player_id: accountId,
+        player_name: accountName,
+        is_host: false,
+        is_invader: true,
+        sprite_id: spriteId,
+        level: team[0]?.level || 5,
+        hp: team[0]?.hp || 100,
+        max_hp: team[0]?.maxHp || team[0]?.max_hp || 100,
+        position_x: spawn.x,
+        position_y: spawn.y,
+      });
+
+      if (playerErr) { setError(playerErr.message); return; }
+
+      closeNPC();
+      if (onJoin) onJoin({ roomId: room.id, roomCode: room.code, playerId: accountId, isHost: false });
+      if (onStartDungeon) onStartDungeon();
+    } catch (err) {
+      console.error("Invade dungeon error:", err);
+      setError(err.message || "Could not invade dungeon");
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
+  // "Play with a friend": join a friend's running dungeon by code (coop, no PvP vs host).
+  async function joinFriendDungeon() {
+    const code = friendCode.toUpperCase().trim();
+    if (code.length < 4) {
+      setError(t("Enter room code", language));
       return;
     }
+    if (!requireTeam()) return;
+    setActionBusy("friend");
+    setError("");
+    try {
+      const { data: room } = await supabase
+        .from("rooms")
+        .select("*")
+        .ilike("code", code)
+        .maybeSingle();
 
-    // Broadcast so non-host clients know to transition
-    channelRef.current?.send({
-      type: "broadcast",
-      event: "game_start",
-      payload: {},
-    });
+      if (!room) {
+        setError(t("Room not found", language));
+        return;
+      }
+      if (room.status !== "playing") {
+        setError(t("Game not started yet", language));
+        return;
+      }
 
-    if (onStartDungeon) onStartDungeon();
+      const { count } = await supabase
+        .from("room_players")
+        .select("*", { count: "exact", head: true })
+        .eq("room_id", room.id);
+      if (count >= room.max_players) {
+        setError(t("Room is full", language));
+        return;
+      }
+
+      const { data: existing } = await supabase
+        .from("room_players")
+        .select("id")
+        .eq("room_id", room.id)
+        .eq("player_id", accountId)
+        .maybeSingle();
+      if (existing) {
+        setError(t("You're already in that dungeon!", language));
+        return;
+      }
+
+      // Leave any previous room so reconnect routes back to this dungeon.
+      await supabase.from("room_players").delete().eq("player_id", accountId);
+
+      const spawn = await getDungeonSpawn(room.id);
+      const spriteId = team[0]?.pokemonId || team[0]?.pokemon_id || 25;
+      const { error: playerErr } = await supabase.from("room_players").insert({
+        room_id: room.id,
+        player_id: accountId,
+        player_name: accountName,
+        is_host: false,
+        is_invader: false,
+        sprite_id: spriteId,
+        level: team[0]?.level || 5,
+        hp: team[0]?.hp || 100,
+        max_hp: team[0]?.maxHp || team[0]?.max_hp || 100,
+        position_x: spawn.x,
+        position_y: spawn.y,
+      });
+
+      if (playerErr) { setError(playerErr.message); return; }
+
+      closeNPC();
+      if (onJoin) onJoin({ roomId: room.id, roomCode: room.code, playerId: accountId, isHost: false });
+      if (onStartDungeon) onStartDungeon();
+    } catch (err) {
+      console.error("Join friend dungeon error:", err);
+      setError(err.message || "Could not join dungeon");
+    } finally {
+      setActionBusy(null);
+    }
   }
 
   // ─── Rendering ───
@@ -1289,27 +1525,48 @@ export default function VillageGame({
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4 text-center">
             <p className="text-4xl">🗺️</p>
-            <h2 className="text-xl font-bold text-stone-100">Start Adventure</h2>
+            <h2 className="text-xl font-bold text-stone-100">{t("Dungeon Crawler", language)}</h2>
             <p className="text-sm text-stone-400">
-              Enter the dungeon to find treasure and battle wild Pokémon!
+              {t("Explore alone, join a friend, or invade someone else's dungeon!", language) || "Explore alone, join a friend, or invade someone else's dungeon!"}
             </p>
-            {players.length === 1 ? (
-              <p className="text-xs text-amber-400">Going solo? Brave!</p>
-            ) : (
-              <p className="text-xs text-stone-400">{players.length} players ready</p>
+            {error && (
+              <p className="text-xs text-red-400 bg-red-900/20 rounded-xl px-4 py-2">{error}</p>
             )}
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => { closeNPC(); handleStartAdventure(); }}
-                className="w-full rounded-xl bg-green-700 px-4 py-3 text-sm font-semibold text-white hover:bg-green-600 transition-colors"
+                onClick={startSoloDungeon}
+                disabled={actionBusy !== null || team.length === 0}
+                className="w-full rounded-xl bg-green-700 px-4 py-3 text-sm font-semibold text-white hover:bg-green-600 transition-colors disabled:opacity-50"
               >
-                Enter Dungeon {session?.isHost ? "(as Host)" : "(wait for host)"}
+                {actionBusy === "solo" ? t("Starting...", language) : t("Go to a dungeon", language)}
               </button>
+              <button
+                onClick={invadeDungeon}
+                disabled={actionBusy !== null || team.length === 0}
+                className="w-full rounded-xl bg-red-700 px-4 py-3 text-sm font-semibold text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {actionBusy === "invade" ? t("Invading...", language) : t("Invade a dungeon", language)}
+              </button>
+              <div className="space-y-1.5">
+                <input
+                  value={friendCode}
+                  onChange={(e) => setFriendCode(e.target.value.toUpperCase().slice(0, 6))}
+                  placeholder={t("Enter room code", language)}
+                  className="w-full rounded-xl bg-stone-700/60 border border-stone-600 px-4 py-2.5 text-sm text-stone-100 text-center font-mono tracking-widest uppercase placeholder:text-stone-500 outline-none focus:border-stone-500"
+                />
+                <button
+                  onClick={joinFriendDungeon}
+                  disabled={actionBusy !== null || team.length === 0 || friendCode.trim().length < 4}
+                  className="w-full rounded-xl bg-blue-700 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-600 transition-colors disabled:opacity-50"
+                >
+                  {actionBusy === "friend" ? t("Joining...", language) : t("Play with a friend", language)}
+                </button>
+              </div>
               <button
                 onClick={closeNPC}
                 className="w-full rounded-xl bg-stone-700 px-4 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
               >
-                Not yet
+                {t("Cancel", language)}
               </button>
             </div>
           </div>

@@ -66,6 +66,24 @@ const COLOR_MAP = {
 const CHANGELOG = [
   {
     date: "2026-07-31",
+    title: "Dungeon modes: solo, invade & play with a friend",
+    items: [
+      "The adventure NPC now offers three ways to play: Go to a dungeon (host your own solo run), Invade a dungeon (join a random active dungeon as an invader), and Play with a friend (join by code)",
+      "Each player explores their own dungeon — other village players are no longer dragged along",
+      "PvP rules: invaders can attack and be attacked by everyone, while the host and friends who joined by code play cooperatively and can't hurt each other",
+      "Leaving a dungeon as a guest only removes yourself — the host's run keeps going",
+    ],
+  },
+  {
+    date: "2026-07-31",
+    title: "Dungeon multiplayer fixes",
+    items: [
+      "Fixed wild Pokémon HP not matching their base stats — enemies now use the real stat formula (a level 3 Popplio no longer survives 5 scratches from a level 5 Charmander)",
+      "Players who close the tab now get removed from the lobby, so disconnected players no longer get sent to the dungeon and block everyone's turns",
+    ],
+  },
+  {
+    date: "2026-07-31",
     title: "Dungeon wild Pokémon HP fix",
     items: [
       "Fixed wild Pokémon HP not matching their base stats — enemies now use the real stat formula (a level 3 Popplio no longer survives 5 scratches from a level 5 Charmander)",

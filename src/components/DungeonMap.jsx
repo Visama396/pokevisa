@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { TILE, getVisibleTiles } from "../lib/dungeon";
+import SpriteImg from "./SpriteImg";
 
 const TILE_COLORS = {
   [TILE.FLOOR]: "bg-slate-700/40",
@@ -10,38 +11,15 @@ const TILE_COLORS = {
   [TILE.PLAYER]: "bg-green-900/30",
 };
 
-const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
-
 function TileContent({ tile, enemy, treasure, gold, isPlayer, isOtherPlayer, otherPlayerName, playerSpriteId, otherSpriteId }) {
   if (isPlayer) {
-    return (
-      <img
-        src={`${SPRITE_URL}/${playerSpriteId}.png`}
-        alt=""
-        className="w-6 h-6 object-contain"
-        title="You"
-      />
-    );
+    return <SpriteImg id={playerSpriteId} size={30} title="You" />;
   }
   if (isOtherPlayer) {
-    return (
-      <img
-        src={`${SPRITE_URL}/${otherSpriteId || 25}.png`}
-        alt=""
-        className="w-5 h-5 object-contain"
-        title={otherPlayerName}
-      />
-    );
+    return <SpriteImg id={otherSpriteId || 25} size={26} title={otherPlayerName} />;
   }
   if (enemy) {
-    return (
-      <img
-        src={`${SPRITE_URL}/${enemy.pokemonId}.png`}
-        alt=""
-        className="w-6 h-6 object-contain"
-        title={`Lv.${enemy.level}`}
-      />
-    );
+    return <SpriteImg id={enemy.pokemonId} size={26} title={`Lv.${enemy.level}`} />;
   }
   if (treasure && !treasure.opened) {
     return <span className="text-sm">📦</span>;

@@ -42,13 +42,23 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const turnLockRef = useRef(false);
   const enemyTurnRef = useRef(async () => {});
   const [turnPlayerId, setTurnPlayerId] = useState(null);
+  const turnPlayerIdRef = useRef(null);
+  useEffect(() => { turnPlayerIdRef.current = turnPlayerId; }, [turnPlayerId]);
   const actedThisRoundRef = useRef(false);
   const turnIndexRef = useRef(0);
   const advanceTurnRef = useRef(async () => {});
   const teamRef = useRef(initialTeam);
   const activeTeamIndexRef = useRef(0);
+  const playersRef = useRef([]);
+  const offlineCleanupRef = useRef(null);
 
   const activePokemon = team[activeTeamIndex];
+
+  // If the original host disconnected, the first remaining player takes over
+  // turn coordination so invaders / friends can keep playing a stale room.
+  const isTurnHost = isHost || (!!room && players.length > 0 && !players.some((p) => p.player_id === room.host_id));
+  const effectiveHostRef = useRef(isTurnHost);
+  useEffect(() => { effectiveHostRef.current = isTurnHost; }, [isTurnHost]);
 
   function addLog(msg, side) {
     setBattleLog((prev) => [...prev, { text: msg, side }].slice(-LOG_MAX));
@@ -120,6 +130,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       enemies: gen.enemies,
       treasures: gen.treasures,
       gold: gen.gold,
+      spawn_x: gen.spawnX,
+      spawn_y: gen.spawnY,
     });
 
     if (channelRef.current) {
@@ -153,8 +165,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         enemies,
         treasures: data.treasures || [],
         gold: data.gold || [],
-        spawnX: 1,
-        spawnY: 1,
+        spawnX: data.spawn_x ?? 1,
+        spawnY: data.spawn_y ?? 1,
         rooms: [],
         stairsX: data.width - 3,
         stairsY: data.height - 3,
@@ -192,19 +204,15 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     }
   }, [pokedexReady]);
 
+  // Generate the dungeon for this room when it first enters "playing".
+  // Any player can do this: the host normally creates it, but if the host is
+  // gone (stale room), an invader or friend joining by code can take over.
   useEffect(() => {
     if (!room || room.status !== "playing" || dungeon) return;
 
-    // Non-host: load existing dungeon state directly (handles late joiners
-    // who might miss the game_start broadcast)
-    if (!isHost) {
-      loadDungeonFromDb();
-      return;
-    }
-
     if (players.length === 0) return;
 
-    async function autoStart() {
+    async function ensureDungeon() {
       try {
         const { data: existing } = await supabase
           .from("dungeon_state")
@@ -241,8 +249,13 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           enemies: gen.enemies,
           treasures: gen.treasures,
           gold: gen.gold,
+          spawn_x: gen.spawnX,
+          spawn_y: gen.spawnY,
         });
 
+        // If two clients race to create the dungeon, the loser's insert fails on
+        // the unique room_id constraint — the postgres_changes INSERT handler
+        // then loads the winning dungeon.
         if (insertErr) {
           console.error("Failed to insert dungeon_state:", insertErr);
           return;
@@ -266,15 +279,66 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         }
         setDungeon(gen);
       } catch (err) {
-        console.error("autoStart error:", err);
+        console.error("ensureDungeon error:", err);
       }
     }
-    autoStart();
-  }, [room, isHost, players, dungeon, roomId, loadDungeonFromDb, myPlayer]);
+    ensureDungeon();
+  }, [room, players, dungeon, roomId, loadDungeonFromDb, myPlayer]);
 
-  // Start turn system when dungeon first loads on the host
+  // Late joiners (invaders / friends joining by code) can enter with a stale
+  // position (e.g. the village spawn or a wall tile). Once the dungeon loads,
+  // place them on a free walkable tile near the spawn point.
   useEffect(() => {
-    if (!dungeon || turnPlayerId || !isHost || players.length === 0) return;
+    if (!dungeon || !myPlayer) return;
+    if (isWalkable(dungeon.tiles, myPlayer.position_x, myPlayer.position_y)) return;
+
+    const occupied = new Set(
+      players
+        .filter((p) => p.player_id !== playerId)
+        .map((p) => `${p.position_x},${p.position_y}`)
+    );
+    const sx = dungeon.spawnX ?? 1;
+    const sy = dungeon.spawnY ?? 1;
+    const idx = players.findIndex((p) => p.player_id === playerId);
+    let px = sx + (idx % 3);
+    let py = sy + Math.floor(idx / 3);
+
+    // Walk outward from the spawn in expanding rings until we find a free tile.
+    outer: for (let ring = 0; ring < 8; ring++) {
+      for (let dy = -ring; dy <= ring; dy++) {
+        for (let dx = -ring; dx <= ring; dx++) {
+          if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
+          const tx = sx + dx;
+          const ty = sy + dy;
+          if (ty < 0 || tx < 0 || ty >= dungeon.tiles.length || tx >= dungeon.tiles[0].length) continue;
+          if (!isWalkable(dungeon.tiles, tx, ty)) continue;
+          if (occupied.has(`${tx},${ty}`)) continue;
+          px = tx;
+          py = ty;
+          break outer;
+        }
+      }
+    }
+
+    setMyPlayer((p) => ({ ...p, position_x: px, position_y: py }));
+    setPlayers((prev) =>
+      prev.map((p) => (p.player_id === playerId ? { ...p, position_x: px, position_y: py } : p))
+    );
+    supabase
+      .from("room_players")
+      .update({ position_x: px, position_y: py })
+      .eq("player_id", playerId)
+      .eq("room_id", roomId);
+    channelRef.current?.send({
+      type: "broadcast",
+      event: "player_move",
+      payload: { playerId, x: px, y: py },
+    });
+  }, [dungeon, myPlayer, playerId, players, roomId]);
+
+  // Start turn system when dungeon first loads on the turn host
+  useEffect(() => {
+    if (!dungeon || turnPlayerId || !isTurnHost || players.length === 0) return;
     if (!channelRef.current) return;
 
     turnIndexRef.current = 0;
@@ -286,18 +350,20 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       event: "turn_advance",
       payload: { playerId: first.player_id },
     });
-  }, [dungeon, isHost, players, turnPlayerId]);
+  }, [dungeon, isTurnHost, players, turnPlayerId]);
 
-  // If current turn player disconnects, advance to next
+  // If the current turn player disconnects or faints, advance to next
   useEffect(() => {
-    if (!isHost || !turnPlayerId || players.length === 0) return;
-    if (!players.find((p) => p.player_id === turnPlayerId)) {
+    if (!isTurnHost || !turnPlayerId || players.length === 0) return;
+    const current = players.find((p) => p.player_id === turnPlayerId);
+    if (!current || current.is_alive === false) {
       advanceTurnRef.current();
     }
-  }, [players, turnPlayerId, isHost]);
+  }, [players, turnPlayerId, isTurnHost]);
 
   useEffect(() => { teamRef.current = team; }, [team]);
   useEffect(() => { activeTeamIndexRef.current = activeTeamIndex; }, [activeTeamIndex]);
+  useEffect(() => { playersRef.current = players; }, [players]);
 
   // Supabase Realtime channel
   useEffect(() => {
@@ -336,6 +402,15 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               setPlayers(data);
               const me = data.find((p) => p.player_id === playerId);
               if (me) setMyPlayer(me);
+              // Late joiners (invaders / friends) missed earlier turn_advance
+              // broadcasts — resync the current turn so they can act.
+              if (effectiveHostRef.current && turnPlayerIdRef.current) {
+                channelRef.current?.send({
+                  type: "broadcast",
+                  event: "turn_advance",
+                  payload: { playerId: turnPlayerIdRef.current, resync: true },
+                });
+              }
             }
           });
       })
@@ -345,6 +420,38 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       .on("broadcast", { event: "player_left" }, ({ payload }) => {
         setPlayers((prev) => prev.filter((p) => p.player_id !== payload.playerId));
       })
+      // Presence sync: detect abrupt disconnects (tab close, network drop).
+      // Drop offline players from the turn rotation locally and, after a grace
+      // period, remove them from room_players so they don't block the next start.
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const onlineIds = new Set(
+          Object.values(state).flatMap((p) => p.map((p2) => p2.player_id))
+        );
+        // Never treat ourselves as offline while connected.
+        onlineIds.add(playerId);
+
+        setPlayers((prev) => prev.filter((p) => onlineIds.has(p.player_id)));
+
+        const offline = playersRef.current.filter(
+          (p) => p.player_id !== playerId && !onlineIds.has(p.player_id)
+        );
+        if (offline.length > 0) {
+          // Grace delay so the brief village->dungeon presence gap doesn't
+          // delete players who are actively transitioning.
+          if (offlineCleanupRef.current) clearTimeout(offlineCleanupRef.current);
+          offlineCleanupRef.current = setTimeout(() => {
+            supabase
+              .from("room_players")
+              .delete()
+              .in("player_id", offline.map((p) => p.player_id))
+              .eq("room_id", roomId);
+          }, 8000);
+        } else if (offlineCleanupRef.current) {
+          clearTimeout(offlineCleanupRef.current);
+          offlineCleanupRef.current = null;
+        }
+      })
       .on("broadcast", { event: "pvp_damage" }, async ({ payload }) => {
         if (payload.targetPlayerId !== playerId) return;
         let currentTeam = [...teamRef.current];
@@ -352,6 +459,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         if (!currentTeam[currentIndex]) return;
         const newHp = Math.max(0, (currentTeam[currentIndex].hp || 100) - payload.damage);
         currentTeam[currentIndex] = { ...currentTeam[currentIndex], hp: newHp };
+        let wiped = false;
         if (newHp <= 0) {
           const name = currentTeam[currentIndex]?.nickname || getSpeciesName(currentTeam[currentIndex]?.pokemonId);
           addLog(`${name} ${t("fainted", language)} ${t("from", language)} ${payload.attackerName || t("opponent", language)}!`, "enemy");
@@ -360,7 +468,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           for (let i = 0; i < currentTeam.length; i++) {
             if (i !== currentIndex && currentTeam[i].hp > 0) { currentIndex = i; found = true; break; }
           }
-          if (!found) { setBattleResult({ result: "lost" }); }
+          if (!found) { wiped = true; setBattleResult({ result: "lost" }); }
         } else {
           addLog(`${payload.attackerName || t("Opponent", language)} ${t("used", language)} ${payload.moveName || "attack"}! ${payload.damage} ${t("dmg", language)}`, "enemy");
         }
@@ -370,16 +478,31 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           setMyPlayer((p) => ({ ...p, hp: currentTeam[currentIndex].hp }));
         }
         if (currentTeam[currentIndex]?.id) await updateTeamMember(currentTeam[currentIndex].id, { hp: currentTeam[currentIndex].hp });
-        await supabase.from("room_players").update({ hp: currentTeam[currentIndex]?.hp || 0 }).eq("player_id", playerId).eq("room_id", roomId);
+        await supabase.from("room_players")
+          .update({ hp: currentTeam[currentIndex]?.hp || 0, is_alive: !wiped })
+          .eq("player_id", playerId).eq("room_id", roomId);
+        // Tell the turn host we fainted so it skips us in the rotation.
+        if (wiped) {
+          channelRef.current?.send({ type: "broadcast", event: "player_ko", payload: { playerId } });
+        }
+      })
+      .on("broadcast", { event: "player_ko" }, ({ payload }) => {
+        setPlayers((prev) =>
+          prev.map((p) => (p.player_id === payload.playerId ? { ...p, is_alive: false } : p))
+        );
       })
       .on("broadcast", { event: "turn_advance" }, ({ payload }) => {
         setTurnPlayerId(payload.playerId);
+        // Resyncs (re-broadcast of the current turn to a late joiner) only set
+        // the turn — they must not reset lock state, otherwise the acting
+        // player could act twice in one round.
+        if (payload.resync) return;
         turnLockRef.current = false;
         setEnemiesMoved(true);
         actedThisRoundRef.current = false;
       })
       .on("broadcast", { event: "turn_acted" }, async () => {
-        if (!isHost) return;
+        if (!effectiveHostRef.current) return;
         await advanceTurnRef.current();
       })
       .on("broadcast", { event: "enemy_turn_done" }, ({ payload }) => {
@@ -538,7 +661,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   // --- Turn coordination (async functions, not useCallback — called via refs) ---
 
   async function advanceTurn() {
-    if (!isHost || players.length === 0) return;
+    if (!isTurnHost || players.length === 0) return;
     turnIndexRef.current += 1;
 
     if (turnIndexRef.current >= players.length) {
@@ -546,16 +669,32 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       turnLockRef.current = true;
       setEnemiesMoved(false);
       await doEnemyTurn();
-    } else {
-      const next = players[turnIndexRef.current];
-      actedThisRoundRef.current = false;
-      setTurnPlayerId(next.player_id);
-      channelRef.current?.send({
-        type: "broadcast",
-        event: "turn_advance",
-        payload: { playerId: next.player_id },
-      });
+      return;
     }
+
+    // Skip players who fainted (e.g. KO'd by an invader) so the round isn't blocked.
+    while (
+      turnIndexRef.current < players.length &&
+      players[turnIndexRef.current].is_alive === false
+    ) {
+      turnIndexRef.current += 1;
+    }
+    if (turnIndexRef.current >= players.length) {
+      turnIndexRef.current = 0;
+      turnLockRef.current = true;
+      setEnemiesMoved(false);
+      await doEnemyTurn();
+      return;
+    }
+
+    const next = players[turnIndexRef.current];
+    actedThisRoundRef.current = false;
+    setTurnPlayerId(next.player_id);
+    channelRef.current?.send({
+      type: "broadcast",
+      event: "turn_advance",
+      payload: { playerId: next.player_id },
+    });
   }
   advanceTurnRef.current = advanceTurn;
 
@@ -676,21 +815,29 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     }
     if (wiped) { setBattleResult({ result: "lost" }); }
     if (currentTeam[currentIndex]?.id) await updateTeamMember(currentTeam[currentIndex].id, { hp: currentTeam[currentIndex].hp });
-    await supabase.from("room_players").update({ hp: currentTeam[currentIndex]?.hp || 0 }).eq("player_id", playerId).eq("room_id", roomId);
+    await supabase.from("room_players")
+      .update({ hp: currentTeam[currentIndex]?.hp || 0, is_alive: !wiped })
+      .eq("player_id", playerId).eq("room_id", roomId);
+    // Tell the turn host we fainted so it skips us in the rotation.
+    if (wiped) {
+      channelRef.current?.send({ type: "broadcast", event: "player_ko", payload: { playerId } });
+    }
     finishTurn();
   }
 
   function finishTurn() {
     setEnemiesMoved(true);
     turnLockRef.current = false;
-    if (isHost && players.length > 0) {
+    if (isTurnHost && players.length > 0) {
       turnIndexRef.current = 0;
       actedThisRoundRef.current = false;
-      setTurnPlayerId(players[0].player_id);
+      const firstAlive = players.find((p) => p.is_alive !== false);
+      if (!firstAlive) return;
+      setTurnPlayerId(firstAlive.player_id);
       channelRef.current?.send({
         type: "broadcast",
         event: "turn_advance",
-        payload: { playerId: players[0].player_id },
+        payload: { playerId: firstAlive.player_id },
       });
     }
   }
@@ -716,13 +863,15 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
       // If a move is selected (attack mode)
       if (selectedMove) {
+        const dealt = await processAttack(x, y, selectedMove, enemyHere, playerHere);
+        setSelectedMove(null);
+        // Friendly fire is blocked and doesn't consume the turn.
+        if (!dealt) return;
         turnLockRef.current = true;
         setEnemiesMoved(false);
-        await processAttack(x, y, selectedMove, enemyHere);
-        setSelectedMove(null);
         actedThisRoundRef.current = true;
         channelRef.current?.send({ type: "broadcast", event: "turn_acted", payload: { playerId } });
-        if (isHost) advanceTurnRef.current();
+        if (isTurnHost) advanceTurnRef.current();
         return;
       }
 
@@ -730,13 +879,15 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       if (enemyHere || playerHere) {
         const move = lastMoveRef.current || team[activeTeamIndex]?.moves?.[0];
         if (move) {
-          turnLockRef.current = true;
-          setEnemiesMoved(false);
-          await processAttack(x, y, move, enemyHere, playerHere);
+          const dealt = await processAttack(x, y, move, enemyHere, playerHere);
+          // Friendly fire is blocked and doesn't consume the turn.
+          if (!dealt) return;
         }
+        turnLockRef.current = true;
+        setEnemiesMoved(false);
         actedThisRoundRef.current = true;
         channelRef.current?.send({ type: "broadcast", event: "turn_acted", payload: { playerId } });
-        if (isHost) advanceTurnRef.current();
+        if (isTurnHost) advanceTurnRef.current();
         return;
       }
 
@@ -871,12 +1022,13 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
       actedThisRoundRef.current = true;
       channelRef.current?.send({ type: "broadcast", event: "turn_acted", payload: { playerId } });
-      if (isHost) advanceTurnRef.current();
+      if (isTurnHost) advanceTurnRef.current();
     },
-    [dungeon, myPlayer, playerId, roomId, enemiesMoved, enemyTurn, selectedMove, team, activeTeamIndex, players, turnPlayerId, isHost, floorNum]
+    [dungeon, myPlayer, playerId, roomId, enemiesMoved, enemyTurn, selectedMove, team, activeTeamIndex, players, turnPlayerId, isTurnHost, floorNum]
   );
 
-  // Process an attack on a tile
+  // Process an attack on a tile. Returns true if the attack dealt damage
+  // (turn consumed), false when it was blocked (friendly fire vs a coop ally).
   async function processAttack(x, y, move, enemyHere, playerHere) {
     lastMoveRef.current = move;
 
@@ -920,14 +1072,28 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         payload: { enemies: newEnemies },
       });
 
+      return true;
+
     } else if (playerHere) {
+      // PvP rule: damage is allowed iff at least one of the two combatants is
+      // an invader. Hosts and friends who joined by code (coop) can't hurt each
+      // other; invaders can hurt everyone and be hurt by everyone.
+      const canHurt = myPlayer?.is_invader === true || playerHere.is_invader === true;
+      if (!canHurt) {
+        addLog(`${t("Can't attack your allies!", language)}`, "player");
+        return false;
+      }
+
+      const atkStat = move.category === "physical"
+        ? (activePokemon?.atk || 10 + (activePokemon?.level || 5) * 3)
+        : (activePokemon?.spa || 10 + (activePokemon?.level || 5) * 3);
       const defStat = move.category === "physical"
         ? (playerHere.def || 8 + (playerHere.level || 5) * 2)
         : (playerHere.spd || 8 + (playerHere.level || 5) * 2);
       const defenderTypes = getSpeciesTypes(playerHere.sprite_id || 25);
       const eff = getEffectiveness(move.type, defenderTypes);
       const stab = getStabMultiplier(move.type, activePokemon?.types || getSpeciesTypes(activePokemon?.pokemonId || 25));
-      const dmg = calcDamage(move, activePokemon, { def: defStat, spd: defStat, types: defenderTypes }, eff, activePokemon?.level || 5, stab);
+      const dmg = calcDamage(move, atkStat, defStat, eff, activePokemon?.level || 5, stab);
 
       let effText = "";
       if (eff > 1) effText = ` ${t("Super effective!", language)}`;
@@ -942,9 +1108,11 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         event: "pvp_damage",
         payload: { targetPlayerId: playerHere.player_id, attackerPlayerId: playerId, damage: dmg, moveName: move.name, eff, attackerName: myPlayer?.player_name },
       });
+      return true;
 
     } else {
       addLog(`${t("You used", language)} ${move.name}! ${t("No effect!", language)}`, "player");
+      return true;
     }
   }
 
@@ -1060,6 +1228,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         enemies: gen.enemies,
         treasures: gen.treasures,
         gold: gen.gold,
+        spawn_x: gen.spawnX,
+        spawn_y: gen.spawnY,
       })
       .eq("room_id", roomId);
 
@@ -1374,7 +1544,12 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
                     className="w-8 h-8"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-200 truncate">{p.player_name}</p>
+                    <p className="text-xs text-slate-200 truncate">
+                      {p.player_name}
+                      {p.is_invader && (
+                        <span className="ml-1 text-red-400" title="Invader">⚔️</span>
+                      )}
+                    </p>
                     <div className="w-full h-1 rounded-full bg-slate-700 overflow-hidden">
                       <div
                         className={`h-full rounded-full ${p.is_alive ? "bg-green-500" : "bg-red-500"}`}
