@@ -65,6 +65,13 @@ const COLOR_MAP = {
 
 const CHANGELOG = [
   {
+    date: "2026-07-31",
+    title: "Dungeon wild Pokémon HP fix",
+    items: [
+      "Fixed wild Pokémon HP not matching their base stats — enemies now use the real stat formula (a level 3 Popplio no longer survives 5 scratches from a level 5 Charmander)",
+    ],
+  },
+  {
     date: "2026-07-30",
     title: "Search improvements + code cleanup",
     items: [

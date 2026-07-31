@@ -787,13 +787,13 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           if (!occupied.has(`${sx},${sy}`)) {
             const wildLevel = floorNum + 1 + Math.floor(Math.random() * 4);
             const pokemonId = getRandomWildPokemon(wildLevel);
-            const hp = 20 + Math.floor(Math.random() * 30);
-            const spawn = { x: sx, y: sy, pokemonId, level: wildLevel, hp, maxHp: hp };
+            const spawn = { x: sx, y: sy, pokemonId, level: wildLevel };
             try {
               const nature = pickNature(`${pokemonId}-${Date.now()}`);
               const stats = await computeStats(pokemonId, wildLevel, nature);
               const moves = await getMovesAtLevel(pokemonId, wildLevel);
-              const enriched = { ...spawn, ...stats, moves, hp: spawn.hp, maxHp: stats.maxHp };
+              // Enemy HP comes from the Pokémon's base stats via computeStats, not a random value.
+              const enriched = { ...spawn, ...stats, moves, hp: stats.maxHp, maxHp: stats.maxHp };
               setDungeon((d) => d ? { ...d, enemies: [...d.enemies, enriched] } : d);
               const newEnemies = [...dungeon.enemies, enriched];
               await supabase.from("dungeon_state").update({ enemies: newEnemies }).eq("room_id", roomId);

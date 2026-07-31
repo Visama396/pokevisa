@@ -10,6 +10,39 @@ Manage the background server with `astro dev stop`, `astro dev status`, and `ast
 
 **Do not run `astro build` during development.** The user runs `bun run dev` and `astro build` (or `npx astro build`) breaks the running dev server and adds unnecessary files. Test changes by visiting `localhost:4321` instead.
 
+## Codebase Map
+
+Where to find each feature when you need to read or modify it.
+
+**Routes (pages)**
+- `/` — `src/pages/index.astro` → `src/components/Home.jsx` (game cards + patch notes `CHANGELOG`)
+- `/pokedex` — `src/pages/pokedex.astro` → `src/components/Dex.jsx`; detail view `/pokedex/[id]` → `src/pages/pokedex/[id].astro` → `src/components/PokemonDetails.jsx`
+- `/pokedle` — `src/pages/pokedle.astro` → `src/components/Pokewordle.jsx`
+- `/pokedexmaster` — `src/pages/pokedexmaster.astro` → `src/components/DexMaster.jsx`
+- `/pokelite` — `src/pages/pokelite.astro` → `src/components/Pokeroguelite.jsx`
+- `/statsbattle` — `src/pages/statsbattle.astro` → `src/components/PokeStatsBattle.jsx`
+- `/dungeon` — `src/pages/dungeon.astro` → `src/components/Dungeon.jsx` (auth → starter quiz → village → dungeon)
+
+**Shared libs (`src/lib/`)**
+- `pokedex.js` — pokedex.json loading, stat formulas (`calcStat`, `computeStats`), natures, type lookup
+- `moves.js` — move data, type effectiveness (`getEffectiveness`), damage formula (`calcDamage`), STAB, EXP/level-up, wild Pokémon selection, moves at level
+- `dungeon.js` — dungeon map generation (BSP), tile types, enemy movement AI, fog-of-war visibility
+- `village.js` — village spawn + shop items
+- `auth.js` — profile/team/auth helpers
+- `supabase.js` — Supabase client
+
+**Dungeon gameplay (`src/components/`)**
+- `DungeonGame.jsx` — main combat logic, enemy spawning (wild enemy HP/stats here), PvP damage sync, team, items, capture
+- `DungeonBattle.jsx` — standalone turn-based battle screen
+- `DungeonMap.jsx` — dungeon grid rendering, damage popups
+- `DungeonLobby.jsx` — team selection
+- `VillageGame.jsx` / `VillageMap.jsx` — village movement, NPCs (mart, move changer, etc.)
+
+**Other**
+- `src/stores/language.js`, `src/stores/translations.js` — i18n
+- `src/components/AuthScreen.jsx`, `StarterQuiz.jsx`, `TeamView.jsx`, `CaptureScreen.jsx`, `LanguageSelector.jsx`, `HomeButton.jsx` — shared screens/widgets
+- `supabase/` — database schema/migrations
+
 ## Code Style
 
 - **Comment and document new features.** When adding a new feature, add a brief comment explaining what it does and why, and where is used.
