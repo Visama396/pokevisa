@@ -3,8 +3,6 @@
 // Generates grid-based dungeons with rooms and corridors
 // =====================================================
 
-import { getRandomWildPokemon } from "./moves";
-
 // Tile types
 export const TILE = {
   FLOOR: 0,
@@ -49,10 +47,10 @@ export function generateDungeon(width = 20, height = 15, seed = Date.now(), floo
 
   // BSP split
   function split(x, y, w, h, depth) {
-    if (depth <= 0 || w < 6 || h < 6) {
+    if (depth <= 0 || w < 5 || h < 5) {
       // Create a room in this region
-      const roomW = Math.floor(rng() * (w - 4)) + 4;
-      const roomH = Math.floor(rng() * (h - 4)) + 4;
+      const roomW = Math.floor(rng() * (w - 3)) + 3;
+      const roomH = Math.floor(rng() * (h - 3)) + 3;
       const roomX = x + Math.floor(rng() * (w - roomW));
       const roomY = y + Math.floor(rng() * (h - roomH));
       rooms.push({ x: roomX, y: roomY, w: roomW, h: roomH });
@@ -60,24 +58,24 @@ export function generateDungeon(width = 20, height = 15, seed = Date.now(), floo
     }
 
     const splitH = rng() > 0.5;
-    if (splitH && h >= 10) {
-      const splitY = y + 4 + Math.floor(rng() * (h - 8));
+    if (splitH && h >= 8) {
+      const splitY = y + 3 + Math.floor(rng() * (h - 6));
       split(x, y, w, splitY - y, depth - 1);
       split(x, splitY, w, y + h - splitY, depth - 1);
-    } else if (w >= 10) {
-      const splitX = x + 4 + Math.floor(rng() * (w - 8));
+    } else if (w >= 8) {
+      const splitX = x + 3 + Math.floor(rng() * (w - 6));
       split(x, y, splitX - x, h, depth - 1);
       split(splitX, y, x + w - splitX, h, depth - 1);
     } else {
-      const roomW = Math.floor(rng() * (w - 4)) + 4;
-      const roomH = Math.floor(rng() * (h - 4)) + 4;
+      const roomW = Math.floor(rng() * (w - 3)) + 3;
+      const roomH = Math.floor(rng() * (h - 3)) + 3;
       const roomX = x + Math.floor(rng() * (w - roomW));
       const roomY = y + Math.floor(rng() * (h - roomH));
       rooms.push({ x: roomX, y: roomY, w: roomW, h: roomH });
     }
   }
 
-  split(1, 1, width - 2, height - 2, 4);
+  split(1, 1, width - 2, height - 2, 5);
 
   // Carve rooms
   for (const room of rooms) {
@@ -122,46 +120,22 @@ export function generateDungeon(width = 20, height = 15, seed = Date.now(), floo
   const stairsY = Math.floor(lastRoom.y + lastRoom.h / 2);
   tiles[stairsY][stairsX] = TILE.STAIRS;
 
-  // Place enemies in random floor tiles (not in first room)
+  // Enemies spawn dynamically at the stairs (every 4 steps, max 5 on floor)
   const enemies = [];
+
+  // Collect floor tiles for treasures & gold placement
   const floorTiles = [];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (tiles[y][x] === TILE.FLOOR) {
-        // Skip the first room (spawn room)
-        const firstRoom = rooms[0];
-        if (x >= firstRoom.x && x < firstRoom.x + firstRoom.w &&
-            y >= firstRoom.y && y < firstRoom.y + firstRoom.h) {
-          continue;
-        }
         floorTiles.push({ x, y });
       }
     }
   }
 
-  const enemyCount = Math.min(floorTiles.length, 5 + Math.floor(rng() * 6));
-  const enemyPositions = shuffleWithRNG(floorTiles, rng).slice(0, enemyCount);
-  for (const pos of enemyPositions) {
-    const wildLevel = floor + 1 + Math.floor(rng() * 4);
-    const pokemonId = getRandomWildPokemon(wildLevel, rng);
-    const hp = 20 + Math.floor(rng() * 30);
-    enemies.push({
-      x: pos.x,
-      y: pos.y,
-      pokemonId,
-      level: wildLevel,
-      hp,
-      maxHp: hp,
-    });
-  }
-
   // Place a few treasures
-  const treasureCount = Math.min(floorTiles.length - enemyCount, 2 + Math.floor(rng() * 3));
-  const usedPositions = new Set(enemyPositions.map((p) => `${p.x},${p.y}`));
-  const availableForTreasure = floorTiles.filter(
-    (p) => !usedPositions.has(`${p.x},${p.y}`)
-  );
-  const treasurePositions = shuffleWithRNG(availableForTreasure, rng).slice(0, treasureCount);
+  const treasureCount = Math.min(floorTiles.length, 2 + Math.floor(rng() * 3));
+  const treasurePositions = shuffleWithRNG(floorTiles, rng).slice(0, treasureCount);
   const treasures = treasurePositions.map((pos) => ({
     x: pos.x,
     y: pos.y,
@@ -170,10 +144,9 @@ export function generateDungeon(width = 20, height = 15, seed = Date.now(), floo
   }));
 
   // Place gold coins
-  const usedForGold = new Set([
-    ...enemyPositions.map((p) => `${p.x},${p.y}`),
-    ...treasurePositions.map((p) => `${p.x},${p.y}`),
-  ]);
+  const usedForGold = new Set(
+    treasurePositions.map((p) => `${p.x},${p.y}`)
+  );
   const availableForGold = floorTiles.filter(
     (p) => !usedForGold.has(`${p.x},${p.y}`)
   );

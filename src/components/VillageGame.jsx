@@ -63,6 +63,22 @@ export default function VillageGame({
     autoJoin();
   }, [session]);
 
+  // Sync player avatar sprite when the active team member changes
+  // (runs on mount and whenever team or myPlayer updates — covers both initial
+  // load after quiz reset, and in-place team changes like Club Wigglytuff swap)
+  useEffect(() => {
+    if (!team?.[0] || !myPlayer?.id) return;
+    const newSpriteId = team[0].pokemonId || team[0].pokemon_id || 25;
+    if (myPlayer.sprite_id === newSpriteId) return;
+    supabase
+      .from("room_players")
+      .update({ sprite_id: newSpriteId })
+      .eq("id", myPlayer.id)
+      .then(() => {
+        setMyPlayer((prev) => ({ ...prev, sprite_id: newSpriteId }));
+      });
+  }, [team?.[0]?.pokemonId ?? team?.[0]?.pokemon_id, myPlayer?.id]);
+
   async function autoJoin() {
     setIsConnecting(true);
     setError("");
@@ -315,7 +331,9 @@ export default function VillageGame({
   useEffect(() => {
     if (!session) return;
 
-    const channel = supabase.channel(`room:${session.roomId}`);
+    const channel = supabase.channel(`room:${session.roomId}`, {
+      broadcast: { self: true },
+    });
 
     channel
       .on("broadcast", { event: "player_move" }, ({ payload }) => {

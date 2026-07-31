@@ -3,7 +3,7 @@ import { getLanguage, subscribe } from "../stores/language";
 import { t, getTypeName } from "../stores/translations";
 import { supabase } from "../lib/supabase";
 import { generateDungeon, isWalkable, moveEnemyToward, getVisibleTiles, TILE } from "../lib/dungeon";
-import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesTypes, getSpeciesSpeed, getMovesAtLevel, getMoveName, calcExpGain, checkLevelUp, getEffectiveness, calcDamage, getStabMultiplier } from "../lib/moves";
+import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesTypes, getSpeciesSpeed, getMovesAtLevel, getMoveName, calcExpGain, checkLevelUp, getEffectiveness, calcDamage, getStabMultiplier, getRandomWildPokemon } from "../lib/moves";
 import { ensureLoaded, computeStats, pickNature } from "../lib/pokedex";
 import { removeTeamMember, updateTeamMember, getTeam, getProfile, saveProfile } from "../lib/auth";
 import LanguageSelector from "./LanguageSelector";
@@ -569,6 +569,19 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       if (p.is_alive !== false) occupied.add(`${p.position_x},${p.position_y}`);
     }
 
+    // Track which enemies were adjacent to a player before movement.
+    // Only these enemies should attack in processEnemyAttacks.
+    // Enemies that move to become adjacent will wait for the next enemy turn.
+    const adjacentBefore = new Set();
+    for (const e of newEnemies) {
+      for (const p of players) {
+        if (p.is_alive === false) continue;
+        if (Math.abs(e.x - p.position_x) <= 1 && Math.abs(e.y - p.position_y) <= 1) {
+          adjacentBefore.add(`${e.x},${e.y}`);
+        }
+      }
+    }
+
     for (const e of newEnemies) {
       let nearest = null;
       let nearestDist = Infinity;
@@ -598,11 +611,11 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     });
 
     setDungeon((d) => d ? { ...d, enemies: newEnemies } : d);
-    setTimeout(() => processEnemyAttacks(newEnemies), 150);
+    setTimeout(() => processEnemyAttacks(newEnemies, adjacentBefore), 150);
   }
 
   // Per-client: enemies adjacent to the local player attack
-  async function processEnemyAttacks(enemies) {
+  async function processEnemyAttacks(enemies, adjacentBefore) {
     if (!myPlayer || !dungeon) { finishTurn(); return; }
 
     const px = myPlayer.position_x;
@@ -616,6 +629,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       if (wiped) break;
       if (currentTeam[currentIndex]?.hp <= 0) { wiped = true; break; }
       if (Math.abs(e.x - px) > 1 || Math.abs(e.y - py) > 1) continue;
+      // Skip enemies that moved into range this turn — they only move, not attack
+      if (adjacentBefore && !adjacentBefore.has(`${e.x},${e.y}`)) continue;
 
       const enemyMoves = e.moves || getRandomMovesForSpecies(e.pokemonId, 3);
       const move = enemyMoves[Math.floor(Math.random() * enemyMoves.length)];
@@ -636,12 +651,20 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       if (newHp <= 0) {
         const name = currentTeam[currentIndex]?.nickname || getSpeciesName(currentTeam[currentIndex]?.pokemonId);
         logEntries.push({ text: `${name} fainted!`, side: "enemy" });
-        if (currentTeam[currentIndex]?.id) await removeTeamMember(currentTeam[currentIndex].id);
+        const faintedId = currentTeam[currentIndex]?.id;
         let found = false;
         for (let i = 0; i < currentTeam.length; i++) {
           if (i !== currentIndex && currentTeam[i].hp > 0) { currentIndex = i; found = true; break; }
         }
-        if (!found) { wiped = true; logEntries.push({ text: "All Pokémon fainted!", side: "enemy" }); }
+        // Only remove from DB if there's another alive member to switch to.
+        // Keeping the last mon in the DB (with 0 HP) prevents loadAccountData
+        // from seeing an empty team and incorrectly resetting the starter profile.
+        if (found) {
+          if (faintedId) await removeTeamMember(faintedId);
+        } else {
+          wiped = true;
+          logEntries.push({ text: "All Pokémon fainted!", side: "enemy" });
+        }
       }
     }
 
@@ -753,6 +776,33 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       }
 
       stepCountRef.current += 1;
+
+      // Spawn a new enemy at the stairs every 4 steps (max 5 on floor)
+      if (stepCountRef.current % 4 === 0 && dungeon) {
+        const currentEnemies = dungeon.enemies.length;
+        if (currentEnemies < 5) {
+          const sx = dungeon.stairsX;
+          const sy = dungeon.stairsY;
+          const occupied = new Set(dungeon.enemies.map((e) => `${e.x},${e.y}`));
+          if (!occupied.has(`${sx},${sy}`)) {
+            const wildLevel = floorNum + 1 + Math.floor(Math.random() * 4);
+            const pokemonId = getRandomWildPokemon(wildLevel);
+            const hp = 20 + Math.floor(Math.random() * 30);
+            const spawn = { x: sx, y: sy, pokemonId, level: wildLevel, hp, maxHp: hp };
+            try {
+              const nature = pickNature(`${pokemonId}-${Date.now()}`);
+              const stats = await computeStats(pokemonId, wildLevel, nature);
+              const moves = await getMovesAtLevel(pokemonId, wildLevel);
+              const enriched = { ...spawn, ...stats, moves, hp: spawn.hp, maxHp: stats.maxHp };
+              setDungeon((d) => d ? { ...d, enemies: [...d.enemies, enriched] } : d);
+              const newEnemies = [...dungeon.enemies, enriched];
+              await supabase.from("dungeon_state").update({ enemies: newEnemies }).eq("room_id", roomId);
+              channelRef.current?.send({ type: "broadcast", event: "enemies_updated", payload: { enemies: newEnemies } });
+            } catch (_) { /* spawn silently fails */ }
+          }
+        }
+      }
+
       if (stepCountRef.current % 2 === 0) {
         setTeam((prev) => {
           let healed = false;
@@ -823,7 +873,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       channelRef.current?.send({ type: "broadcast", event: "turn_acted", payload: { playerId } });
       if (isHost) advanceTurnRef.current();
     },
-    [dungeon, myPlayer, playerId, roomId, enemiesMoved, enemyTurn, selectedMove, team, activeTeamIndex, players, turnPlayerId, isHost]
+    [dungeon, myPlayer, playerId, roomId, enemiesMoved, enemyTurn, selectedMove, team, activeTeamIndex, players, turnPlayerId, isHost, floorNum]
   );
 
   // Process an attack on a tile
@@ -1239,6 +1289,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               disabled={!enemiesMoved || turnLockRef.current}
               targeting={selectedMove}
               damagePopups={damagePopups}
+              rooms={dungeon.rooms}
             />
           ) : (
             <div className="text-center text-slate-400 py-10">

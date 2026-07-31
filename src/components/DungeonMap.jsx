@@ -66,6 +66,7 @@ export default function DungeonMap({
   disabled,
   targeting,
   damagePopups,
+  rooms,
 }) {
   const visibleTiles = useMemo(() => {
     if (!dungeon) return new Set();
@@ -76,11 +77,22 @@ export default function DungeonMap({
 
   const { tiles, enemies, treasures, gold, width, height } = dungeon;
 
+  // Center camera on the room when the player is inside one, else on the player
+  const currentRoom = rooms?.find(
+    (r) => playerX >= r.x && playerX < r.x + r.w && playerY >= r.y && playerY < r.y + r.h
+  );
+  const camX = currentRoom
+    ? Math.floor(currentRoom.x + currentRoom.w / 2)
+    : playerX;
+  const camY = currentRoom
+    ? Math.floor(currentRoom.y + currentRoom.h / 2)
+    : playerY;
+
   const viewRadius = 7;
-  const viewMinX = Math.max(0, playerX - viewRadius);
-  const viewMaxX = Math.min(width, playerX + viewRadius + 1);
-  const viewMinY = Math.max(0, playerY - viewRadius);
-  const viewMaxY = Math.min(height, playerY + viewRadius + 1);
+  const viewMinX = Math.max(0, camX - viewRadius);
+  const viewMaxX = Math.min(width, camX + viewRadius + 1);
+  const viewMinY = Math.max(0, camY - viewRadius);
+  const viewMaxY = Math.min(height, camY + viewRadius + 1);
 
   const otherPlayerMap = {};
   if (otherPlayers) {
