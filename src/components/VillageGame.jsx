@@ -16,6 +16,7 @@ import {
   getFriends, getIncomingFriendRequests, getOutgoingFriendRequests,
   sendFriendRequest, respondToFriendRequest, removeFriend,
   searchAccounts, getFriendsInDungeons, getFriendVillages, giveItemToFriend,
+  normalizeInventory,
 } from "../lib/auth";
 import { getLanguage, subscribe } from "../stores/language";
 import { t } from "../stores/translations";
@@ -27,6 +28,45 @@ import { Tooltip, TooltipTrigger } from "../../components/ui/tooltip";
 import { Bubble, BubbleContent } from "../../components/ui/bubble";
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
+
+// Build a full inventory object from the current one plus the fields being
+// edited, so writes never clobber banked gold or stored items.
+function mergeInventory(existing, patch) {
+  return normalizeInventory({ ...(existing || {}), ...patch });
+}
+
+// Grouped item list for Kangaskhan Storage. `action(itemId, count)` renders
+// the per-row buttons (Use/Store/Send for carried, Withdraw for stored).
+function StorageItemGroup({ items, label, action }) {
+  const counts = {};
+  for (const id of items || []) counts[id] = (counts[id] || 0) + 1;
+  const entries = Object.entries(counts);
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[10px] uppercase tracking-wide text-stone-500">{label}</p>
+      {entries.length === 0 ? (
+        <p className="text-[10px] text-stone-500 text-center py-2">Nothing here yet.</p>
+      ) : (
+        entries.map(([itemId, count]) => {
+          const shopItem = SHOP_ITEMS.find((s) => s.id === itemId);
+          if (!shopItem) return null;
+          return (
+            <div key={itemId} className="flex items-center justify-between rounded-xl bg-stone-700/40 p-3">
+              <div className="min-w-0">
+                <p className="text-sm text-stone-200 font-medium">{shopItem.name}</p>
+                <p className="text-[10px] text-stone-400 truncate">{shopItem.description}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-stone-500">×{count}</span>
+                {action(itemId, count)}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
 
 export default function VillageGame({
   session, accountId, accountName, team, onTeamUpdate,
@@ -572,8 +612,9 @@ export default function VillageGame({
     if (idx === -1) return;
     const newItems = [...items];
     newItems.splice(idx, 1);
-    await saveProfile(accountId, { inventory: { gold: profile?.inventory?.gold || 0, items: newItems } });
-    setProfile((p) => p ? { ...p, inventory: { gold: p.inventory?.gold || 0, items: newItems } } : p);
+    const inv = mergeInventory(profile?.inventory, { items: newItems });
+    await saveProfile(accountId, { inventory: inv });
+    setProfile((p) => p ? { ...p, inventory: inv } : p);
     setStorageSelectedItem(null);
     loadTeam();
   }
@@ -589,16 +630,43 @@ export default function VillageGame({
     newItems.splice(idx, 1);
     const res = await giveItemToFriend(friendId, storageSendItem);
     if (res.error) { setError(res.error); setTimeout(() => setError(""), 2500); return; }
-    await saveProfile(accountId, { inventory: { gold: profile?.inventory?.gold || 0, items: newItems } });
-    setProfile((p) => p ? { ...p, inventory: { gold: p.inventory?.gold || 0, items: newItems } } : p);
+    const inv = mergeInventory(profile?.inventory, { items: newItems });
+    await saveProfile(accountId, { inventory: inv });
+    setProfile((p) => p ? { ...p, inventory: inv } : p);
     setStorageSendItem(null);
     setStorageSendFriend(null);
+  }
+
+  // Kangaskhan Storage: move one carried item into storage (safe from wipes).
+  async function handleStoreItem(itemId) {
+    const items = profile?.inventory?.items || [];
+    const idx = items.indexOf(itemId);
+    if (idx === -1) return;
+    const newItems = [...items];
+    newItems.splice(idx, 1);
+    const storage = profile?.inventory?.storage || [];
+    const inv = mergeInventory(profile?.inventory, { items: newItems, storage: [...storage, itemId] });
+    await saveProfile(accountId, { inventory: inv });
+    setProfile((p) => p ? { ...p, inventory: inv } : p);
+  }
+
+  // Kangaskhan Storage: move one stored item back into the carried bag.
+  async function handleWithdrawItem(itemId) {
+    const storage = profile?.inventory?.storage || [];
+    const idx = storage.indexOf(itemId);
+    if (idx === -1) return;
+    const newStorage = [...storage];
+    newStorage.splice(idx, 1);
+    const items = profile?.inventory?.items || [];
+    const inv = mergeInventory(profile?.inventory, { items: [...items, itemId], storage: newStorage });
+    await saveProfile(accountId, { inventory: inv });
+    setProfile((p) => p ? { ...p, inventory: inv } : p);
   }
 
   // Bank (Persian) — shared deposit/withdraw logic; "all" uses the whole pocket/bank balance
   async function handleBankTransfer(amount, direction) {
     const currentGold = profile?.inventory?.gold || 0;
-    const bankGold = profile?.bank_gold || 0;
+    const bankGold = profile?.inventory?.banked_gold || 0;
     let newGold, newBankGold;
     if (direction === "deposit") {
       if (amount > currentGold) { setError("Not enough gold!"); setTimeout(() => setError(""), 2000); return; }
@@ -609,8 +677,9 @@ export default function VillageGame({
       newGold = currentGold + amount;
       newBankGold = bankGold - amount;
     }
-    await saveProfile(accountId, { inventory: { gold: newGold, items: profile?.inventory?.items || [] }, bank_gold: newBankGold });
-    setProfile((p) => p ? { ...p, inventory: { ...p.inventory, gold: newGold }, bank_gold: newBankGold } : p);
+    const inv = mergeInventory(profile?.inventory, { gold: newGold, banked_gold: newBankGold });
+    await saveProfile(accountId, { inventory: inv });
+    setProfile((p) => p ? { ...p, inventory: inv } : p);
     if (direction === "deposit") setBankDeposit(""); else setBankWithdraw("");
   }
 
@@ -688,11 +757,12 @@ export default function VillageGame({
 
     const newGold = gold - item.price;
     const items = [...(profile.inventory?.items || []), item.id];
+    const inv = mergeInventory(profile.inventory, { gold: newGold, items });
 
     await saveProfile(accountId, {
-      inventory: { gold: newGold, items },
+      inventory: inv,
     });
-    setProfile((p) => p ? { ...p, inventory: { gold: newGold, items } } : p);
+    setProfile((p) => p ? { ...p, inventory: inv } : p);
     loadTeam();
   }
 
@@ -1326,8 +1396,9 @@ export default function VillageGame({
                         await updateTeamMember(pkm.id, { hp: Math.floor((pkm.maxHp || pkm.max_hp || 100) * shopItem.effect.healRatio) });
                       }
                       const newItems = items.slice(1);
-                      await saveProfile(accountId, { inventory: { gold: profile?.inventory?.gold || 0, items: newItems } });
-                      setProfile((p) => p ? { ...p, inventory: { gold: p.inventory?.gold || 0, items: newItems } } : p);
+                      const inv = mergeInventory(profile?.inventory, { items: newItems });
+                      await saveProfile(accountId, { inventory: inv });
+                      setProfile((p) => p ? { ...p, inventory: inv } : p);
                       loadTeam();
                     }}
                     className="w-full rounded-lg bg-stone-700/40 px-3 py-2 text-xs text-stone-300 hover:bg-stone-600/40 text-left flex items-center gap-2"
@@ -1361,7 +1432,7 @@ export default function VillageGame({
               </div>
               <div className="rounded-xl bg-stone-700/40 p-3">
                 <p className="text-[10px] text-stone-400">Bank</p>
-                <p className="text-blue-400 font-bold">🏦 {profile?.bank_gold || 0}</p>
+                <p className="text-blue-400 font-bold">🏦 {profile?.inventory?.banked_gold || 0}</p>
               </div>
             </div>
             <div className="space-y-3">
@@ -1401,14 +1472,14 @@ export default function VillageGame({
                 />
                 <button
                   onClick={handleBankWithdraw}
-                  disabled={!bankWithdraw || parseInt(bankWithdraw) <= 0 || parseInt(bankWithdraw) > (profile?.bank_gold || 0)}
+                  disabled={!bankWithdraw || parseInt(bankWithdraw) <= 0 || parseInt(bankWithdraw) > (profile?.inventory?.banked_gold || 0)}
                   className="rounded-lg bg-blue-800 px-3 py-2 text-xs text-blue-200 hover:bg-blue-700 disabled:opacity-40 transition-colors"
                 >
                   Withdraw
                 </button>
                 <button
-                  onClick={() => handleBankTransfer(profile?.bank_gold || 0, "withdraw")}
-                  disabled={(profile?.bank_gold || 0) <= 0}
+                  onClick={() => handleBankTransfer(profile?.inventory?.banked_gold || 0, "withdraw")}
+                  disabled={(profile?.inventory?.banked_gold || 0) <= 0}
                   className="rounded-lg bg-blue-900/70 px-3 py-2 text-xs text-blue-300 hover:bg-blue-800 disabled:opacity-40 transition-colors"
                   title="Withdraw all bank gold"
                 >
@@ -1764,51 +1835,48 @@ export default function VillageGame({
             {!storageSelectedItem && !storageSendItem ? (
               <>
                 <p className="text-xs text-stone-400">
-                  Items in storage: <span className="text-stone-200 font-semibold">{(profile?.inventory?.items || []).length}</span>
+                  Items you carry can be lost if you faint in a dungeon. Store them to keep them safe!
                 </p>
-                {(profile?.inventory?.items || []).length === 0 ? (
-                  <p className="text-xs text-stone-500 text-center py-4">No items in storage. Find some in dungeons!</p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {(() => {
-                      // Group items by type with counts
-                      const counts = {};
-                      for (const id of profile.inventory.items) {
-                        counts[id] = (counts[id] || 0) + 1;
-                      }
-                      return Object.entries(counts).map(([itemId, count]) => {
-                        const shopItem = SHOP_ITEMS.find((s) => s.id === itemId);
-                        if (!shopItem) return null;
-                        return (
-                          <div
-                            key={itemId}
-                            className="flex items-center justify-between rounded-xl bg-stone-700/40 p-3"
-                          >
-                            <div>
-                              <p className="text-sm text-stone-200 font-medium">{shopItem.name}</p>
-                              <p className="text-[10px] text-stone-400">{shopItem.description}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-stone-500">×{count}</span>
-                              <button
-                                onClick={() => setStorageSelectedItem(itemId)}
-                                className="rounded-lg bg-blue-800 px-2.5 py-1.5 text-xs text-blue-200 hover:bg-blue-700 transition-colors"
-                              >
-                                Use
-                              </button>
-                              <button
-                                onClick={() => { setStorageSendItem(itemId); setStorageSendFriend(null); }}
-                                className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
-                              >
-                                Send
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                )}
+                <div className="space-y-3 max-h-72 overflow-y-auto">
+                  <StorageItemGroup
+                    items={profile?.inventory?.items}
+                    label={`Carried (${(profile?.inventory?.items || []).length})`}
+                    action={(itemId) => (
+                      <>
+                        <button
+                          onClick={() => setStorageSelectedItem(itemId)}
+                          className="rounded-lg bg-blue-800 px-2.5 py-1.5 text-xs text-blue-200 hover:bg-blue-700 transition-colors"
+                        >
+                          Use
+                        </button>
+                        <button
+                          onClick={() => handleStoreItem(itemId)}
+                          className="rounded-lg bg-amber-800 px-2.5 py-1.5 text-xs text-amber-200 hover:bg-amber-700 transition-colors"
+                        >
+                          Store
+                        </button>
+                        <button
+                          onClick={() => { setStorageSendItem(itemId); setStorageSendFriend(null); }}
+                          className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
+                        >
+                          Send
+                        </button>
+                      </>
+                    )}
+                  />
+                  <StorageItemGroup
+                    items={profile?.inventory?.storage}
+                    label={`Stored (${(profile?.inventory?.storage || []).length})`}
+                    action={(itemId) => (
+                      <button
+                        onClick={() => handleWithdrawItem(itemId)}
+                        className="rounded-lg bg-slate-600 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-slate-500 transition-colors"
+                      >
+                        Withdraw
+                      </button>
+                    )}
+                  />
+                </div>
               </>
             ) : storageSendItem ? (
               <div className="space-y-2">

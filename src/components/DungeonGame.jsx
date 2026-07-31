@@ -1335,7 +1335,9 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     await saveProfile(accountId, {
       inventory: {
         gold: existingGold + goldCount,
+        banked_gold: profile?.inventory?.banked_gold || 0,
         items: [...existingItems, ...dungeonItems],
+        storage: profile?.inventory?.storage || [],
       },
       stored_pokemon: [...existingStored, ...extraPkm],
     });
@@ -1366,7 +1368,9 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     await saveProfile(accountId, {
       inventory: {
         gold: existingGold + goldCount,
+        banked_gold: profile?.inventory?.banked_gold || 0,
         items: [...existingItems, ...dungeonItems],
+        storage: profile?.inventory?.storage || [],
       },
       stored_pokemon: [...existingStored, ...extraPkm],
     });

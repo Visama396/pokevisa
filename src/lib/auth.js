@@ -330,10 +330,22 @@ export async function giveItemToFriend(friendId, itemId) {
     .eq("account_id", friendId)
     .maybeSingle();
   if (!prof) return { error: "Friend doesn't have a profile yet" };
-  const { gold = 0, items = [] } = prof.inventory || {};
+  const inv = normalizeInventory(prof.inventory);
   const { error } = await supabase
     .from("player_profiles")
-    .update({ inventory: { gold, items: [...items, itemId] } })
+    .update({ inventory: { ...inv, items: [...inv.items, itemId] } })
     .eq("account_id", friendId);
   return error ? { error: error.message } : {};
+}
+
+// Make sure an inventory object always carries the four keys the app relies on
+// (pocket gold, banked gold, carried items, stored items). Old profiles and
+// partially-built objects may be missing some of them.
+export function normalizeInventory(inv) {
+  return {
+    gold: inv?.gold || 0,
+    banked_gold: inv?.banked_gold || 0,
+    items: inv?.items || [],
+    storage: inv?.storage || [],
+  };
 }
