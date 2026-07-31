@@ -374,7 +374,11 @@ export default function VillageGame({
         setPlayers((prev) => prev.filter((p) => p.player_id !== payload.playerId));
       })
       .on("broadcast", { event: "chat_message" }, ({ payload }) => {
-        setMessages((prev) => [...prev, { id: Date.now(), playerName: payload.playerName, text: payload.text }]);
+        setMessages((prev) =>
+          prev.some((m) => m.id === payload.messageId)
+            ? prev
+            : [...prev, { id: payload.messageId, playerName: payload.playerName, text: payload.text }]
+        );
       })
       // Presence sync: detect abrupt disconnects (tab close, network drop).
       // Filter them from the local list and, after a grace period, remove them
@@ -675,11 +679,17 @@ export default function VillageGame({
 
   // Chat
   async function sendChat() {
-    if (!chatInput.trim() || !channelRef.current) return;
+    const text = chatInput.trim();
+    if (!text || !channelRef.current) return;
+    // Optimistically show our own message. The realtime backend does not echo
+    // broadcasts back to the sender, so we append locally and dedupe incoming
+    // messages by a client-generated id.
+    const messageId = `${accountId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setMessages((prev) => [...prev, { id: messageId, playerName: accountName, text }]);
     await channelRef.current.send({
       type: "broadcast",
       event: "chat_message",
-      payload: { playerName: accountName, text: chatInput.trim() },
+      payload: { messageId, playerName: accountName, text },
     });
     setChatInput("");
   }
