@@ -159,3 +159,161 @@ export async function deleteSavedDungeon(accountId) {
     .eq("account_id", accountId);
   return error;
 }
+
+// ─── Friends (social system) ───
+// Rows live in the `friends` table: account_id = requester, friend_id =
+// recipient. A request is 'pending'; once accepted the row is a friendship.
+// Used by the village friends panel and the "join a friend's dungeon" flow.
+
+// All accepted friends of accountId, as account records (id, username, display_name).
+export async function getFriends(accountId) {
+  const [{ data: outgoing }, { data: incoming }] = await Promise.all([
+    supabase.from("friends").select("friend_id").eq("account_id", accountId).eq("status", "accepted"),
+    supabase.from("friends").select("account_id").eq("friend_id", accountId).eq("status", "accepted"),
+  ]);
+  const ids = [...new Set([
+    ...(outgoing || []).map((r) => r.friend_id),
+    ...(incoming || []).map((r) => r.account_id),
+  ])];
+  if (ids.length === 0) return [];
+  const { data: accounts } = await supabase
+    .from("accounts")
+    .select("id, username, display_name")
+    .in("id", ids);
+  return accounts || [];
+}
+
+// Pending requests someone sent TO accountId (with sender info).
+export async function getIncomingFriendRequests(accountId) {
+  const { data } = await supabase
+    .from("friends")
+    .select("account_id, created_at")
+    .eq("friend_id", accountId)
+    .eq("status", "pending");
+  const ids = (data || []).map((r) => r.account_id);
+  if (ids.length === 0) return [];
+  const { data: accounts } = await supabase
+    .from("accounts")
+    .select("id, username, display_name")
+    .in("id", ids);
+  return (accounts || []).map((a) => ({
+    ...a,
+    created_at: data.find((r) => r.account_id === a.id)?.created_at,
+  }));
+}
+
+// Pending requests accountId sent to others.
+export async function getOutgoingFriendRequests(accountId) {
+  const { data } = await supabase
+    .from("friends")
+    .select("friend_id")
+    .eq("account_id", accountId)
+    .eq("status", "pending");
+  const ids = (data || []).map((r) => r.friend_id);
+  if (ids.length === 0) return [];
+  const { data: accounts } = await supabase
+    .from("accounts")
+    .select("id, username, display_name")
+    .in("id", ids);
+  return accounts || [];
+}
+
+// Send a friend request (idempotent; no duplicates or self-requests).
+export async function sendFriendRequest(fromId, toId) {
+  if (fromId === toId) return { error: "You can't add yourself" };
+  const { data: existing } = await supabase
+    .from("friends")
+    .select("id")
+    .or(`and(account_id.eq.${fromId},friend_id.eq.${toId}),and(account_id.eq.${toId},friend_id.eq.${fromId})`);
+  if (existing && existing.length > 0) {
+    return { error: "Already friends or request pending" };
+  }
+  const { error } = await supabase
+    .from("friends")
+    .insert({ account_id: fromId, friend_id: toId, status: "pending" });
+  return error ? { error: error.message } : {};
+}
+
+// Accept (status -> accepted) or decline (delete) a pending request.
+export async function respondToFriendRequest(requesterId, recipientId, accept) {
+  if (accept) {
+    const { error } = await supabase
+      .from("friends")
+      .update({ status: "accepted" })
+      .eq("account_id", requesterId)
+      .eq("friend_id", recipientId);
+    return error ? { error: error.message } : {};
+  }
+  const { error } = await supabase
+    .from("friends")
+    .delete()
+    .eq("account_id", requesterId)
+    .eq("friend_id", recipientId);
+  return error ? { error: error.message } : {};
+}
+
+// Remove a friendship in either direction.
+export async function removeFriend(a, b) {
+  const { error } = await supabase
+    .from("friends")
+    .delete()
+    .or(`and(account_id.eq.${a},friend_id.eq.${b}),and(account_id.eq.${b},friend_id.eq.${a})`);
+  return error ? { error: error.message } : {};
+}
+
+// Search accounts by display_name or username.
+export async function searchAccounts(query) {
+  const clean = query.trim();
+  if (clean.length < 2) return [];
+  const { data } = await supabase
+    .from("accounts")
+    .select("id, username, display_name")
+    .or(`username.ilike.%${clean.toLowerCase()}%,display_name.ilike.%${clean}%`)
+    .limit(20);
+  return data || [];
+}
+
+// Accepted friends that are currently inside a playing dungeon, grouped by room.
+// Each result: { roomId, code, floor, friends: [{ id, display_name }] }.
+export async function getFriendsInDungeons(accountId) {
+  const friends = await getFriends(accountId);
+  if (friends.length === 0) return [];
+  const ids = friends.map((f) => f.id);
+  const { data: roomPlayers } = await supabase
+    .from("room_players")
+    .select("player_id, player_name, room_id, rooms(code, status, floor)")
+    .in("player_id", ids);
+  const byRoom = {};
+  for (const rp of roomPlayers || []) {
+    const room = rp.rooms;
+    if (!room || room.status !== "playing") continue;
+    const friend = friends.find((f) => f.id === rp.player_id);
+    if (!byRoom[rp.room_id]) {
+      byRoom[rp.room_id] = { roomId: rp.room_id, code: room.code, floor: room.floor, friends: [] };
+    }
+    byRoom[rp.room_id].friends.push({
+      id: friend.id,
+      display_name: friend.display_name,
+      player_name: rp.player_name,
+    });
+  }
+  return Object.values(byRoom);
+}
+
+// Add one item to a friend's inventory (used by Kangaskhan Storage sending).
+// RLS on player_profiles is open, so a player may deposit an item into a friend's
+// inventory. Returns { error } on failure.
+export async function giveItemToFriend(friendId, itemId) {
+  const { data: prof } = await supabase
+    .from("player_profiles")
+    .select("inventory")
+    .eq("account_id", friendId)
+    .maybeSingle();
+  if (!prof) return { error: "Friend doesn't have a profile yet" };
+  const { gold = 0, items = [] } = prof.inventory || {};
+  const { error } = await supabase
+    .from("player_profiles")
+    .update({ inventory: { gold, items: [...items, itemId] } })
+    .eq("account_id", friendId);
+  return error ? { error: error.message } : {};
+}

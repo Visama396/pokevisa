@@ -21,6 +21,10 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const [visitedTiles, setVisitedTiles] = useState(() => new Set());
   const [battleResult, setBattleResult] = useState(null);
   const [captureAttempt, setCaptureAttempt] = useState(null);
+  // When a level-up unlocks a new move and the Pokémon already knows 4, the
+  // player picks which move to forget (or declines). Null when not prompted.
+  const [pendingMoveLearn, setPendingMoveLearn] = useState(null);
+  const pendingMoveLearnRef = useRef(null);
   const [team, setTeam] = useState(initialTeam);
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
   const [allReady, setAllReady] = useState(false);
@@ -463,12 +467,21 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         if (newHp <= 0) {
           const name = currentTeam[currentIndex]?.nickname || getSpeciesName(currentTeam[currentIndex]?.pokemonId);
           addLog(`${name} ${t("fainted", language)} ${t("from", language)} ${payload.attackerName || t("opponent", language)}!`, "enemy");
-          if (currentTeam[currentIndex]?.id) await removeTeamMember(currentTeam[currentIndex].id);
+          const faintedId = currentTeam[currentIndex]?.id;
           let found = false;
           for (let i = 0; i < currentTeam.length; i++) {
             if (i !== currentIndex && currentTeam[i].hp > 0) { currentIndex = i; found = true; break; }
           }
-          if (!found) { wiped = true; setBattleResult({ result: "lost" }); }
+          // Only remove from DB if there's another alive member to switch to.
+          // Keeping the last mon in the DB (with 0 HP) prevents loadAccountData
+          // from seeing an empty team and incorrectly resetting the starter
+          // profile — same guard as the enemy-wipe path.
+          if (found) {
+            if (faintedId) await removeTeamMember(faintedId);
+          } else {
+            wiped = true;
+            setBattleResult({ result: "lost" });
+          }
         } else {
           addLog(`${payload.attackerName || t("Opponent", language)} ${t("used", language)} ${payload.moveName || "attack"}! ${payload.damage} ${t("dmg", language)}`, "enemy");
         }
@@ -489,6 +502,17 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       .on("broadcast", { event: "player_ko" }, ({ payload }) => {
         setPlayers((prev) =>
           prev.map((p) => (p.player_id === payload.playerId ? { ...p, is_alive: false } : p))
+        );
+      })
+      .on("broadcast", { event: "player_update" }, ({ payload }) => {
+        // Another player changed their active partner (quiz reset / club swap) —
+        // refresh their sprite in the party sidebar and on the map.
+        setPlayers((prev) =>
+          prev.map((p) =>
+            p.player_id === payload.playerId
+              ? { ...p, sprite_id: payload.sprite_id ?? p.sprite_id }
+              : p
+          )
         );
       })
       .on("broadcast", { event: "turn_advance" }, ({ payload }) => {
@@ -1116,43 +1140,94 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     }
   }
 
-  // Handle enemy defeated
+  // Handle enemy defeated: award EXP, level up (persisted via player_team.exp),
+  // and offer new moves when the Pokémon already knows 4.
   async function handleEnemyDefeated(enemy) {
     const pkm = activePokemon;
+    let needsMoveChoice = false;
+    let levelForCapture = 5;
     if (pkm) {
       const expGain = calcExpGain(enemy.level);
       const newExp = (pkm.exp || 0) + expGain;
-      const leveledUp = checkLevelUp(pkm.level || 5, newExp);
       let newLevel = pkm.level || 5;
-      if (leveledUp) {
-        newLevel = leveledUp;
-      }
+      // checkLevelUp returns a single level; loop to support multi-level-ups.
+      let next = checkLevelUp(newLevel, newExp);
+      while (next) { newLevel = next; next = checkLevelUp(newLevel, newExp); }
+      levelForCapture = newLevel;
+      const leveledUp = newLevel > (pkm.level || 5);
       const pokemonId = pkm.pokemonId ?? pkm.pokemon_id;
-      const [newStats, newMoves] = await Promise.all([
+      const [newStats, movesAtNew] = await Promise.all([
         computeStats(pokemonId, newLevel, pkm.nature),
         getMovesAtLevel(pokemonId, newLevel),
       ]);
-      const updatedPkm = { ...pkm, ...newStats, moves: newMoves, exp: newExp, hp: Math.max(pkm.hp, newStats.maxHp) };
+      const knownNames = new Set((pkm.moves || []).map((m) => m.name));
+      const newMove = movesAtNew.find((m) => !knownNames.has(m.name));
+      // Only ask the player when the pool is full and a new move just unlocked.
+      // Skip the prompt if one is already waiting (e.g. another kill landed).
+      needsMoveChoice = Boolean(newMove) && (pkm.moves || []).length >= 4 && !pendingMoveLearnRef.current;
+      const moves = needsMoveChoice
+        ? (pkm.moves || [])
+        : newMove
+          ? [...(pkm.moves || []), newMove].slice(0, 4)
+          : (pkm.moves || []);
+      const updatedPkm = { ...pkm, ...newStats, level: newLevel, exp: newExp, moves, hp: Math.max(pkm.hp, newStats.maxHp) };
       setTeam((prev) => {
         const updated = [...prev];
         updated[activeTeamIndex] = updatedPkm;
         return updated;
       });
       if (pkm.id) {
-        await updateTeamMember(pkm.id, { level: newLevel, max_hp: newStats.maxHp, hp: Math.max(pkm.hp, newStats.maxHp), exp: newExp, moves: newMoves });
+        // Persist everything except moves when waiting on the choice, so a
+        // stale moves write can't clobber the player's decision.
+        const toPersist = { level: newLevel, max_hp: newStats.maxHp, hp: updatedPkm.hp, exp: newExp };
+        if (!needsMoveChoice) toPersist.moves = moves;
+        await updateTeamMember(pkm.id, toPersist);
       }
       if (leveledUp) {
         setMyPlayer((p) => (p ? { ...p, level: newLevel } : p));
+      }
+      if (needsMoveChoice) {
+        pendingMoveLearnRef.current = { pkm: updatedPkm, newMove, teamIndex: activeTeamIndex, enemy };
+        setPendingMoveLearn(pendingMoveLearnRef.current);
       }
     }
 
     addLog(`${getSpeciesName(enemy.pokemonId)} ${t("Enemy fainted!", language)}`, "player");
 
-    // Capture chance
-    const chance = Math.min(0.5, Math.max(0.1, 0.15 + ((activePokemon?.level || 5) - enemy.level) * 0.03));
+    // Capture chance — wait for the move choice so the overlays don't stack.
+    if (!needsMoveChoice) {
+      maybeTriggerCapture(enemy, levelForCapture);
+    }
+  }
+
+  // Roll the capture chance after a kill (or after the move-choice resolves).
+  function maybeTriggerCapture(enemy, level) {
+    const chance = Math.min(0.5, Math.max(0.1, 0.15 + ((level || 5) - enemy.level) * 0.03));
     if (Math.random() < chance) {
       setTimeout(() => setCaptureAttempt(enemy), 500);
     }
+  }
+
+  // The player decided: choice = slot index to forget (keep the new move), or
+  // null to decline the new move and keep the current set.
+  async function handleMoveLearnChoice(choice) {
+    const pending = pendingMoveLearnRef.current;
+    if (!pending) return;
+    const { pkm, newMove, teamIndex, enemy } = pending;
+    let finalMoves = pkm.moves || [];
+    if (choice !== null) {
+      finalMoves = finalMoves.map((m, i) => (i === choice ? newMove : m));
+    }
+    const updated = { ...pkm, moves: finalMoves };
+    setTeam((prev) => {
+      const arr = [...prev];
+      arr[teamIndex] = updated;
+      return arr;
+    });
+    if (pkm.id) await updateTeamMember(pkm.id, { moves: finalMoves });
+    pendingMoveLearnRef.current = null;
+    setPendingMoveLearn(null);
+    maybeTriggerCapture(enemy, pkm.level || 5);
   }
 
   // Return to village (does not delete room_players — Dungeon.jsx handles that)
@@ -1503,6 +1578,27 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               HP: {activePokemon?.hp ?? myPlayer?.hp ?? 0}/{activePokemon?.maxHp ?? activePokemon?.max_hp ?? myPlayer?.max_hp ?? 0}
             </p>
 
+            {/* EXP bar — progress toward the next level */}
+            {(() => {
+              const exp = activePokemon?.exp || 0;
+              const level = activePokemon?.level || myPlayer?.level || 5;
+              const threshold = level * 20 + 30;
+              const pct = Math.min(100, (exp / threshold) * 100);
+              return (
+                <div className="space-y-0.5">
+                  <div className="w-full h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: "#3b82f6" }}
+                    />
+                  </div>
+                  <p className="text-[9px] text-slate-500 text-center">
+                    {t("EXP", language) || "EXP"} {exp}/{threshold}
+                  </p>
+                </div>
+              );
+            })()}
+
             {/* Move buttons */}
             {activePokemon?.moves?.length > 0 && (
               <div className="space-y-1 pt-1 border-t border-slate-700/50">
@@ -1616,6 +1712,42 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               onCapture={handleCapture}
               onDecline={handleCaptureDecline}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Move learning overlay — choose which move to forget (or decline) */}
+      {pendingMoveLearn && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="max-w-sm w-full rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4 text-center">
+            <p className="text-3xl">✨</p>
+            <h2 className="text-xl font-bold text-slate-100">Learn a new move?</h2>
+            <p className="text-sm text-slate-300">
+              <span className="text-yellow-400 font-semibold">{getMoveName(pendingMoveLearn.newMove, language, moveData)}</span>{' '}
+              {t("is trying to be learned!", language) || "wants to be learned!"}
+            </p>
+            <p className="text-xs text-slate-400">
+              Your Pokémon already knows 4 moves. Forget one to learn it?
+            </p>
+            <div className="space-y-1.5">
+              {(pendingMoveLearn.pkm.moves || []).map((move, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleMoveLearnChoice(i)}
+                  className="w-full flex items-center gap-2 rounded-xl bg-slate-700/60 px-3 py-2 text-xs text-slate-200 hover:bg-slate-600/60 transition-colors"
+                >
+                  <span className="text-[9px] uppercase text-slate-500">{move.type || "normal"}</span>
+                  <span className="truncate">{getMoveName(move, language, moveData)}</span>
+                  <span className="ml-auto text-slate-400">{move.power > 0 ? move.power : "—"}</span>
+                </button>
+              ))}
+              <button
+                onClick={() => handleMoveLearnChoice(null)}
+                className="w-full rounded-xl bg-stone-700 px-4 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
+              >
+                Don't learn {getMoveName(pendingMoveLearn.newMove, language, moveData)}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -9,14 +9,21 @@ import {
   getSpeciesName, getMoveName, getMovesAtLevel,
   getEffectiveness, calcDamage, getStabMultiplier, getSpeciesTypes,
 } from "../lib/moves";
+import { pickNature } from "../lib/pokedex";
 import {
   getTeam, getProfile, saveProfile,
   addTeamMember, removeTeamMember, updateTeamMember,
+  getFriends, getIncomingFriendRequests, getOutgoingFriendRequests,
+  sendFriendRequest, respondToFriendRequest, removeFriend,
+  searchAccounts, getFriendsInDungeons, giveItemToFriend,
 } from "../lib/auth";
 import { getLanguage, subscribe } from "../stores/language";
 import { t } from "../stores/translations";
 import VillageMap from "./VillageMap";
 import LanguageSelector from "./LanguageSelector";
+import SpriteImg from "./SpriteImg";
+import PkmStatsTooltip from "./PkmStatsTooltip";
+import { Tooltip, TooltipTrigger } from "../../components/ui/tooltip";
 import { Bubble, BubbleContent } from "../../components/ui/bubble";
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
@@ -47,9 +54,23 @@ export default function VillageGame({
   const [bankWithdraw, setBankWithdraw] = useState("");
   const [showQuizResetConfirm, setShowQuizResetConfirm] = useState(false);
 
-  // Adventure (dungeon modes): which action is running + friend's room code
+  // Adventure (dungeon modes): which action is running + friends' active dungeons
   const [actionBusy, setActionBusy] = useState(null);
-  const [friendCode, setFriendCode] = useState("");
+  const [friendDungeons, setFriendDungeons] = useState([]);
+
+  // Friends (social) panel state
+  const [friendsOpen, setFriendsOpen] = useState(false);
+  const [friendsTab, setFriendsTab] = useState("friends"); // friends | requests | add
+  const [friends, setFriends] = useState([]);
+  const [incomingRequests, setIncomingRequests] = useState([]);
+  const [outgoingRequests, setOutgoingRequests] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [friendBusy, setFriendBusy] = useState(false);
+
+  // Kangaskhan Storage "send item to a friend" flow state
+  const [storageSendItem, setStorageSendItem] = useState(null);
+  const [storageSendFriend, setStorageSendFriend] = useState(null);
 
   // Chat state
   const [messages, setMessages] = useState([]);
@@ -83,6 +104,12 @@ export default function VillageGame({
       .eq("id", myPlayer.id)
       .then(() => {
         setMyPlayer((prev) => ({ ...prev, sprite_id: newSpriteId }));
+        // Tell everyone in the room so their maps show the new sprite too.
+        channelRef.current?.send({
+          type: "broadcast",
+          event: "player_update",
+          payload: { playerId: myPlayer.player_id, sprite_id: newSpriteId },
+        });
       });
   }, [team?.[0]?.pokemonId ?? team?.[0]?.pokemon_id, myPlayer?.id]);
 
@@ -380,6 +407,17 @@ export default function VillageGame({
             : [...prev, { id: payload.messageId, playerName: payload.playerName, text: payload.text }]
         );
       })
+      .on("broadcast", { event: "player_update" }, ({ payload }) => {
+        // Another player changed their active partner — refresh their avatar
+        // (e.g. after a quiz reset or Club Wigglytuff swap).
+        setPlayers((prev) =>
+          prev.map((p) =>
+            p.player_id === payload.playerId
+              ? { ...p, sprite_id: payload.sprite_id ?? p.sprite_id }
+              : p
+          )
+        );
+      })
       // Presence sync: detect abrupt disconnects (tab close, network drop).
       // Filter them from the local list and, after a grace period, remove them
       // from room_players so stale players don't get carried into the dungeon.
@@ -536,29 +574,52 @@ export default function VillageGame({
     loadTeam();
   }
 
-  // Bank
+  // Send one item from Kangaskhan Storage to a friend's inventory. Removes the
+  // item locally first, then appends it to the friend's inventory.
+  async function handleSendItemToFriend(friendId) {
+    if (!storageSendItem || !friendId) return;
+    const items = profile?.inventory?.items || [];
+    const idx = items.indexOf(storageSendItem);
+    if (idx === -1) return;
+    const newItems = [...items];
+    newItems.splice(idx, 1);
+    const res = await giveItemToFriend(friendId, storageSendItem);
+    if (res.error) { setError(res.error); setTimeout(() => setError(""), 2500); return; }
+    await saveProfile(accountId, { inventory: { gold: profile?.inventory?.gold || 0, items: newItems } });
+    setProfile((p) => p ? { ...p, inventory: { gold: p.inventory?.gold || 0, items: newItems } } : p);
+    setStorageSendItem(null);
+    setStorageSendFriend(null);
+  }
+
+  // Bank (Persian) — shared deposit/withdraw logic; "all" uses the whole pocket/bank balance
+  async function handleBankTransfer(amount, direction) {
+    const currentGold = profile?.inventory?.gold || 0;
+    const bankGold = profile?.bank_gold || 0;
+    let newGold, newBankGold;
+    if (direction === "deposit") {
+      if (amount > currentGold) { setError("Not enough gold!"); setTimeout(() => setError(""), 2000); return; }
+      newGold = currentGold - amount;
+      newBankGold = bankGold + amount;
+    } else {
+      if (amount > bankGold) { setError("Not enough in bank!"); setTimeout(() => setError(""), 2000); return; }
+      newGold = currentGold + amount;
+      newBankGold = bankGold - amount;
+    }
+    await saveProfile(accountId, { inventory: { gold: newGold, items: profile?.inventory?.items || [] }, bank_gold: newBankGold });
+    setProfile((p) => p ? { ...p, inventory: { ...p.inventory, gold: newGold }, bank_gold: newBankGold } : p);
+    if (direction === "deposit") setBankDeposit(""); else setBankWithdraw("");
+  }
+
   async function handleBankDeposit() {
     const amount = parseInt(bankDeposit, 10);
     if (!amount || amount <= 0) return;
-    const currentGold = profile?.inventory?.gold || 0;
-    if (amount > currentGold) { setError("Not enough gold!"); setTimeout(() => setError(""), 2000); return; }
-    const newGold = currentGold - amount;
-    const bankGold = (profile?.bank_gold || 0) + amount;
-    await saveProfile(accountId, { inventory: { gold: newGold, items: profile?.inventory?.items || [] }, bank_gold: bankGold });
-    setProfile((p) => p ? { ...p, inventory: { ...p.inventory, gold: newGold }, bank_gold: bankGold } : p);
-    setBankDeposit("");
+    await handleBankTransfer(amount, "deposit");
   }
 
   async function handleBankWithdraw() {
     const amount = parseInt(bankWithdraw, 10);
     if (!amount || amount <= 0) return;
-    const bankGold = profile?.bank_gold || 0;
-    if (amount > bankGold) { setError("Not enough in bank!"); setTimeout(() => setError(""), 2000); return; }
-    const currentGold = (profile?.inventory?.gold || 0) + amount;
-    const newBankGold = bankGold - amount;
-    await saveProfile(accountId, { inventory: { gold: currentGold, items: profile?.inventory?.items || [] }, bank_gold: newBankGold });
-    setProfile((p) => p ? { ...p, inventory: { ...p.inventory, gold: currentGold }, bank_gold: newBankGold } : p);
-    setBankWithdraw("");
+    await handleBankTransfer(amount, "withdraw");
   }
 
   // Club Wigglytuff — swap active partner from the club pool
@@ -572,19 +633,25 @@ export default function VillageGame({
       moves: m.moves || [],
       hp: m.hp,
       max_hp: m.maxHp || m.max_hp,
+      nature: m.nature && m.nature !== "_" ? m.nature : null,
     }));
     // Remove current team from DB
     for (const member of team) {
       if (member.id) await removeTeamMember(member.id);
     }
-    // Add selected club Pokémon to team
+    // Add selected club Pokémon to team. The nature column is NOT NULL, so we
+    // must supply a valid value — camp Pokémon stored without one (captures)
+    // fall back to a deterministic nature instead of null.
+    const nature = storedPkm.nature && storedPkm.nature !== "_"
+      ? storedPkm.nature
+      : pickNature(`${accountId}-${storedPkm.pokemon_id}-active`);
     await addTeamMember(accountId, {
       pokemon_id: storedPkm.pokemon_id,
       nickname: storedPkm.nickname || getSpeciesName(storedPkm.pokemon_id),
       level: storedPkm.level || 5,
       hp: storedPkm.hp || 100,
       max_hp: storedPkm.max_hp || 100,
-      nature: storedPkm.nature || null,
+      nature,
       moves: storedPkm.moves || [],
       slot: 0,
       is_starter: false,
@@ -631,6 +698,74 @@ export default function VillageGame({
     // team is updated via onTeamUpdate
     const prof = await getProfile(accountId);
     if (prof) setProfile(prof);
+  }
+
+  // ─── Friends (social system) ───
+  // Loads accepted friends, pending requests (both directions) and any friends
+  // currently inside a playing dungeon. Used by the friends panel and by the
+  // Hariyama "join a friend" flow.
+  async function loadFriends() {
+    if (!accountId) return;
+    const [f, inc, out, dungeons] = await Promise.all([
+      getFriends(accountId),
+      getIncomingFriendRequests(accountId),
+      getOutgoingFriendRequests(accountId),
+      getFriendsInDungeons(accountId),
+    ]);
+    setFriends(f);
+    setIncomingRequests(inc);
+    setOutgoingRequests(out);
+    setFriendDungeons(dungeons);
+  }
+
+  useEffect(() => {
+    loadFriends();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
+
+  // Live refresh: friends' dungeon status changes as they start/finish rooms.
+  useEffect(() => {
+    if (!accountId) return;
+    const id = setInterval(() => {
+      getFriendsInDungeons(accountId).then(setFriendDungeons);
+    }, 8000);
+    return () => clearInterval(id);
+  }, [accountId]);
+
+  function closeFriends() {
+    setFriendsOpen(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  }
+
+  async function handleSearch() {
+    if (searchQuery.trim().length < 2) return;
+    const results = await searchAccounts(searchQuery);
+    setSearchResults(results);
+  }
+
+  async function handleSendRequest(targetId) {
+    if (friendBusy) return;
+    setFriendBusy(true);
+    const res = await sendFriendRequest(accountId, targetId);
+    if (res.error) { setError(res.error); setTimeout(() => setError(""), 2500); }
+    setFriendBusy(false);
+    await loadFriends();
+  }
+
+  async function handleRespond(requesterId, accept) {
+    if (friendBusy) return;
+    setFriendBusy(true);
+    const res = await respondToFriendRequest(requesterId, accountId, accept);
+    if (res.error) { setError(res.error); setTimeout(() => setError(""), 2500); }
+    setFriendBusy(false);
+    await loadFriends();
+  }
+
+  async function handleRemoveFriend(friendId) {
+    const res = await removeFriend(accountId, friendId);
+    if (res.error) { setError(res.error); setTimeout(() => setError(""), 2500); }
+    await loadFriends();
   }
 
   // Move changer
@@ -844,10 +979,10 @@ export default function VillageGame({
     }
   }
 
-  // "Play with a friend": join a friend's running dungeon by code (coop, no PvP vs host).
-  async function joinFriendDungeon() {
-    const code = friendCode.toUpperCase().trim();
-    if (code.length < 4) {
+  // Join any playing dungeon by its code (coop, no PvP vs the host). Used both
+  // by the old code-entry path and by the "join a friend's dungeon" buttons.
+  async function joinRoomByCode(code) {
+    if (!code || code.length < 4) {
       setError(t("Enter room code", language));
       return;
     }
@@ -922,6 +1057,12 @@ export default function VillageGame({
     }
   }
 
+  // Join a specific friend's active dungeon (Hariyama adventure menu).
+  async function joinFriendRoom(code) {
+    closeFriends();
+    await joinRoomByCode(code);
+  }
+
   // ─── Rendering ───
 
   // Connecting / setup screen (no session yet)
@@ -991,24 +1132,15 @@ export default function VillageGame({
           onInteractNPC={handleInteractNPC}
         />
 
-        {/* NPC labels */}
+        {/* NPC labels — click a badge to interact from anywhere (faster than walking up) */}
         <div className="flex flex-wrap gap-2 justify-center">
           {NPC_POSITIONS.map((npc) => (
             <button
               key={npc.id}
-              onClick={() => {
-                const dx = Math.abs(npc.x - (myPlayer?.position_x || 0));
-                const dy = Math.abs(npc.y - (myPlayer?.position_y || 0));
-                if (dx <= 1 && dy <= 1) {
-                  setActiveNPC(npc);
-                } else {
-                  setError("Walk closer to interact");
-                  setTimeout(() => setError(""), 1500);
-                }
-              }}
+              onClick={() => setActiveNPC(npc)}
               className="flex items-center gap-1.5 rounded-xl bg-stone-800/60 border border-stone-700 px-3 py-1.5 text-xs text-stone-300 hover:bg-stone-700/60 transition-colors"
             >
-              <img src={`${SPRITE_URL}/${npc.spriteId}.png`} alt="" className="w-5 h-5" />
+              <SpriteImg id={npc.spriteId} size={28} />
               {npc.label}
             </button>
           ))}
@@ -1032,23 +1164,23 @@ export default function VillageGame({
           ))}
         </div>
 
-        {/* Team view */}
+        {/* Team view — hover a badge to see stats + moves */}
         <div className="flex flex-wrap gap-2 justify-center">
           {team.map((pkm, i) => (
-            <div
-              key={pkm.id || i}
-              className="flex items-center gap-1.5 rounded-xl bg-stone-800/40 border border-stone-700/50 px-2.5 py-1"
-            >
-              <img
-                src={`${SPRITE_URL}/${pkm.pokemonId || pkm.pokemon_id || 25}.png`}
-                alt=""
-                className="w-5 h-5"
+            <Tooltip key={pkm.id || i}>
+              <TooltipTrigger
+                render={
+                  <div className="flex items-center gap-1.5 rounded-xl bg-stone-800/40 border border-stone-700/50 px-2.5 py-1 cursor-default">
+                    <SpriteImg id={pkm.pokemonId || pkm.pokemon_id || 25} size={40} />
+                    <div className="text-[10px] text-stone-400">
+                      <span className="text-stone-300">{pkm.nickname || getSpeciesName(pkm.pokemonId || pkm.pokemon_id)}</span>
+                      <span className="ml-1 text-stone-500">Lv.{pkm.level || 5}</span>
+                    </div>
+                  </div>
+                }
               />
-              <div className="text-[10px] text-stone-400">
-                <span className="text-stone-300">{pkm.nickname || getSpeciesName(pkm.pokemonId || pkm.pokemon_id)}</span>
-                <span className="ml-1 text-stone-500">Lv.{pkm.level || 5}</span>
-              </div>
-            </div>
+              <PkmStatsTooltip pkm={pkm} />
+            </Tooltip>
           ))}
         </div>
       </div>
@@ -1163,6 +1295,14 @@ export default function VillageGame({
                 >
                   Deposit
                 </button>
+                <button
+                  onClick={() => handleBankTransfer(profile?.inventory?.gold || 0, "deposit")}
+                  disabled={(profile?.inventory?.gold || 0) <= 0}
+                  className="rounded-lg bg-green-900/70 px-3 py-2 text-xs text-green-300 hover:bg-green-800 disabled:opacity-40 transition-colors"
+                  title="Deposit all pocket gold"
+                >
+                  All
+                </button>
               </div>
               <div className="flex gap-2">
                 <input
@@ -1179,6 +1319,14 @@ export default function VillageGame({
                   className="rounded-lg bg-blue-800 px-3 py-2 text-xs text-blue-200 hover:bg-blue-700 disabled:opacity-40 transition-colors"
                 >
                   Withdraw
+                </button>
+                <button
+                  onClick={() => handleBankTransfer(profile?.bank_gold || 0, "withdraw")}
+                  disabled={(profile?.bank_gold || 0) <= 0}
+                  className="rounded-lg bg-blue-900/70 px-3 py-2 text-xs text-blue-300 hover:bg-blue-800 disabled:opacity-40 transition-colors"
+                  title="Withdraw all bank gold"
+                >
+                  All
                 </button>
               </div>
             </div>
@@ -1304,6 +1452,155 @@ export default function VillageGame({
         {chatOpen ? "Close" : "Chat"}
       </button>
 
+      {/* ─── Friends toggle button ─── */}
+      <button
+        onClick={() => { setFriendsOpen((o) => !o); if (!friendsOpen) loadFriends(); }}
+        className="fixed bottom-4 right-24 z-50 rounded-full bg-slate-700 px-4 py-2 text-xs text-slate-300 shadow-lg hover:bg-slate-600 transition-colors"
+      >
+        {friendsOpen ? "Close" : "Friends"}
+      </button>
+
+      {/* ─── Friends panel ─── */}
+      {friendsOpen && (
+        <div className="fixed bottom-16 right-24 z-50 w-80 rounded-xl border border-slate-700 bg-slate-800/95 backdrop-blur shadow-xl flex flex-col">
+          <div className="flex items-center justify-between border-b border-slate-700 px-3 py-2">
+            <span className="text-xs font-semibold text-slate-300">Friends</span>
+            <button onClick={closeFriends} className="text-slate-500 hover:text-slate-300 text-sm">&times;</button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-slate-700 text-[10px]">
+            {(["friends", "requests", "add"]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFriendsTab(tab)}
+                className={`flex-1 py-2 font-semibold uppercase tracking-wider transition-colors ${
+                  friendsTab === tab ? "text-slate-100 bg-slate-700/50" : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                {tab === "friends" ? `Friends (${friends.length})` : tab === "requests" ? `Requests (${incomingRequests.length})` : "Add"}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 overflow-y-auto max-h-64 px-3 py-2 space-y-1.5">
+            {friendsTab === "friends" && (
+              friends.length === 0 ? (
+                <p className="text-[10px] text-slate-500 text-center py-4">
+                  No friends yet. Add friends to see who's exploring and join their dungeons!
+                </p>
+              ) : (
+                friends.map((f) => (
+                  <div key={f.id} className="flex items-center gap-2 rounded-lg bg-slate-700/40 px-3 py-2">
+                    <span className="text-sm text-slate-200 font-medium truncate flex-1">
+                      {f.display_name || f.username}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveFriend(f.id)}
+                      className="rounded-lg bg-red-900/60 px-2 py-1 text-[10px] text-red-300 hover:bg-red-800/60 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )
+            )}
+
+            {friendsTab === "requests" && (
+              <>
+                {incomingRequests.length === 0 && outgoingRequests.length === 0 ? (
+                  <p className="text-[10px] text-slate-500 text-center py-4">No pending requests.</p>
+                ) : (
+                  <>
+                    {incomingRequests.map((r) => (
+                      <div key={r.id} className="rounded-lg bg-slate-700/40 px-3 py-2 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-200 font-medium truncate flex-1">
+                            {r.display_name || r.username}
+                          </span>
+                          <span className="text-[9px] text-slate-500">wants to be friends</span>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => handleRespond(r.id, true)}
+                            disabled={friendBusy}
+                            className="flex-1 rounded-lg bg-green-800 px-2 py-1 text-[10px] text-green-200 hover:bg-green-700 disabled:opacity-40"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleRespond(r.id, false)}
+                            disabled={friendBusy}
+                            className="flex-1 rounded-lg bg-stone-700 px-2 py-1 text-[10px] text-stone-400 hover:bg-stone-600 disabled:opacity-40"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {outgoingRequests.map((r) => (
+                      <div key={r.id} className="flex items-center gap-2 rounded-lg bg-slate-700/40 px-3 py-2">
+                        <span className="text-xs text-slate-400 truncate flex-1">
+                          {r.display_name || r.username} <span className="text-slate-600">(request sent)</span>
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+
+            {friendsTab === "add" && (
+              <div className="space-y-1.5">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
+                  className="flex gap-1.5"
+                >
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by username..."
+                    className="flex-1 rounded-lg bg-slate-700/60 border border-slate-600 px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 outline-none focus:border-slate-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={searchQuery.trim().length < 2}
+                    className="rounded-lg bg-blue-800 px-2.5 py-1.5 text-[10px] text-blue-200 hover:bg-blue-700 disabled:opacity-40"
+                  >
+                    Search
+                  </button>
+                </form>
+                {searchResults.length === 0 ? (
+                  <p className="text-[10px] text-slate-500 text-center py-3">
+                    {searchQuery.trim().length >= 2 ? "No accounts found." : "Type at least 2 characters to search."}
+                  </p>
+                ) : (
+                  searchResults.map((a) => {
+                    const alreadyFriend = friends.some((f) => f.id === a.id);
+                    const requestSent = outgoingRequests.some((r) => r.id === a.id);
+                    const isSelf = a.id === accountId;
+                    return (
+                      <div key={a.id} className="flex items-center gap-2 rounded-lg bg-slate-700/40 px-3 py-2">
+                        <span className="text-xs text-slate-200 font-medium truncate flex-1">
+                          {a.display_name || a.username}
+                        </span>
+                        <button
+                          onClick={() => handleSendRequest(a.id)}
+                          disabled={friendBusy || alreadyFriend || requestSent || isSelf}
+                          className="rounded-lg bg-green-800 px-2 py-1 text-[10px] text-green-200 hover:bg-green-700 disabled:opacity-40"
+                        >
+                          {isSelf ? "You" : alreadyFriend ? "Friends" : requestSent ? "Sent" : "Add"}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ─── Chat panel ─── */}
       {chatOpen && (
         <div className="fixed bottom-16 right-4 z-50 w-72 rounded-xl border border-stone-700 bg-stone-800/95 backdrop-blur shadow-xl flex flex-col">
@@ -1360,7 +1657,7 @@ export default function VillageGame({
               <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
             </div>
 
-            {!storageSelectedItem ? (
+            {!storageSelectedItem && !storageSendItem ? (
               <>
                 <p className="text-xs text-stone-400">
                   Items in storage: <span className="text-stone-200 font-semibold">{(profile?.inventory?.items || []).length}</span>
@@ -1395,6 +1692,12 @@ export default function VillageGame({
                               >
                                 Use
                               </button>
+                              <button
+                                onClick={() => { setStorageSendItem(itemId); setStorageSendFriend(null); }}
+                                className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
+                              >
+                                Send
+                              </button>
                             </div>
                           </div>
                         );
@@ -1403,6 +1706,37 @@ export default function VillageGame({
                   </div>
                 )}
               </>
+            ) : storageSendItem ? (
+              <div className="space-y-2">
+                <p className="text-xs text-stone-400">Send this item to a friend:</p>
+                <p className="text-sm text-stone-200 font-medium">
+                  {SHOP_ITEMS.find((s) => s.id === storageSendItem)?.name || storageSendItem}
+                </p>
+                {friends.length === 0 ? (
+                  <p className="text-xs text-stone-500 text-center py-4">
+                    You have no friends yet. Add friends from the Friends button first!
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {friends.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => handleSendItemToFriend(f.id)}
+                        className="w-full flex items-center gap-2 rounded-lg bg-stone-700/40 px-3 py-2 text-xs text-stone-300 hover:bg-stone-600/40 transition-colors"
+                      >
+                        <span className="text-sm">{f.display_name || f.username}</span>
+                        <span className="ml-auto text-[10px] text-stone-500">{f.username}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button
+                  onClick={() => setStorageSendItem(null)}
+                  className="w-full rounded-lg bg-stone-700 px-3 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
+                >
+                  Back
+                </button>
+              </div>
             ) : (
               <div className="space-y-2">
                 <p className="text-xs text-stone-400">Choose a Pokémon to use this item on:</p>
@@ -1558,18 +1892,36 @@ export default function VillageGame({
                 {actionBusy === "invade" ? t("Invading...", language) : t("Invade a dungeon", language)}
               </button>
               <div className="space-y-1.5">
-                <input
-                  value={friendCode}
-                  onChange={(e) => setFriendCode(e.target.value.toUpperCase().slice(0, 6))}
-                  placeholder={t("Enter room code", language)}
-                  className="w-full rounded-xl bg-stone-700/60 border border-stone-600 px-4 py-2.5 text-sm text-stone-100 text-center font-mono tracking-widest uppercase placeholder:text-stone-500 outline-none focus:border-stone-500"
-                />
+                <p className="text-[10px] uppercase tracking-wider text-stone-500 text-left">
+                  Friends in dungeons
+                </p>
+                {friendDungeons.length === 0 ? (
+                  <p className="text-xs text-stone-500 rounded-xl bg-stone-700/40 px-4 py-3">
+                    No friends are exploring right now. Ask them to start a dungeon, then come back!
+                  </p>
+                ) : (
+                  friendDungeons.map((d) => (
+                    <button
+                      key={d.roomId}
+                      onClick={() => joinFriendRoom(d.code)}
+                      disabled={actionBusy !== null || team.length === 0}
+                      className="w-full rounded-xl bg-blue-800 px-4 py-3 text-left text-sm text-blue-100 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      <span className="block font-semibold">
+                        {d.friends.map((f) => f.display_name || f.player_name).join(", ")}
+                      </span>
+                      <span className="text-[10px] text-blue-300">
+                        Room {d.code} · Floor {d.floor}
+                      </span>
+                    </button>
+                  ))
+                )}
                 <button
-                  onClick={joinFriendDungeon}
-                  disabled={actionBusy !== null || team.length === 0 || friendCode.trim().length < 4}
-                  className="w-full rounded-xl bg-blue-700 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-600 transition-colors disabled:opacity-50"
+                  onClick={loadFriends}
+                  disabled={actionBusy !== null}
+                  className="w-full rounded-xl bg-stone-700/60 px-4 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors disabled:opacity-50"
                 >
-                  {actionBusy === "friend" ? t("Joining...", language) : t("Play with a friend", language)}
+                  Refresh
                 </button>
               </div>
               <button

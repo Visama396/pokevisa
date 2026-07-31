@@ -34,8 +34,10 @@ export default function Dungeon() {
     setLoading(true);
     try {
       const [prof, tm] = await Promise.all([getProfile(accountId), getTeam(accountId)]);
-      // Only reset profile if the quiz starter creation failed mid-way
-      if (tm.length === 0 && prof && prof.starter_id) {
+      // Only reset the profile when the starter creation failed mid-way and the
+      // account has nothing to lose. A player with camp/stored Pokémon is never
+      // reset even if their active team is temporarily empty.
+      if (tm.length === 0 && prof && prof.starter_id && (prof.stored_pokemon || []).length === 0) {
         await resetProfile(accountId);
         setProfile(null);
       } else {
