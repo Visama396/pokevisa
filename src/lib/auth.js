@@ -300,6 +300,26 @@ export async function getFriendsInDungeons(accountId) {
   return Object.values(byRoom);
 }
 
+// Accepted friends who are currently standing in a village (a lobby room).
+// Returns a map: { friendId: { roomId, code } } so the friends panel can offer
+// "join their village" without guessing a room code.
+export async function getFriendVillages(accountId) {
+  const friends = await getFriends(accountId);
+  if (friends.length === 0) return {};
+  const ids = friends.map((f) => f.id);
+  const { data: roomPlayers } = await supabase
+    .from("room_players")
+    .select("player_id, room_id, rooms(code, status)")
+    .in("player_id", ids);
+  const byFriend = {};
+  for (const rp of roomPlayers || []) {
+    const room = rp.rooms;
+    if (!room || room.status !== "lobby") continue;
+    byFriend[rp.player_id] = { roomId: rp.room_id, code: room.code };
+  }
+  return byFriend;
+}
+
 // Add one item to a friend's inventory (used by Kangaskhan Storage sending).
 // RLS on player_profiles is open, so a player may deposit an item into a friend's
 // inventory. Returns { error } on failure.

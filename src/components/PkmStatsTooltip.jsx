@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { TooltipContent } from "../../components/ui/tooltip";
 import SpriteImg from "./SpriteImg";
+import PokeTypeBadge from "./PokeTypeBadge";
 import { getSpeciesName, getMoveName, ensureMovesData } from "../lib/moves";
 import { computeStats } from "../lib/pokedex";
 import { getLanguage } from "../stores/language";
@@ -48,19 +49,17 @@ export default function PkmStatsTooltip({ pkm }) {
           <span>HP {stats.hp}</span>
           <span>Atk {stats.atk}</span>
           <span>Def {stats.def}</span>
+          <span>Spe {stats.spe}</span>
           <span>SpA {stats.spa}</span>
           <span>SpD {stats.spd}</span>
-          <span>Spe {stats.spe}</span>
         </div>
       )}
 
       <div className="space-y-1 border-t border-stone-700 p-2.5">
         <p className="text-[9px] uppercase tracking-wide text-stone-500">Moves</p>
         {(pkm.moves || []).slice(0, 4).map((move, i) => (
-          <div key={i} className="flex items-center gap-1.5 text-[10px] text-stone-300">
-            <span className="rounded bg-stone-700/60 px-1 py-[1px] text-[8px] uppercase text-stone-400">
-              {move.type || "normal"}
-            </span>
+          <div key={i} className="flex items-center gap-1.5 text-xs text-stone-300">
+            <PokeTypeBadge type={move.type || "normal"} language={language} />
             <span className="truncate">{getMoveName(move, language)}</span>
             <span className="ml-auto text-stone-400">{move.power > 0 ? move.power : "—"}</span>
           </div>

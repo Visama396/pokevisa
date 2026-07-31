@@ -15,7 +15,7 @@ import {
   addTeamMember, removeTeamMember, updateTeamMember,
   getFriends, getIncomingFriendRequests, getOutgoingFriendRequests,
   sendFriendRequest, respondToFriendRequest, removeFriend,
-  searchAccounts, getFriendsInDungeons, giveItemToFriend,
+  searchAccounts, getFriendsInDungeons, getFriendVillages, giveItemToFriend,
 } from "../lib/auth";
 import { getLanguage, subscribe } from "../stores/language";
 import { t } from "../stores/translations";
@@ -67,6 +67,9 @@ export default function VillageGame({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [friendBusy, setFriendBusy] = useState(false);
+  // Map of friendId -> { roomId, code } for friends currently in a village
+  // (lobby room), so we can offer "join their village".
+  const [friendVillages, setFriendVillages] = useState({});
 
   // Kangaskhan Storage "send item to a friend" flow state
   const [storageSendItem, setStorageSendItem] = useState(null);
@@ -541,10 +544,11 @@ export default function VillageGame({
   function closeNPC() {
     setActiveNPC(null);
     setStorageSelectedItem(null);
+    setStorageSendItem(null);
+    setStorageSendFriend(null);
     setBankDeposit("");
     setBankWithdraw("");
     setShowQuizResetConfirm(false);
-    setFriendCode("");
   }
 
   // Storage
@@ -706,22 +710,44 @@ export default function VillageGame({
   // Hariyama "join a friend" flow.
   async function loadFriends() {
     if (!accountId) return;
-    const [f, inc, out, dungeons] = await Promise.all([
+    const [f, inc, out, dungeons, villages] = await Promise.all([
       getFriends(accountId),
       getIncomingFriendRequests(accountId),
       getOutgoingFriendRequests(accountId),
       getFriendsInDungeons(accountId),
+      getFriendVillages(accountId),
     ]);
     setFriends(f);
     setIncomingRequests(inc);
     setOutgoingRequests(out);
     setFriendDungeons(dungeons);
+    setFriendVillages(villages);
   }
 
   useEffect(() => {
     loadFriends();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId]);
+
+  // Tab close cleanup: remove this player from their village room so an
+  // abandoned lobby can be garbage-collected by the DB trigger (see migration
+  // 010). Keepalive fetch fires reliably enough on pagehide for this.
+  useEffect(() => {
+    if (!session || !accountId) return;
+    const url = `${import.meta.env.PUBLIC_SUPABASE_URL}/rest/v1/room_players?room_id=eq.${session.roomId}&player_id=eq.${accountId}`;
+    const cleanup = () => {
+      fetch(url, {
+        method: "DELETE",
+        keepalive: true,
+        headers: {
+          apikey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${import.meta.env.PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+      }).catch(() => {});
+    };
+    window.addEventListener("pagehide", cleanup);
+    return () => window.removeEventListener("pagehide", cleanup);
+  }, [session, accountId]);
 
   // Live refresh: friends' dungeon status changes as they start/finish rooms.
   useEffect(() => {
@@ -1061,6 +1087,66 @@ export default function VillageGame({
   async function joinFriendRoom(code) {
     closeFriends();
     await joinRoomByCode(code);
+  }
+
+  // Move this player into a friend's village. Leaves the current room (their
+  // row is deleted, which lets the DB trigger clean up an emptied lobby) and
+  // spawns them in the friend's village room.
+  async function joinFriendVillage(friendId) {
+    const info = friendVillages[friendId];
+    if (!info || !requireTeam()) return;
+    if (info.roomId === session?.roomId) { closeFriends(); return; }
+    setActionBusy("friend");
+    setError("");
+    try {
+      const { data: roomData } = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("id", info.roomId)
+        .single();
+      if (!roomData || roomData.status !== "lobby") {
+        setError("That village is gone or already in a dungeon");
+        return;
+      }
+      const { count } = await supabase
+        .from("room_players")
+        .select("*", { count: "exact", head: true })
+        .eq("room_id", roomData.id);
+      if (count >= roomData.max_players) {
+        setError("That village is full");
+        return;
+      }
+
+      // Leave any previous room (auto-cleans the old village if it becomes empty).
+      await supabase.from("room_players").delete().eq("player_id", accountId);
+
+      const spriteId = team[0]?.pokemonId || team[0]?.pokemon_id || 25;
+      const { error: playerErr } = await supabase.from("room_players").insert({
+        room_id: roomData.id,
+        player_id: accountId,
+        player_name: accountName,
+        is_host: false,
+        sprite_id: spriteId,
+        level: team[0]?.level || 5,
+        hp: team[0]?.hp || 100,
+        max_hp: team[0]?.maxHp || team[0]?.max_hp || 100,
+        position_x: VILLAGE_SPAWN.x,
+        position_y: VILLAGE_SPAWN.y,
+      });
+      if (playerErr) { setError(playerErr.message); return; }
+
+      setRoom(roomData);
+      setRoomCode(roomData.code);
+      closeFriends();
+      // Changing session re-runs the room channel effect, switching this client
+      // to the friend's village realtime channel.
+      if (onJoin) onJoin({ roomId: roomData.id, roomCode: roomData.code, playerId: accountId, isHost: false });
+    } catch (err) {
+      console.error("Join friend village error:", err);
+      setError(err.message || "Could not join village");
+    } finally {
+      setActionBusy(null);
+    }
   }
 
   // ─── Rendering ───
@@ -1490,19 +1576,37 @@ export default function VillageGame({
                   No friends yet. Add friends to see who's exploring and join their dungeons!
                 </p>
               ) : (
-                friends.map((f) => (
-                  <div key={f.id} className="flex items-center gap-2 rounded-lg bg-slate-700/40 px-3 py-2">
-                    <span className="text-sm text-slate-200 font-medium truncate flex-1">
-                      {f.display_name || f.username}
-                    </span>
-                    <button
-                      onClick={() => handleRemoveFriend(f.id)}
-                      className="rounded-lg bg-red-900/60 px-2 py-1 text-[10px] text-red-300 hover:bg-red-800/60 transition-colors"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))
+                friends.map((f) => {
+                  const village = friendVillages[f.id];
+                  const isCurrentVillage = village && village.roomId === session?.roomId;
+                  const inDungeon = friendDungeons.some((d) => d.friends.some((fd) => fd.id === f.id));
+                  return (
+                    <div key={f.id} className="flex items-center gap-2 rounded-lg bg-slate-700/40 px-3 py-2">
+                      <span className="text-sm text-slate-200 font-medium truncate flex-1">
+                        {f.display_name || f.username}
+                      </span>
+                      {village && !isCurrentVillage ? (
+                        <button
+                          onClick={() => joinFriendVillage(f.id)}
+                          disabled={friendBusy || actionBusy !== null}
+                          className="rounded-lg bg-blue-800 px-2 py-1 text-[10px] text-blue-200 hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                        >
+                          Join village
+                        </button>
+                      ) : (
+                        <span className="text-[9px] text-slate-600">
+                          {isCurrentVillage ? "Same village" : inDungeon ? "In dungeon" : "Offline"}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleRemoveFriend(f.id)}
+                        className="rounded-lg bg-red-900/60 px-2 py-1 text-[10px] text-red-300 hover:bg-red-800/60 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })
               )
             )}
 
