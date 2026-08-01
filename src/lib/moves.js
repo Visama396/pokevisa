@@ -517,6 +517,65 @@ function getMoveData(name) {
   return { name, type: "normal", category: "physical", power: 40, accuracy: 100 };
 }
 
+// Rough PP estimate for moves whose real PP isn't loaded yet (old saves, sync
+// fallback paths). attachPP() replaces it with the real value from moves.json.
+export function defaultPP(move) {
+  if (!move) return 10;
+  if (move.category === "status" || move.power === 0) return 20;
+  if (move.power >= 100) return 5;
+  if (move.power >= 70) return 10;
+  if (move.power >= 50) return 15;
+  if (move.power >= 30) return 20;
+  return 25;
+}
+
+function withDefaultPP(move) {
+  return { ...move, pp: move.pp ?? defaultPP(move) };
+}
+
+// Attach the real PP value (from public/moves.json) to a move object. Used
+// when building/persisting moves so the battle can enforce PP costs.
+export async function attachPP(move) {
+  if (!move) return move;
+  if (typeof move.pp === "number" && move.pp > 0) return move;
+  const data = await ensureMovesData();
+  const real = data?.[move.key || move.name];
+  return { ...move, pp: typeof real?.pp === "number" ? real.pp : defaultPP(move) };
+}
+
+// Move PP at battle time: prefer the stored value, fall back to the estimate.
+export function getMovePP(move) {
+  return (typeof move?.pp === "number" && move.pp > 0) ? move.pp : defaultPP(move);
+}
+
+// Maps dedicated status-inflicting moves to the condition they apply. Damaging
+// moves can additionally inflict burn/paralysis via getMoveInflictedStatus().
+const STATUS_MOVES = {
+  "sleep-powder": "sleep", spore: "sleep", hypnosis: "sleep", sing: "sleep",
+  "grass-whistle": "sleep", yawn: "sleep", "dark-void": "sleep",
+  "poison-powder": "poison", toxic: "poison", "poison-gas": "poison",
+  "thunder-wave": "paralysis", "stun-spore": "paralysis", glare: "paralysis",
+  "will-o-wisp": "burn",
+};
+
+export function getStatusMoveEffect(moveName) {
+  return STATUS_MOVES[moveName] || null;
+}
+
+// The status a move inflicts on the target this use. Dedicated status moves
+// apply ~60% of the time (there is no accuracy roll, so the chance keeps sleep
+// from soft-locking); Fire/Electric damaging moves have a 10% chance to
+// burn/paralyze respectively.
+export function getMoveInflictedStatus(move) {
+  const primary = getStatusMoveEffect(move?.name);
+  if (primary) return Math.random() < 0.6 ? primary : null;
+  if (move?.power > 0 && Math.random() < 0.1) {
+    if (move.type === "fire") return "burn";
+    if (move.type === "electric") return "paralysis";
+  }
+  return null;
+}
+
 // Get the moves a Pokémon knows at a given level based on its learnset
 export async function getMovesAtLevel(pokemonId, level, maxMoves = 4) {
   await ensureLoaded();
@@ -528,7 +587,7 @@ export async function getMovesAtLevel(pokemonId, level, maxMoves = 4) {
     .filter(m => m.level <= level)
     .sort((a, b) => a.level - b.level);
   const moves = learned.slice(-maxMoves).map(m => getMoveData(m.name));
-  return moves;
+  return Promise.all(moves.map(attachPP));
 }
 
 // Every move a Pokémon can know at the given level from its level-up learnset,
@@ -539,10 +598,14 @@ export async function getAllMovesAtLevel(pokemonId, level) {
   await ensureLoaded();
   const entry = getFromCache(pokemonId);
   if (!entry || !entry.moves || !entry.moves.levelUp) return [];
-  return entry.moves.levelUp
+  const learned = entry.moves.levelUp
     .filter(m => m.level <= level)
-    .sort((a, b) => a.level - b.level)
-    .map(m => ({ ...getMoveData(m.name), level: m.level }));
+    .sort((a, b) => a.level - b.level);
+  const enriched = [];
+  for (const m of learned) {
+    enriched.push({ ...(await attachPP(getMoveData(m.name))), level: m.level });
+  }
+  return enriched;
 }
 
 let _moveDataCache = null;
@@ -561,6 +624,89 @@ export function getMoveName(move, language, moveData) {
     if (m?.names?.en) return m.names.en;
   }
   return move?.name?.replace(/-/g, " ") || "";
+}
+
+// ─── TM system ───────────────────────────────────────────────────────────────
+// Every move in public/moves.json is a TM (item id `tm-<move-slug>`). A species
+// can only learn a TM move if it appears in its pokedex `moves.tm` list, i.e.
+// real-game TM compatibility. The shop's daily rotation, dungeon drops and the
+// teach-TM flows (village + dungeon) all build on these helpers.
+
+// Full battle-ready move data for a move slug: real stats from moves.json
+// merged with a sensible fallback so TMs always teach a working move even if a
+// slug is missing from the JSON. async because it may fetch moves.json once.
+export async function getMoveDataBySlug(slug) {
+  if (!slug) return null;
+  const data = await ensureMovesData();
+  const real = data?.[slug];
+  if (real) {
+    return {
+      name: slug,
+      type: real.type || "normal",
+      category: real.category || "physical",
+      power: real.power || 0,
+      accuracy: typeof real.accuracy === "number" ? real.accuracy : 100,
+      pp: typeof real.pp === "number" ? real.pp : defaultPP(real),
+    };
+  }
+  const fallback = getMoveData(slug);
+  return { ...fallback, pp: defaultPP(fallback) };
+}
+
+// Normalize a move for storage in a moveset (used by TM teaching and the Move
+// Tutor). Drops transient fields like `level` and `ppUsed`, keeps the stats the
+// battle needs.
+export function buildStoredMove(move) {
+  return {
+    name: move.name,
+    type: move.type,
+    category: move.category,
+    power: move.power,
+    accuracy: move.accuracy,
+    pp: move.pp,
+  };
+}
+
+// The move slugs a species can learn via TM (its pokedex `moves.tm` list).
+export function getSpeciesTMMoves(pokemonId) {
+  const entry = getFromCache(pokemonId);
+  return entry?.moves?.tm || [];
+}
+
+// Whether a species can learn a given move from a TM.
+export function canLearnTM(pokemonId, moveSlug) {
+  return getSpeciesTMMoves(pokemonId).includes(moveSlug);
+}
+
+// Deterministic daily TM rotation: 5 move slugs chosen from moves.json by a
+// date-hashed index, so every player sees the same TMs in the shop today.
+// Mirrors PokéWordle's date-seeded daily pick.
+export async function getDailyTMs(dateStr) {
+  const data = await ensureMovesData();
+  const slugs = Object.keys(data || {});
+  if (slugs.length === 0) return [];
+  const date = dateStr || new Date().toISOString().slice(0, 10);
+  const hashStr = (s) => {
+    let h = 0x811c9dc5;
+    for (const char of s) {
+      h ^= char.charCodeAt(0);
+      h = Math.imul(h, 0x01000193);
+    }
+    return h >>> 0;
+  };
+  const picks = [];
+  const used = new Set();
+  for (let i = 0; i < 5; i++) {
+    let idx = hashStr(`${date}:${i}`) % slugs.length;
+    let bump = 0;
+    while (used.has(slugs[idx]) && bump < slugs.length) {
+      idx = (idx + 1) % slugs.length;
+      bump++;
+    }
+    used.add(slugs[idx]);
+    picks.push(slugs[idx]);
+  }
+  return picks;
 }
 
 // Species → type mapping for Gen 1 (1-151)

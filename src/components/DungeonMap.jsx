@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { TILE, getVisibleTiles } from "../lib/dungeon";
+import { getItemIcon } from "../lib/items";
 import SpriteImg from "./SpriteImg";
 
 const TILE_COLORS = {
@@ -22,7 +23,7 @@ function TileContent({ tile, enemy, treasure, gold, isPlayer, isOtherPlayer, oth
     return <SpriteImg id={enemy.pokemonId} size={26} title={`Lv.${enemy.level}`} />;
   }
   if (treasure && !treasure.opened) {
-    return <span className="text-sm">📦</span>;
+    return <span className="text-sm" title={treasure.item}>{getItemIcon(treasure.item)}</span>;
   }
   if (gold && !gold.collected) {
     return <span className="text-sm">💰</span>;

@@ -8,14 +8,17 @@ import { isWalkable } from "../lib/dungeon";
 import {
   getSpeciesName, getMoveName, getMovesAtLevel, getAllMovesAtLevel,
   getEffectiveness, calcDamage, getStabMultiplier, getSpeciesTypes,
+  getMoveDataBySlug, buildStoredMove, canLearnTM, getDailyTMs,
 } from "../lib/moves";
 import { pickNature } from "../lib/pokedex";
+import { getItem, getItemName, getItemIcon, applyHeal, isUsableItem, getTMMoveSlug } from "../lib/items";
 import {
   getTeam, getProfile, saveProfile,
   addTeamMember, removeTeamMember, updateTeamMember,
   getFriends, getIncomingFriendRequests, getOutgoingFriendRequests,
   sendFriendRequest, respondToFriendRequest, removeFriend,
-  searchAccounts, getFriendsInDungeons, getFriendVillages, giveItemToFriend,
+  searchAccounts, getFriendsInDungeons, getFriendVillages,
+  sendGift, acceptGift, declineGift, getIncomingGifts, getOutgoingGifts,
   normalizeInventory,
 } from "../lib/auth";
 import { getLanguage, subscribe } from "../stores/language";
@@ -35,9 +38,18 @@ function mergeInventory(existing, patch) {
   return normalizeInventory({ ...(existing || {}), ...patch });
 }
 
+// Human-readable summary of a gift's contents, e.g. "2× Oran Berry + 500g".
+function formatGiftContents(items, gold, language) {
+  const counts = {};
+  for (const id of items || []) counts[id] = (counts[id] || 0) + 1;
+  const parts = Object.entries(counts).map(([id, n]) => `${n > 1 ? `${n}× ` : ""}${getItemName(id, language)}`);
+  if (gold > 0) parts.push(`${gold}g`);
+  return parts.join(" + ") || "—";
+}
+
 // Grouped item list for Kangaskhan Storage. `action(itemId, count)` renders
 // the per-row buttons (Use/Store/Send for carried, Withdraw for stored).
-function StorageItemGroup({ items, label, action }) {
+function StorageItemGroup({ items, label, action, language }) {
   const counts = {};
   for (const id of items || []) counts[id] = (counts[id] || 0) + 1;
   const entries = Object.entries(counts);
@@ -48,13 +60,15 @@ function StorageItemGroup({ items, label, action }) {
         <p className="text-[10px] text-stone-500 text-center py-2">Nothing here yet.</p>
       ) : (
         entries.map(([itemId, count]) => {
-          const shopItem = SHOP_ITEMS.find((s) => s.id === itemId);
-          if (!shopItem) return null;
+          // TMs are dynamic (tm-<move>) so they aren't in SHOP_ITEMS — resolve
+          // every id through getItem to render carried and stored TMs too.
+          const item = getItem(itemId);
+          if (!item) return null;
           return (
             <div key={itemId} className="flex items-center justify-between rounded-xl bg-stone-700/40 p-3">
               <div className="min-w-0">
-                <p className="text-sm text-stone-200 font-medium">{shopItem.name}</p>
-                <p className="text-[10px] text-stone-400 truncate">{shopItem.description}</p>
+                <p className="text-sm text-stone-200 font-medium">{getItemIcon(itemId)} {getItemName(itemId, language)}</p>
+                <p className="text-[10px] text-stone-400 truncate">{item.description}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-stone-500">×{count}</span>
@@ -145,6 +159,18 @@ export default function VillageGame({
   // Kangaskhan Storage "send item to a friend" flow state
   const [storageSendItem, setStorageSendItem] = useState(null);
   const [storageSendFriend, setStorageSendFriend] = useState(null);
+  // Which bucket the item being sent comes from: "items" (carried) or "storage".
+  const [storageSendSource, setStorageSendSource] = useState("items");
+
+  // Gifts (async item/gold transfers): escrow bell + panel state.
+  const [giftsOpen, setGiftsOpen] = useState(false);
+  const [incomingGifts, setIncomingGifts] = useState([]);
+  const [outgoingGifts, setOutgoingGifts] = useState([]);
+  const [giftBusy, setGiftBusy] = useState(false);
+  // Bank (Persian) "send gold" flow: amount, source bucket, target friend.
+  const [bankSendGold, setBankSendGold] = useState("");
+  const [bankSendSource, setBankSendSource] = useState("bank");
+  const [bankSendFriend, setBankSendFriend] = useState(null);
 
   // Chat state
   const [messages, setMessages] = useState([]);
@@ -620,6 +646,7 @@ export default function VillageGame({
     setStorageSelectedItem(null);
     setStorageSendItem(null);
     setStorageSendFriend(null);
+    setTmTeaching(null);
     setBankDeposit("");
     setBankWithdraw("");
     setShowQuizResetConfirm(false);
@@ -627,18 +654,36 @@ export default function VillageGame({
 
   // Storage
   async function handleUseStorageItem(itemId, pkm) {
-    const shopItem = SHOP_ITEMS.find((s) => s.id === itemId);
-    if (!shopItem) return;
+    const item = getItem(itemId);
+    if (!item) return;
+    // TMs teach their move instead of healing — route to the teach flow.
+    if (item.effect?.tm) {
+      await handleTeachTM(itemId, pkm);
+      return;
+    }
+    const effect = item.effect || {};
+    let used = false;
 
-    if (shopItem.effect.heal === "full") {
-      const maxHp = pkm.maxHp || pkm.max_hp || 100;
-      await updateTeamMember(pkm.id, { hp: maxHp });
-    } else if (shopItem.effect.heal) {
-      const maxHp = pkm.maxHp || pkm.max_hp || 100;
-      const newHp = Math.min(maxHp, (pkm.hp || 0) + shopItem.effect.heal);
-      await updateTeamMember(pkm.id, { hp: newHp });
-    } else if (shopItem.effect.revive) {
-      await updateTeamMember(pkm.id, { hp: Math.floor((pkm.maxHp || pkm.max_hp || 100) * shopItem.effect.healRatio) });
+    // Healing berries restore HP. Statuses only exist mid-dungeon (in-memory),
+    // so cure/Awaken berries can't be used here — the item is kept instead.
+    if (effect.heal) {
+      const newHp = applyHeal(effect, pkm);
+      if (newHp > (pkm.hp || 0)) {
+        await updateTeamMember(pkm.id, { hp: newHp });
+        used = true;
+      }
+    }
+
+    if (effect.restorePP) {
+      const moves = (pkm.moves || []).map((m) => ({ ...m, ppUsed: 0 }));
+      await updateTeamMember(pkm.id, { moves });
+      used = true;
+    }
+
+    if (!used) {
+      setError("It had no effect...");
+      setTimeout(() => setError(""), 2500);
+      return;
     }
 
     const items = profile?.inventory?.items || [];
@@ -653,22 +698,52 @@ export default function VillageGame({
     loadTeam();
   }
 
-  // Send one item from Kangaskhan Storage to a friend's inventory. Removes the
-  // item locally first, then appends it to the friend's inventory.
+  // Send one item to a friend as a pending gift (escrow) instead of putting it
+  // straight into their bag. The item comes from the carried bag or storage
+  // (storageSendSource); the friend accepts or declines to take delivery. A
+  // decline refunds it to this same bucket.
   async function handleSendItemToFriend(friendId) {
     if (!storageSendItem || !friendId) return;
-    const items = profile?.inventory?.items || [];
-    const idx = items.indexOf(storageSendItem);
+    const source = storageSendSource === "storage" ? "storage" : "items";
+    const bucket = profile?.inventory?.[source] || [];
+    const idx = bucket.indexOf(storageSendItem);
     if (idx === -1) return;
-    const newItems = [...items];
-    newItems.splice(idx, 1);
-    const res = await giveItemToFriend(friendId, storageSendItem);
+    const newBucket = [...bucket];
+    newBucket.splice(idx, 1);
+    const res = await sendGift({
+      senderId: accountId, receiverId: friendId,
+      items: [storageSendItem], sourceItems: source,
+    });
     if (res.error) { setError(res.error); setTimeout(() => setError(""), 2500); return; }
-    const inv = mergeInventory(profile?.inventory, { items: newItems });
+    const inv = mergeInventory(profile?.inventory, { [source]: newBucket });
     await saveProfile(accountId, { inventory: inv });
     setProfile((p) => p ? { ...p, inventory: inv } : p);
     setStorageSendItem(null);
     setStorageSendFriend(null);
+    loadGifts();
+  }
+
+  // Send gold to a friend as a pending gift. The gold leaves the pocket or the
+  // bank immediately (bankSendSource); if the friend declines it comes back to
+  // the same bucket.
+  async function handleSendGoldToFriend(friendId) {
+    const amount = parseInt(bankSendGold, 10);
+    if (!friendId || !amount || amount <= 0) return;
+    const source = bankSendSource === "bank" ? "bank" : "pocket";
+    const goldKey = source === "bank" ? "banked_gold" : "gold";
+    const current = profile?.inventory?.[goldKey] || 0;
+    if (amount > current) { setError("Not enough gold!"); setTimeout(() => setError(""), 2000); return; }
+    const res = await sendGift({
+      senderId: accountId, receiverId: friendId,
+      gold: amount, sourceGold: source,
+    });
+    if (res.error) { setError(res.error); setTimeout(() => setError(""), 2500); return; }
+    const inv = mergeInventory(profile?.inventory, { [goldKey]: current - amount });
+    await saveProfile(accountId, { inventory: inv });
+    setProfile((p) => p ? { ...p, inventory: inv } : p);
+    setBankSendGold("");
+    setBankSendFriend(null);
+    loadGifts();
   }
 
   // Kangaskhan Storage: move one carried item into storage (safe from wipes).
@@ -789,15 +864,23 @@ export default function VillageGame({
     if (onTeamUpdate) onTeamUpdate();
   }
 
-  // Shop
+  // Shop. Payment draws on pocket gold first and takes any shortfall from the
+  // bank (banked gold), so a player with money in Persian's bank can shop even
+  // when their pocket is empty.
   async function handleBuyItem(item) {
     if (!profile) return;
     const gold = profile.inventory?.gold || 0;
-    if (gold < item.price) { setError("Not enough gold!"); setTimeout(() => setError(""), 2000); return; }
+    const banked = profile.inventory?.banked_gold || 0;
+    if (gold + banked < item.price) { setError("Not enough gold!"); setTimeout(() => setError(""), 2000); return; }
 
-    const newGold = gold - item.price;
+    let newGold = gold - item.price;
+    let newBanked = banked;
+    if (newGold < 0) {
+      newBanked += newGold;
+      newGold = 0;
+    }
     const items = [...(profile.inventory?.items || []), item.id];
-    const inv = mergeInventory(profile.inventory, { gold: newGold, items });
+    const inv = mergeInventory(profile.inventory, { gold: newGold, banked_gold: newBanked, items });
 
     await saveProfile(accountId, {
       inventory: inv,
@@ -939,6 +1022,43 @@ export default function VillageGame({
     await loadFriends();
   }
 
+  // ─── Gifts (async item/gold transfers) ───
+  // Loads pending gifts sent to me plus the history of gifts I sent, so the
+  // bell count and the gifts panel stay accurate. The bell count also polls so
+  // gifts from friends appear while the village is open.
+  async function loadGifts() {
+    if (!accountId) return;
+    const [inc, out] = await Promise.all([
+      getIncomingGifts(accountId),
+      getOutgoingGifts(accountId),
+    ]);
+    setIncomingGifts(inc);
+    setOutgoingGifts(out);
+  }
+
+  useEffect(() => {
+    loadGifts();
+    const id = setInterval(() => {
+      getIncomingGifts(accountId).then(setIncomingGifts);
+    }, 15000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
+
+  // Accept delivers the gift (items → Kangaskhan Storage, gold → bank); decline
+  // refunds the sender. acceptGift/declineGift claim the row atomically, so a
+  // double-tap can't double-deliver or double-refund.
+  async function handleGiftResponse(giftId, accept) {
+    if (giftBusy) return;
+    setGiftBusy(true);
+    const res = accept ? await acceptGift(giftId) : await declineGift(giftId);
+    if (res.error) { setError(res.error); setTimeout(() => setError(""), 2500); }
+    setGiftBusy(false);
+    await loadGifts();
+    // Accepting changes my own storage/bank, so refresh the profile display.
+    if (accept) loadTeam();
+  }
+
   // Move changer (Poliwhirl tutor) — shows every move the Pokémon can learn by
   // its current level and lets the player assign one. Persisted to player_team
   // so the taught moves survive across devices/sessions.
@@ -978,6 +1098,78 @@ export default function VillageGame({
     setSelectedMove(null);
     setActiveNPC(null);
     loadTeam();
+  }
+
+  // ─── Daily TMs ───
+  // Every day the Mart rotates in the same 5 TMs for all players (date-seeded
+  // like PokéWordle's daily Pokémon). They're sold in the shop's "Today's TMs"
+  // section, buyable any number of times while supplies — er, prices — hold.
+  const [dailyTMs, setDailyTMs] = useState([]);
+
+  useEffect(() => {
+    getDailyTMs().then(setDailyTMs);
+  }, []);
+
+  // ─── TM teaching (village) ───
+  // Using a TM from Kangaskhan Storage teaches its move to the chosen Pokémon
+  // if the species is TM-compatible (pokedex moves.tm). With fewer than 4 moves
+  // it appends directly; at 4 moves the player picks which one to forget.
+  const [tmTeaching, setTmTeaching] = useState(null); // { itemId, pkm, storedMove, slug }
+
+  async function handleTeachTM(itemId, pkm) {
+    const slug = getTMMoveSlug(itemId);
+    if (!slug) return;
+    const pokemonId = pkm.pokemonId || pkm.pokemon_id;
+    if (!canLearnTM(pokemonId, slug)) {
+      setError(`${getSpeciesName(pokemonId)} ${t("can't learn this TM.", language)}`);
+      setTimeout(() => setError(""), 2500);
+      return;
+    }
+    if ((pkm.moves || []).some((m) => (m.name || m) === slug)) {
+      setError(t("It already knows that move.", language));
+      setTimeout(() => setError(""), 2500);
+      return;
+    }
+    const moveData = await getMoveDataBySlug(slug);
+    if (!moveData) {
+      setError("Invalid TM.");
+      setTimeout(() => setError(""), 2500);
+      return;
+    }
+    const storedMove = buildStoredMove(moveData);
+    if ((pkm.moves || []).length < 4) {
+      await updateTeamMember(pkm.id, { moves: [...(pkm.moves || []), storedMove] });
+      await consumeItem(itemId);
+      setStorageSelectedItem(null);
+      loadTeam();
+    } else {
+      setTmTeaching({ itemId, pkm, storedMove, slug });
+    }
+  }
+
+  // The player picked which current move to forget for the TM move.
+  async function handleTMDropReplace(slot) {
+    if (!tmTeaching) return;
+    const { itemId, pkm, storedMove } = tmTeaching;
+    const currentMoves = pkm.moves || [];
+    const newMoves = currentMoves.map((m, i) => (i === slot ? storedMove : m));
+    await updateTeamMember(pkm.id, { moves: newMoves });
+    await consumeItem(itemId);
+    setTmTeaching(null);
+    setStorageSelectedItem(null);
+    loadTeam();
+  }
+
+  // Remove a single consumed item from the carried inventory and persist it.
+  async function consumeItem(itemId) {
+    const items = profile?.inventory?.items || [];
+    const idx = items.indexOf(itemId);
+    if (idx === -1) return;
+    const newItems = [...items];
+    newItems.splice(idx, 1);
+    const inv = mergeInventory(profile?.inventory, { items: newItems });
+    await saveProfile(accountId, { inventory: inv });
+    setProfile((p) => p ? { ...p, inventory: inv } : p);
   }
 
   // Name rater
@@ -1439,7 +1631,7 @@ export default function VillageGame({
               </div>
               <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
             </div>
-            <p className="text-xs text-stone-400">💰 {profile?.inventory?.gold || 0} gold</p>
+            <p className="text-xs text-stone-400">💰 {profile?.inventory?.gold || 0} gold · 🏦 {profile?.inventory?.banked_gold || 0} banked</p>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {SHOP_ITEMS.map((item) => (
                 <div
@@ -1452,7 +1644,7 @@ export default function VillageGame({
                   </div>
                   <button
                     onClick={() => handleBuyItem(item)}
-                    disabled={(profile?.inventory?.gold || 0) < item.price}
+                    disabled={((profile?.inventory?.gold || 0) + (profile?.inventory?.banked_gold || 0)) < item.price}
                     className="rounded-lg bg-green-800 px-3 py-1.5 text-xs text-green-200 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {item.price}g
@@ -1460,6 +1652,38 @@ export default function VillageGame({
                 </div>
               ))}
             </div>
+
+            {/* Today's TMs — the same 5 TMs rotate daily for every player. */}
+            {dailyTMs.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase tracking-wide text-stone-500">
+                  📼 {t("Today's TMs", language)}
+                </p>
+                {dailyTMs.map((slug) => {
+                  const tmItem = getItem(`tm-${slug}`);
+                  if (!tmItem) return null;
+                  const tmId = tmItem.id;
+                  return (
+                    <div
+                      key={tmId}
+                      className="flex items-center justify-between rounded-xl bg-stone-700/40 p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm text-stone-200 font-medium truncate">{getItemName(tmId, language)}</p>
+                        <p className="text-[10px] text-stone-400">{t("Teaches a move to a compatible Pokémon", language)}</p>
+                      </div>
+                      <button
+                        onClick={() => handleBuyItem(tmItem)}
+                        disabled={((profile?.inventory?.gold || 0) + (profile?.inventory?.banked_gold || 0)) < tmItem.price}
+                        className="rounded-lg bg-green-800 px-3 py-1.5 text-xs text-green-200 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                      >
+                        {tmItem.price}g
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {team.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-stone-500">Use an item on your Pokémon:</p>
@@ -1469,20 +1693,32 @@ export default function VillageGame({
                     onClick={async () => {
                       const items = profile?.inventory?.items || [];
                       if (items.length === 0) { setError("No items!"); setTimeout(() => setError(""), 1500); return; }
-                      const itemId = items[0];
+                      // Quick-use applies the first usable healing item
+                      // (berry/elixir). TMs are excluded — they need the
+                      // teach flow from Kangaskhan Storage, not a one-click use.
+                      const itemId = items.find((id) => {
+                        const it = getItem(id);
+                        return it && isUsableItem(id) && !it.effect?.tm;
+                      });
+                      if (!itemId) { setError("No usable items!"); setTimeout(() => setError(""), 1500); return; }
                       const shopItem = SHOP_ITEMS.find((s) => s.id === itemId);
                       if (!shopItem) return;
-                      if (shopItem.effect.heal === "full") {
-                        const maxHp = pkm.maxHp || pkm.max_hp || 100;
-                        await updateTeamMember(pkm.id, { hp: maxHp });
-                      } else if (shopItem.effect.heal) {
-                        const maxHp = pkm.maxHp || pkm.max_hp || 100;
-                        const newHp = Math.min(maxHp, (pkm.hp || 0) + shopItem.effect.heal);
-                        await updateTeamMember(pkm.id, { hp: newHp });
-                      } else if (shopItem.effect.revive) {
-                        await updateTeamMember(pkm.id, { hp: Math.floor((pkm.maxHp || pkm.max_hp || 100) * shopItem.effect.healRatio) });
+                      const effect = shopItem.effect || {};
+                      let used = false;
+                      if (effect.heal) {
+                        const newHp = applyHeal(effect, pkm);
+                        if (newHp > (pkm.hp || 0)) {
+                          await updateTeamMember(pkm.id, { hp: newHp });
+                          used = true;
+                        }
                       }
-                      const newItems = items.slice(1);
+                      if (effect.restorePP) {
+                        const moves = (pkm.moves || []).map((m) => ({ ...m, ppUsed: 0 }));
+                        await updateTeamMember(pkm.id, { moves });
+                        used = true;
+                      }
+                      if (!used) { setError("It had no effect..."); setTimeout(() => setError(""), 1500); return; }
+                      const newItems = items.filter((id) => id !== itemId);
                       const inv = mergeInventory(profile?.inventory, { items: newItems });
                       await saveProfile(accountId, { inventory: inv });
                       setProfile((p) => p ? { ...p, inventory: inv } : p);
@@ -1573,6 +1809,60 @@ export default function VillageGame({
                   All
                 </button>
               </div>
+            </div>
+            {/* Send gold to a friend as a pending gift (escrow) */}
+            <div className="border-t border-stone-700 pt-3 space-y-2">
+              <p className="text-xs text-stone-400">{t("gift-send-gold", language)}</p>
+              <p className="text-[10px] text-stone-500">{t("gift-send-hint", language)}</p>
+              <div className="flex gap-1.5">
+                {["bank", "pocket"].map((src) => (
+                  <button
+                    key={src}
+                    onClick={() => setBankSendSource(src)}
+                    className={`flex-1 rounded-lg px-2 py-1 text-[10px] uppercase tracking-wide transition-colors ${
+                      bankSendSource === src
+                        ? "bg-stone-500 text-stone-100"
+                        : "bg-stone-700 text-stone-400 hover:bg-stone-600"
+                    }`}
+                  >
+                    {src === "bank" ? `Bank (${profile?.inventory?.banked_gold || 0})` : `Pocket (${profile?.inventory?.gold || 0})`}
+                  </button>
+                ))}
+              </div>
+              {bankSendFriend ? (
+                <div className="flex gap-1.5">
+                  <input
+                    type="number"
+                    min={1}
+                    value={bankSendGold}
+                    onChange={(e) => setBankSendGold(e.target.value)}
+                    placeholder="Amount"
+                    className="flex-1 min-w-0 rounded-lg bg-stone-700/60 border border-stone-600 px-3 py-2 text-xs text-stone-100 placeholder:text-stone-500"
+                  />
+                  <button
+                    onClick={() => handleSendGoldToFriend(bankSendFriend)}
+                    disabled={!bankSendGold || parseInt(bankSendGold) <= 0}
+                    className="rounded-lg bg-emerald-800 px-3 py-2 text-xs text-emerald-200 hover:bg-emerald-700 disabled:opacity-40 transition-colors"
+                  >
+                    Send to {bankSendFriend.display_name || bankSendFriend.username}
+                  </button>
+                  <button onClick={() => setBankSendFriend(null)} className="text-stone-500 hover:text-stone-300 text-sm">&times;</button>
+                </div>
+              ) : friends.length === 0 ? (
+                <p className="text-[10px] text-stone-500 text-center py-1">{t("gift-no-friends", language)}</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-1 max-h-24 overflow-y-auto">
+                  {friends.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => setBankSendFriend(f)}
+                      className="rounded-lg bg-stone-700/40 px-2 py-1 text-[10px] text-stone-300 hover:bg-stone-600/40 text-left"
+                    >
+                      {f.display_name || f.username}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <p className="text-[10px] text-stone-500 text-center">Gold in the bank is safe if you die in a dungeon.</p>
           </div>
@@ -1916,6 +2206,73 @@ export default function VillageGame({
         </div>
       )}
 
+      {/* ─── Gifts toggle button ─── */}
+      <button
+        onClick={() => { setGiftsOpen((o) => !o); if (!giftsOpen) loadGifts(); }}
+        className="fixed bottom-4 right-44 z-50 rounded-full bg-emerald-700 px-4 py-2 text-xs text-emerald-200 shadow-lg hover:bg-emerald-600 transition-colors"
+      >
+        🎁 {incomingGifts.length > 0 ? `${t("gifts", language)} (${incomingGifts.length})` : t("gifts", language)}
+      </button>
+
+      {/* ─── Gifts panel (incoming accept/decline, outgoing status) ─── */}
+      {giftsOpen && (
+        <div className="fixed bottom-16 right-44 z-50 w-80 rounded-xl border border-emerald-800 bg-stone-800/95 backdrop-blur shadow-xl flex flex-col">
+          <div className="flex items-center justify-between border-b border-emerald-900 px-3 py-2">
+            <span className="text-xs font-semibold text-emerald-300">{t("gifts", language)}</span>
+            <button onClick={() => setGiftsOpen(false)} className="text-stone-500 hover:text-stone-300 text-sm">&times;</button>
+          </div>
+          <div className="flex-1 overflow-y-auto max-h-64 px-3 py-2 space-y-1.5">
+            {incomingGifts.length === 0 && outgoingGifts.length === 0 ? (
+              <p className="text-[10px] text-stone-500 text-center py-4">{t("gift-empty", language)}</p>
+            ) : (
+              <>
+                {incomingGifts.map((g) => (
+                  <div key={g.id} className="rounded-lg bg-stone-700/40 px-3 py-2 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-stone-200 font-medium truncate flex-1">
+                        {g.sender?.display_name || g.sender?.username || "?"}
+                      </span>
+                      <span className="text-[9px] text-stone-500">{t("gift-sent-you", language)}</span>
+                    </div>
+                    <p className="text-[10px] text-stone-400">{formatGiftContents(g.items, g.gold, language)}</p>
+                    {g.note && <p className="text-[10px] text-stone-500 italic">"{g.note}"</p>}
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => handleGiftResponse(g.id, true)}
+                        disabled={giftBusy}
+                        className="flex-1 rounded-lg bg-green-800 px-2 py-1 text-[10px] text-green-200 hover:bg-green-700 disabled:opacity-40"
+                      >
+                        {t("Accept", language)}
+                      </button>
+                      <button
+                        onClick={() => handleGiftResponse(g.id, false)}
+                        disabled={giftBusy}
+                        className="flex-1 rounded-lg bg-stone-700 px-2 py-1 text-[10px] text-stone-400 hover:bg-stone-600 disabled:opacity-40"
+                      >
+                        {t("Decline", language)}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {outgoingGifts.map((g) => (
+                  <div key={g.id} className="flex items-center gap-2 rounded-lg bg-stone-700/40 px-3 py-2">
+                    <span className="text-xs text-stone-400 truncate flex-1">
+                      {g.receiver?.display_name || g.receiver?.username || "?"} — {formatGiftContents(g.items, g.gold, language)}
+                    </span>
+                    <span className={`text-[9px] ${
+                      g.status === "accepted" ? "text-green-400"
+                        : g.status === "declined" ? "text-red-400" : "text-yellow-400"
+                    }`}>
+                      {g.status === "accepted" ? t("Accepted", language) : g.status === "declined" ? t("Declined", language) : t("Pending", language)}
+                    </span>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ─── Chat panel ─── */}
       {chatOpen && (
         <div className="fixed bottom-16 right-4 z-50 w-72 rounded-xl border border-stone-700 bg-stone-800/95 backdrop-blur shadow-xl flex flex-col">
@@ -1981,6 +2338,7 @@ export default function VillageGame({
                   <StorageItemGroup
                     items={profile?.inventory?.items}
                     label={`Carried (${(profile?.inventory?.items || []).length})`}
+                    language={language}
                     action={(itemId) => (
                       <>
                         <button
@@ -1996,7 +2354,7 @@ export default function VillageGame({
                           Store
                         </button>
                         <button
-                          onClick={() => { setStorageSendItem(itemId); setStorageSendFriend(null); }}
+                          onClick={() => { setStorageSendItem(itemId); setStorageSendSource("items"); setStorageSendFriend(null); }}
                           className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
                         >
                           Send
@@ -2007,27 +2365,67 @@ export default function VillageGame({
                   <StorageItemGroup
                     items={profile?.inventory?.storage}
                     label={`Stored (${(profile?.inventory?.storage || []).length})`}
+                    language={language}
                     action={(itemId) => (
-                      <button
-                        onClick={() => handleWithdrawItem(itemId)}
-                        className="rounded-lg bg-slate-600 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-slate-500 transition-colors"
-                      >
-                        Withdraw
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleWithdrawItem(itemId)}
+                          className="rounded-lg bg-slate-600 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-slate-500 transition-colors"
+                        >
+                          Withdraw
+                        </button>
+                        <button
+                          onClick={() => { setStorageSendItem(itemId); setStorageSendSource("storage"); setStorageSendFriend(null); }}
+                          className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
+                        >
+                          Send
+                        </button>
+                      </>
                     )}
                   />
                 </div>
               </>
+            ) : tmTeaching ? (
+              // TM with a full moveset: pick which current move to forget.
+              <div className="space-y-2">
+                <p className="text-xs text-stone-400">
+                  {getItemName(tmTeaching.itemId, language)} — {t("pick a move to forget:", language)}
+                </p>
+                <p className="text-xs text-stone-300">
+                  {tmTeaching.pkm.nickname || getSpeciesName(tmTeaching.pkm.pokemonId || tmTeaching.pkm.pokemon_id)}:
+                </p>
+                {(tmTeaching.pkm.moves || []).map((move, si) => (
+                  <button
+                    key={si}
+                    onClick={() => handleTMDropReplace(si)}
+                    className="w-full rounded-lg bg-stone-700/40 px-3 py-2 text-xs text-stone-300 hover:bg-stone-600/40 text-left flex items-center gap-2"
+                  >
+                    <span>{getMoveName(move, language)}</span>
+                    <span className="ml-auto text-[10px] text-green-400">
+                      → {getMoveName({ name: tmTeaching.slug }, language)}
+                    </span>
+                  </button>
+                ))}
+                <button
+                  onClick={() => setTmTeaching(null)}
+                  className="w-full rounded-lg bg-stone-700 px-3 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
+                >
+                  Back
+                </button>
+              </div>
             ) : storageSendItem ? (
               <div className="space-y-2">
-                <p className="text-xs text-stone-400">Send this item to a friend:</p>
+                <p className="text-xs text-stone-400">{t("gift-send-this", language)}</p>
                 <p className="text-sm text-stone-200 font-medium">
-                  {SHOP_ITEMS.find((s) => s.id === storageSendItem)?.name || storageSendItem}
+                  {getItemName(storageSendItem, language)}
+                </p>
+                <p className="text-[10px] text-stone-500">
+                  {storageSendSource === "storage"
+                    ? "From Kangaskhan Storage — returns here if declined."
+                    : "From your carried items — returns to your bag if declined."}
                 </p>
                 {friends.length === 0 ? (
-                  <p className="text-xs text-stone-500 text-center py-4">
-                    You have no friends yet. Add friends from the Friends button first!
-                  </p>
+                  <p className="text-xs text-stone-500 text-center py-4">{t("gift-no-friends", language)}</p>
                 ) : (
                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
                     {friends.map((f) => (

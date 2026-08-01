@@ -143,6 +143,34 @@ const ui = {
     en: "Total", es: "Total", fr: "Total", de: "Gesamt", it: "Totale",
     ja: "合計", ko: "합계", "zh-hans": "总计", "zh-hant": "總計",
   },
+  "Today's TMs": {
+    en: "Today's TMs", es: "MT de Hoy", fr: "CT du Jour", de: "Tages-VMs", it: "MT di Oggi",
+    ja: "今日のわざマシン", ko: "오늘의 기술머신", "zh-hans": "今日招式学习器", "zh-hant": "今日招式學習器",
+  },
+  "Teaches a move to a compatible Pokémon": {
+    en: "Teaches a move to a compatible Pokémon", es: "Enseña un movimiento a un Pokémon compatible", fr: "Enseigne une capacité à un Pokémon compatible", de: "Lehrt einem kompatiblen Pokémon eine Attacke", it: "Insegna una mossa a un Pokémon compatibile",
+    ja: "対応するポケモンに技を教えます", ko: "호환되는 포켓몬에게 기술을 가르칩니다", "zh-hans": "教相容的宝可梦学会招式", "zh-hant": "教相容的寶可夢學會招式",
+  },
+  "can't learn this TM.": {
+    en: "can't learn this TM.", es: "no puede aprender esta MT.", fr: "ne peut pas apprendre cette CT.", de: "kann diese VM nicht lernen.", it: "non può imparare questa MT.",
+    ja: "このわざマシンは使えません。", ko: "이 기술머신을 배울 수 없습니다.", "zh-hans": "无法学会这个招式学习器。", "zh-hant": "無法學會這個招式學習器。",
+  },
+  "It already knows that move.": {
+    en: "It already knows that move.", es: "Ya conoce ese movimiento.", fr: "Il connaît déjà cette capacité.", de: "Es kann diese Attacke bereits.", it: "Conosce già quella mossa.",
+    ja: "その技はすでに覚えています。", ko: "이미 그 기술을 알고 있습니다.", "zh-hans": "它已经会那个招式了。", "zh-hant": "它已經會那個招式了。",
+  },
+  "learned": {
+    en: "learned", es: "aprendió", fr: "a appris", de: "hat gelernt", it: "ha imparato",
+    ja: "を覚えた", ko: "을(를) 배웠다", "zh-hans": "学会了", "zh-hant": "學會了",
+  },
+  "pick a move to forget:": {
+    en: "pick a move to forget:", es: "elige un movimiento para olvidar:", fr: "choisis une capacité à oublier :", de: "wähle eine zu vergessende Attacke:", it: "scegli una mossa da dimenticare:",
+    ja: "忘れさせたい技を選んでください:", ko: "잊어버릴 기술을 선택하세요:", "zh-hans": "选择要忘掉的招式:", "zh-hant": "選擇要忘掉的招式:",
+  },
+  "can be learned by replacing a move!": {
+    en: "can be learned by replacing a move!", es: "puede aprenderse reemplazando un movimiento!", fr: "peut être apprise en remplaçant une capacité !", de: "kann durch Ersetzen einer Attacke gelernt werden!", it: "può essere imparata sostituendo una mossa!",
+    ja: "技を入れ替えることで覚えられます！", ko: "기술을 바꾸면 배울 수 있습니다!", "zh-hans": "可以替换招式来学会它！", "zh-hant": "可以替換招式來學會它！",
+  },
   "Type Effectiveness": {
     en: "Type Effectiveness", es: "Efectividad de Tipos", fr: "Efficacité des Types", de: "Typeneffektivität", it: "Efficacia dei Tipi",
     ja: "タイプ相性", ko: "타입 상성", "zh-hans": "属性相性", "zh-hant": "屬性相性",
@@ -1314,6 +1342,154 @@ const ui = {
     ko: "친구와 함께하는 멀티플레이어 던전 탐험",
     "zh-hans": "与朋友一起多人地牢探索",
     "zh-hant": "與朋友一起多人地牢探索",
+  },
+  "Items": {
+    en: "Items", es: "Artículos", fr: "Objets", de: "Gegenstände", it: "Oggetti",
+    ja: "アイテム", ko: "아이템", "zh-hans": "道具", "zh-hant": "道具",
+  },
+  "Use": {
+    en: "Use", es: "Usar", fr: "Utiliser", de: "Benutzen", it: "Usa",
+    ja: "使う", ko: "사용", "zh-hans": "使用", "zh-hant": "使用",
+  },
+  "No items collected": {
+    en: "No items collected", es: "No hay objetos", fr: "Aucun objet", de: "Keine Gegenstände", it: "Nessun oggetto",
+    ja: "アイテムなし", ko: "아이템 없음", "zh-hans": "没有道具", "zh-hant": "沒有道具",
+  },
+  "Items collected": {
+    en: "Items collected", es: "Objetos recogidos", fr: "Objets ramassés", de: "Gesammelte Gegenstände", it: "Oggetti raccolti",
+    ja: "集めたアイテム", ko: "수집한 아이템", "zh-hans": "收集的道具", "zh-hant": "收集的道具",
+  },
+  "healed": {
+    en: "healed", es: "recuperó", fr: "soigné", de: "geheilt", it: "recuperato",
+    ja: "回復した", ko: "회복됨", "zh-hans": "恢复了", "zh-hant": "恢復了",
+  },
+  "was cured of": {
+    en: "was cured of", es: "se curó de", fr: "guéri de", de: "geheilt von", it: "guarito da",
+    ja: "が治った", ko: "을 치료함", "zh-hans": "治愈了", "zh-hant": "治癒了",
+  },
+  "It had no effect...": {
+    en: "It had no effect...", es: "No tuvo efecto...", fr: "Aucun effet...", de: "Keine Wirkung...", it: "Nessun effetto...",
+    ja: "効果がなかった...", ko: "효과가 없었다...", "zh-hans": "没有效果...", "zh-hant": "沒有效果...",
+  },
+  "is now Awaken (sleep-proof until the stairs)!": {
+    en: "is now Awaken (sleep-proof until the stairs)!", es: "ahora está Despierto (inmune al sueño hasta las escaleras)!",
+    fr: "est maintenant Éveillé (immunisé au sommeil jusqu'aux escaliers) !", de: "ist jetzt Wach (schlafimmun bis zur Treppe)!",
+    it: "ora è Sveglio (immune al sonno fino alle scale)!", ja: "目覚めた状態になった（階段まで眠り免疫）！",
+    ko: "지금은 깨어있음 상태(계단까지 수면 면역)입니다!", "zh-hans": "现在处于清醒状态（到楼梯前免疫睡眠）！", "zh-hant": "現在處於清醒狀態（到樓梯前免疫睡眠）！",
+  },
+  "PP fully restored!": {
+    en: "PP fully restored!", es: "¡PP totalmente restaurado!", fr: "PP entièrement restaurés !", de: "AP vollständig wiederhergestellt!",
+    it: "PP completamente ripristinati!", ja: "PPが全回復した！", ko: "PP가 완전 회복됨!", "zh-hans": "PP完全恢复！", "zh-hant": "PP完全恢復！",
+  },
+  "is hurt by": {
+    en: "is hurt by", es: "recibe daño de", fr: "est blessé par", de: "wird verletzt durch", it: "subisce danni da",
+    ja: "によるダメージを受けた", ko: "로 피해를 입음", "zh-hans": "受到了...的伤害", "zh-hant": "受到了...的傷害",
+  },
+  "woke up!": {
+    en: "woke up!", es: "se despertó!", fr: "s'est réveillé !", de: "ist aufgewacht!", it: "si è svegliato!",
+    ja: "目を覚ました！", ko: "깨어났다!", "zh-hans": "醒来了！", "zh-hant": "醒來了！",
+  },
+  "is fast asleep...": {
+    en: "is fast asleep...", es: "está profundamente dormido...", fr: "dort profondément...", de: "schläft tief...",
+    it: "dorme profondamente...", ja: "ぐっすり眠っている...", ko: "깊이 잠들어 있다...", "zh-hans": "在熟睡...", "zh-hant": "在熟睡...",
+  },
+  "is paralyzed! It can't move!": {
+    en: "is paralyzed! It can't move!", es: "está paralizado! No puede moverse!", fr: "est paralysé ! Il ne peut pas bouger !",
+    de: "ist paralysiert! Es kann sich nicht bewegen!", it: "è paralizzato! Non può muoversi!",
+    ja: "まひしていて動けない！", ko: "마비되어 움직일 수 없다!", "zh-hans": "麻痹了，无法行动！", "zh-hant": "麻痺了，無法行動！",
+  },
+  "is protected by Awaken!": {
+    en: "is protected by Awaken!", es: "está protegido por Despierto!", fr: "est protégé par Éveil !", de: "ist durch Wach geschützt!",
+    it: "è protetto da Sveglio!", ja: "目覚め状態に守られている！", ko: "깨어있음의 보호를 받고 있다!",
+    "zh-hans": "受到清醒状态保护！", "zh-hant": "受到清醒狀態保護！",
+  },
+  "was poisoned": {
+    en: "was poisoned", es: "fue envenenado", fr: "a été empoisonné", de: "wurde vergiftet", it: "è stato avvelenato",
+    ja: "どく状態になった", ko: "독 상태가 되었다", "zh-hans": "中毒了", "zh-hant": "中毒了",
+  },
+  "was burned": {
+    en: "was burned", es: "fue quemado", fr: "a été brûlé", de: "wurde verbrannt", it: "è stato ustionato",
+    ja: "やけど状態になった", ko: "화상 상태가 되었다", "zh-hans": "灼伤了", "zh-hant": "灼傷了",
+  },
+  "was paralyzed": {
+    en: "was paralyzed", es: "fue paralizado", fr: "a été paralysé", de: "wurde paralysiert", it: "è stato paralizzato",
+    ja: "まひ状態になった", ko: "마비 상태가 되었다", "zh-hans": "麻痹了", "zh-hant": "麻痺了",
+  },
+  "fell asleep": {
+    en: "fell asleep", es: "se durmió", fr: "s'est endormi", de: "ist eingeschlafen", it: "si è addormentato",
+    ja: "眠り状態になった", ko: "잠든 상태가 되었다", "zh-hans": "睡着了", "zh-hant": "睡著了",
+  },
+  "has no PP left!": {
+    en: "has no PP left!", es: "no le queda PP!", fr: "n'a plus de PP !", de: "hat keine AP mehr!", it: "non ha più PP!",
+    ja: "PPが残っていない！", ko: "PP가 남아 있지 않다!", "zh-hans": "没有PP了！", "zh-hant": "沒有PP了！",
+  },
+  "Poisoned": {
+    en: "Poisoned", es: "Envenenado", fr: "Empoisonné", de: "Vergiftet", it: "Avvelenato",
+    ja: "どく", ko: "독", "zh-hans": "中毒", "zh-hant": "中毒",
+  },
+  "Burned": {
+    en: "Burned", es: "Quemado", fr: "Brûlé", de: "Verbrannt", it: "Ustionato",
+    ja: "やけど", ko: "화상", "zh-hans": "灼伤", "zh-hant": "灼傷",
+  },
+  "Paralyzed": {
+    en: "Paralyzed", es: "Paralizado", fr: "Paralysé", de: "Paralysiert", it: "Paralizzato",
+    ja: "まひ", ko: "마비", "zh-hans": "麻痹", "zh-hant": "麻痺",
+  },
+  "Asleep": {
+    en: "Asleep", es: "Dormido", fr: "Endormi", de: "Schlafend", it: "Addormentato",
+    ja: "ねむり", ko: "잠듦", "zh-hans": "睡眠", "zh-hant": "睡眠",
+  },
+  "Awaken": {
+    en: "Awaken", es: "Despierto", fr: "Éveil", de: "Wach", it: "Sveglio",
+    ja: "目覚め", ko: "깨어있음", "zh-hans": "清醒", "zh-hant": "清醒",
+  },
+  "fainted": {
+    en: "fainted", es: "se desmayó", fr: "a fait l'évanouissement", de: "ist ohnmächtig geworden", it: "è svenuto",
+    ja: "ひんし", ko: "기절함", "zh-hans": "倒下了", "zh-hant": "倒下了",
+  },
+  "gifts": {
+    en: "Gifts", es: "Regalos", fr: "Cadeaux", de: "Geschenke", it: "Regali",
+    ja: "プレゼント", ko: "선물", "zh-hans": "礼物", "zh-hant": "禮物",
+  },
+  "gift-sent-you": {
+    en: "sent you a gift", es: "te envió un regalo", fr: "t'a envoyé un cadeau", de: "hat dir ein Geschenk geschickt", it: "ti ha inviato un regalo",
+    ja: "プレゼントを送ってきた", ko: "선물을 보냈습니다", "zh-hans": "送了你一份礼物", "zh-hant": "送了你一份禮物",
+  },
+  "gift-empty": {
+    en: "No gifts yet. Send items or gold to friends to get started!", es: "Aún no hay regalos. ¡Envía objetos u oro a tus amigos para empezar!", fr: "Pas encore de cadeaux. Envoyez des objets ou de l'or à des amis pour commencer !", de: "Noch keine Geschenke. Schicke Freunden Gegenstände oder Gold, um zu starten!", it: "Nessun regalo ancora. Invia oggetti o oro agli amici per iniziare!",
+    ja: "まだプレゼントはありません。友達にアイテムやゴールドを送ってみよう！", ko: "아직 선물이 없습니다. 친구에게 아이템이나 골드를 보내보세요!", "zh-hans": "还没有礼物。给朋友发送物品或金币开始吧！", "zh-hant": "還沒有禮物。給朋友發送物品或金幣開始吧！",
+  },
+  "gift-send-this": {
+    en: "Send this to a friend:", es: "Enviar esto a un amigo:", fr: "Envoyer ceci à un ami :", de: "An einen Freund senden:", it: "Invia questo a un amico:",
+    ja: "友達に送る：", ko: "친구에게 보내기:", "zh-hans": "发送给朋友：", "zh-hant": "發送給朋友：",
+  },
+  "gift-send-gold": {
+    en: "Send gold to a friend", es: "Enviar oro a un amigo", fr: "Envoyer de l'or à un ami", de: "Gold an einen Freund senden", it: "Invia oro a un amico",
+    ja: "友達にゴールドを送る", ko: "친구에게 골드 보내기", "zh-hans": "给朋友发送金币", "zh-hant": "給朋友發送金幣",
+  },
+  "gift-send-hint": {
+    en: "Gold is held until your friend accepts or declines.", es: "El oro se guarda hasta que tu amigo acepte o rechace.", fr: "L'or est conservé jusqu'à ce que votre ami accepte ou refuse.", de: "Gold wird zurückgehalten, bis dein Freund annimmt oder ablehnt.", it: "L'oro viene trattenuto finché il tuo amico non accetta o rifiuta.",
+    ja: "友達が受け取るか断るまでゴールドは保留されます。", ko: "친구가 수락하거나 거절할 때까지 골드가 보류됩니다.", "zh-hans": "金币将保留到你的朋友接受或拒绝。", "zh-hant": "金幣將保留到你的朋友接受或拒絕。",
+  },
+  "gift-no-friends": {
+    en: "You have no friends yet. Add friends from the Friends button first!", es: "Aún no tienes amigos. ¡Añade amigos desde el botón Amigos primero!", fr: "Vous n'avez pas encore d'amis. Ajoutez d'abord des amis via le bouton Amis !", de: "Du hast noch keine Freunde. Füge zuerst Freunde über den Freunde-Button hinzu!", it: "Non hai ancora amici. Aggiungi amici dal pulsante Amici prima!",
+    ja: "まだ友達がいません。まず友達ボタンから友達を追加しよう！", ko: "아직 친구가 없습니다. 친구 버튼에서 먼저 친구를 추가하세요!", "zh-hans": "还没有朋友。先从好友按钮添加好友吧！", "zh-hant": "還沒有朋友。先從好友按鈕新增好友吧！",
+  },
+  "Accept": {
+    en: "Accept", es: "Aceptar", fr: "Accepter", de: "Annehmen", it: "Accetta",
+    ja: "受け取る", ko: "수락", "zh-hans": "接受", "zh-hant": "接受",
+  },
+  "Pending": {
+    en: "Pending", es: "Pendiente", fr: "En attente", de: "Ausstehend", it: "In attesa",
+    ja: "保留中", ko: "대기 중", "zh-hans": "待处理", "zh-hant": "待處理",
+  },
+  "Accepted": {
+    en: "Accepted", es: "Aceptado", fr: "Accepté", de: "Angenommen", it: "Accettato",
+    ja: "受け取り済み", ko: "수락됨", "zh-hans": "已接受", "zh-hant": "已接受",
+  },
+  "Declined": {
+    en: "Declined", es: "Rechazado", fr: "Refusé", de: "Abgelehnt", it: "Rifiutato",
+    ja: "拒否済み", ko: "거절됨", "zh-hans": "已拒绝", "zh-hant": "已拒絕",
   },
 };
 

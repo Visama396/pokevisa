@@ -3,6 +3,8 @@
 // Generates grid-based dungeons with rooms and corridors
 // =====================================================
 
+import { ensureMovesData } from "./moves.js";
+
 // Tile types
 export const TILE = {
   FLOOR: 0,
@@ -34,9 +36,49 @@ function shuffleWithRNG(arr, rng) {
   return a;
 }
 
-// Generate a dungeon using BSP
-export function generateDungeon(width = 20, height = 15, seed = Date.now(), floor = 1) {
+// Weighted dungeon treasure pool. Berries are the everyday drops, elixir shows
+// up occasionally, evolution items are rare collectibles, and "TM" rolls a
+// random move TM (added dynamically once moves.json is loaded).
+const DUNGEON_ITEM_POOL = [
+  "oran-berry", "oran-berry", "oran-berry",
+  "pecha-berry", "pecha-berry",
+  "cheri-berry", "cheri-berry",
+  "rawst-berry",
+  "sitrus-berry",
+  "chesto-berry",
+  "elixir", "elixir",
+  "water-stone", "fire-stone", "thunder-stone", "leaf-stone",
+  "moon-stone", "sun-stone", "dawn-stone", "dusk-stone", "shiny-stone", "ice-stone",
+  "metal-coat", "peat-block",
+  "TM",
+];
+
+// All move slugs from moves.json (TM source). Cached at module level so the
+// async load happens once; generateDungeon is async to await it.
+let _tmSlugs = null;
+async function getTMSlugs() {
+  if (_tmSlugs) return _tmSlugs;
+  const data = await ensureMovesData();
+  _tmSlugs = data ? Object.keys(data) : [];
+  return _tmSlugs;
+}
+
+function rollDungeonItem(rng, tmSlugs) {
+  const roll = DUNGEON_ITEM_POOL[Math.floor(rng() * DUNGEON_ITEM_POOL.length)];
+  if (roll === "TM") {
+    // Guard against an empty move list (e.g. moves.json failed to load) by
+    // falling back to a berry so a TM slot never yields an invalid id.
+    if (!tmSlugs || tmSlugs.length === 0) return "sitrus-berry";
+    return `tm-${tmSlugs[Math.floor(rng() * tmSlugs.length)]}`;
+  }
+  return roll;
+}
+
+// Generate a dungeon using BSP. Async because it rolls a TM from moves.json for
+// the treasure pool — callers await it (DungeonGame already does for enemies).
+export async function generateDungeon(width = 20, height = 15, seed = Date.now(), floor = 1) {
   const rng = createRNG(seed);
+  const tmSlugs = await getTMSlugs();
 
   // Initialize grid with walls
   const tiles = Array.from({ length: height }, () =>
@@ -139,7 +181,7 @@ export function generateDungeon(width = 20, height = 15, seed = Date.now(), floo
   const treasures = treasurePositions.map((pos) => ({
     x: pos.x,
     y: pos.y,
-    item: rng() > 0.5 ? "potion" : "orb",
+    item: rollDungeonItem(rng, tmSlugs),
     opened: false,
   }));
 

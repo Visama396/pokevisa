@@ -1,4 +1,5 @@
 import { TILE } from "./dungeon";
+import { ITEMS } from "./items";
 
 const W = TILE.WALL;
 const F = TILE.FLOOR;
@@ -64,10 +65,6 @@ export const NPC_POSITIONS = [
 
 export const VILLAGE_SPAWN = { x: 15, y: 10 };
 
-export const SHOP_ITEMS = [
-  { id: "potion", name: "Potion", description: "Heal 20 HP", price: 50, effect: { heal: 20 } },
-  { id: "super-potion", name: "Super Potion", description: "Heal 50 HP", price: 150, effect: { heal: 50 } },
-  { id: "full-heal", name: "Full Heal", description: "Cure all status & heal to full", price: 500, effect: { heal: "full" } },
-  { id: "revive", name: "Revive", description: "Revive fainted Pokémon (50% HP)", price: 800, effect: { revive: true, healRatio: 0.5 } },
-  { id: "orb", name: "Orb", description: "Throw at a wild Pokémon to deal 30 damage", price: 100, effect: { damage: 30 } },
-];
+// Shop stock is the full item catalog (see src/lib/items.js). Potions were
+// replaced by berries, and evolution items/elixir were added alongside.
+export const SHOP_ITEMS = ITEMS;

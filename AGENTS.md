@@ -1,4 +1,52 @@
-## Development
+# PokéVisa Development Plan
+
+This file records the phase plan and current status so work can be resumed across
+sessions. When a phase is finished, mark it `[x]` here.
+
+## Phase 1 — Item-system bug fixes (DONE)
+- Dungeon loot/persistence: capture no longer remounts the dungeon; loot
+  (gold delta + item bag) survives remounts via `persistLoot()` at every descend
+  and on exit/defeat.
+- Move-learn bug: only level-unlocked moves are offered, declined moves stop
+  re-prompting, display-only `level` field dropped (matches Move Tutor).
+- Dungeon entry seeds pocket gold + carried items; item use consumes from the
+  live bag; shop pays pocket-then-bank; `stairs-orb` catalog entry.
+- Migration `014` converts legacy `potion`/`super-potion`/`orb` ids.
+
+## Phase 2 — TM system (DONE)
+- Every move in `public/moves.json` is a TM (item id `tm-<move-slug>`).
+- Species compatibility from `public/pokedex.json` `moves.tm` (real-game TM lists).
+- TM sources: random dungeon treasure drop (rare, like elixir) + daily shop
+  rotation (same 5 TMs for all players, date-seeded like PokéWordle, buyable
+  unlimited, price 1200).
+- Teaching flows in the village (Kangaskhan Storage "Use") and mid-run
+  (dungeon items panel). Compat checks, duplicate check, appends if <4 moves,
+  else a forget-a-move picker. Persisted via `updateTeamMember`.
+- Files: `src/lib/moves.js`, `src/lib/items.js`, `src/lib/dungeon.js`,
+  `src/components/VillageGame.jsx`, `src/components/DungeonGame.jsx`.
+
+## Phase 3 — Gifts (async item/gold transfers) (IN PROGRESS)
+- Send items and gold to friends as pending gifts (escrow) instead of delivering
+  directly. Receiver gets a notification; nothing lands in their carried bag.
+- Sources: items from carried inventory OR Kangaskhan Storage; gold from pocket
+  OR the bank. Declined gifts refund to the sender's original buckets.
+- Accept → items to receiver's Kangaskhan Storage, gold to their bank.
+  Decline → items/gold return to the sender (source buckets recorded on the row).
+- Table `gifts` (migration `015`, **apply in Supabase SQL editor — not yet
+  applied**); client-side RPC-style functions in `src/lib/auth.js`
+  (`sendGift`, `acceptGift`, `declineGift`, `getIncomingGifts`,
+  `getOutgoingGifts`) with an atomic `pending → accepted/declined` claim so
+  double-taps can't double-deliver.
+- UI in `src/components/VillageGame.jsx`: gift bell with pending count + panel
+  (incoming accept/decline, outgoing status), storage "Send" for carried and
+  stored items, bank "Send gold to a friend" (bank or pocket source).
+- **Code is written and bundles clean; remaining: apply migration `015`,
+  then live-test the flow (gift → bell → accept/decline → delivery/refund).**
+
+## Ongoing conventions
+- Dev server: `astro dev --background`; never run `astro build` during development.
+- Migrations are applied manually in the Supabase SQL editor.
+- Reuse existing components/libs before creating new ones; comment new features.
 
 When starting the dev server, use background mode:
 

@@ -320,21 +320,130 @@ export async function getFriendVillages(accountId) {
   return byFriend;
 }
 
-// Add one item to a friend's inventory (used by Kangaskhan Storage sending).
-// RLS on player_profiles is open, so a player may deposit an item into a friend's
-// inventory. Returns { error } on failure.
-export async function giveItemToFriend(friendId, itemId) {
+// ─── Gifts (async item/gold transfers) ───
+// A gift holds items and/or gold in escrow until the receiver accepts (items →
+// Kangaskhan Storage, gold → bank) or declines (everything refunded to the
+// sender's original buckets). Mirrors the friend-request pending pattern, but
+// the value leaves the sender immediately on send. acceptGift/declineGift claim
+// the row atomically (pending → accepted/declined) so a double-tap can't
+// double-deliver or double-refund.
+
+// Pending gifts sent TO accountId, with the sender's account info.
+export async function getIncomingGifts(accountId) {
+  const { data } = await supabase
+    .from("gifts")
+    .select("id, sender_id, items, gold, note, source_items, source_gold, created_at")
+    .eq("receiver_id", accountId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  const ids = [...new Set((data || []).map((g) => g.sender_id))];
+  if (ids.length === 0) return [];
+  const { data: accounts } = await supabase
+    .from("accounts")
+    .select("id, username, display_name")
+    .in("id", ids);
+  const byId = Object.fromEntries((accounts || []).map((a) => [a.id, a]));
+  return (data || []).map((g) => ({ ...g, sender: byId[g.sender_id] || null }));
+}
+
+// Gifts accountId sent to others (any status, newest first) with the receiver's
+// info, so the sender can track pending/accepted/declined.
+export async function getOutgoingGifts(accountId) {
+  const { data } = await supabase
+    .from("gifts")
+    .select("id, receiver_id, items, gold, note, status, created_at")
+    .eq("sender_id", accountId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  const ids = [...new Set((data || []).map((g) => g.receiver_id))];
+  if (ids.length === 0) return [];
+  const { data: accounts } = await supabase
+    .from("accounts")
+    .select("id, username, display_name")
+    .in("id", ids);
+  const byId = Object.fromEntries((accounts || []).map((a) => [a.id, a]));
+  return (data || []).map((g) => ({ ...g, receiver: byId[g.receiver_id] || null }));
+}
+
+// Create a pending gift. The sender removes the value from their own inventory
+// first (in the calling component) so the escrow is balanced; source_* records
+// where it came from so a decline can refund to the same place.
+export async function sendGift({ senderId, receiverId, items = [], gold = 0, sourceItems = "items", sourceGold = "pocket", note }) {
+  if (senderId === receiverId) return { error: "You can't send a gift to yourself" };
+  if (items.length === 0 && gold <= 0) return { error: "Nothing to send" };
+  const { error } = await supabase.from("gifts").insert({
+    sender_id: senderId,
+    receiver_id: receiverId,
+    items,
+    gold,
+    note: note || null,
+    source_items: sourceItems,
+    source_gold: sourceGold,
+    status: "pending",
+  });
+  return error ? { error: error.message } : {};
+}
+
+// Accept a pending gift: items → receiver's Kangaskhan Storage, gold → the
+// receiver's bank. Claims the row first so concurrent accept/decline races only
+// one winner.
+export async function acceptGift(giftId) {
+  const { data: claimed } = await supabase
+    .from("gifts")
+    .update({ status: "accepted" })
+    .eq("id", giftId)
+    .eq("status", "pending")
+    .select();
+  if (!claimed || claimed.length === 0) return { error: "This gift was already handled" };
+  const gift = claimed[0];
   const { data: prof } = await supabase
     .from("player_profiles")
     .select("inventory")
-    .eq("account_id", friendId)
+    .eq("account_id", gift.receiver_id)
     .maybeSingle();
-  if (!prof) return { error: "Friend doesn't have a profile yet" };
+  if (!prof) return { error: "Receiver has no profile" };
   const inv = normalizeInventory(prof.inventory);
+  const next = {
+    ...inv,
+    storage: [...(inv.storage || []), ...(gift.items || [])],
+    banked_gold: (inv.banked_gold || 0) + (gift.gold || 0),
+  };
   const { error } = await supabase
     .from("player_profiles")
-    .update({ inventory: { ...inv, items: [...inv.items, itemId] } })
-    .eq("account_id", friendId);
+    .update({ inventory: next })
+    .eq("account_id", gift.receiver_id);
+  return error ? { error: error.message } : {};
+}
+
+// Decline a pending gift: refund items/gold to the sender's original buckets
+// (carried vs storage, pocket vs bank), as recorded when the gift was sent.
+export async function declineGift(giftId) {
+  const { data: claimed } = await supabase
+    .from("gifts")
+    .update({ status: "declined" })
+    .eq("id", giftId)
+    .eq("status", "pending")
+    .select();
+  if (!claimed || claimed.length === 0) return { error: "This gift was already handled" };
+  const gift = claimed[0];
+  const { data: prof } = await supabase
+    .from("player_profiles")
+    .select("inventory")
+    .eq("account_id", gift.sender_id)
+    .maybeSingle();
+  if (!prof) return { error: "Sender has no profile" };
+  const inv = normalizeInventory(prof.inventory);
+  const itemKey = gift.source_items === "storage" ? "storage" : "items";
+  const goldKey = gift.source_gold === "bank" ? "banked_gold" : "gold";
+  const next = {
+    ...inv,
+    [itemKey]: [...(inv[itemKey] || []), ...(gift.items || [])],
+    [goldKey]: (inv[goldKey] || 0) + (gift.gold || 0),
+  };
+  const { error } = await supabase
+    .from("player_profiles")
+    .update({ inventory: next })
+    .eq("account_id", gift.sender_id);
   return error ? { error: error.message } : {};
 }
 
