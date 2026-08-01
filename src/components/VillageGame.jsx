@@ -95,13 +95,14 @@ export default function VillageGame({
     return playerList.filter((p) => onlineIds.has(p.player_id));
   }
 
-  // Remove disconnected players from LOBBY villages. Any connected client can
-  // run it; the DB trigger (migration 010) then garbage-collects the now-empty
-  // rooms. Connected players keep last_seen fresh via the heartbeat below, so
-  // only genuinely dead connections are swept.
-  async function sweepStaleLobbyPlayers() {
+  // Remove disconnected players from lobby AND playing rooms. Any connected
+  // client can run it; the DB trigger (migration 013) then garbage-collects the
+  // now-empty rooms, and rooms that were already orphaned get deleted too.
+  // Connected players keep last_seen fresh via the heartbeat (village and
+  // dungeon), so only genuinely dead connections are swept.
+  async function sweepStaleRooms() {
     try {
-      await supabase.rpc("cleanup_stale_lobby_players", { min_age_seconds: 120 });
+      await supabase.rpc("cleanup_stale_rooms", { min_age_seconds: 120 });
     } catch (err) {
       // Non-fatal: presence-based cleanup still covers live rooms.
     }
@@ -192,7 +193,7 @@ export default function VillageGame({
 
     // Clean up disconnected players before scanning for a room to join, so a
     // village that only contains ghosts isn't picked up (or seen as full).
-    await sweepStaleLobbyPlayers();
+    await sweepStaleRooms();
 
     try {
       const { data: existing } = await supabase
@@ -859,7 +860,7 @@ export default function VillageGame({
   }, [session, accountId]);
 
   // Heartbeat: keep our room_players.last_seen fresh while connected so
-  // cleanup_stale_lobby_players can tell a dead connection from a live one.
+  // cleanup_stale_rooms can tell a dead connection from a live one.
   // Background tabs throttle timers (worst case ~1/min), so the sweep threshold
   // of 120s is safely wider than any drift a connected player can produce.
   useEffect(() => {
@@ -882,13 +883,14 @@ export default function VillageGame({
     return () => clearInterval(id);
   }, [session, accountId]);
 
-  // Periodic stale-player sweep. Any connected client can clean up lobby rooms
-  // that lost players without cleanup (closed tab, crash). Combined with the
-  // join-time sweep in autoJoin, disconnected players stop showing up quickly.
+  // Periodic stale-room sweep. Any connected client can clean up lobby and
+  // playing rooms that lost players without cleanup (closed tab, crash).
+  // Combined with the join-time sweep in autoJoin, disconnected players and
+  // abandoned rooms stop showing up quickly.
   useEffect(() => {
     if (!accountId) return;
-    sweepStaleLobbyPlayers();
-    const id = setInterval(sweepStaleLobbyPlayers, 30000);
+    sweepStaleRooms();
+    const id = setInterval(sweepStaleRooms, 30000);
     return () => clearInterval(id);
   }, [accountId]);
 

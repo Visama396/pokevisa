@@ -104,6 +104,31 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     loadRoom();
   }, [roomId, playerId]);
 
+  // Heartbeat: keep our room_players.last_seen fresh while inside the dungeon,
+  // so cleanup_stale_rooms (migration 013) can sweep an abandoned PLAYING room
+  // the same way it does for lobby villages without killing a live player.
+  // Background tabs throttle timers (worst case ~1/min), so the sweep threshold
+  // of 120s is safely wider than any drift a connected player can produce.
+  useEffect(() => {
+    if (!playerId || !roomId) return;
+    const beat = () => {
+      // postgrest-js builders are thenable but have no .catch — pass the
+      // rejection handler to .then instead so failures are silently ignored.
+      supabase
+        .from("room_players")
+        .update({ last_seen: new Date().toISOString() })
+        .eq("player_id", playerId)
+        .eq("room_id", roomId)
+        .then(
+          () => {},
+          () => {}
+        );
+    };
+    beat();
+    const id = setInterval(beat, 10000);
+    return () => clearInterval(id);
+  }, [playerId, roomId]);
+
   // Generate dungeon when host starts the game
   const startGame = useCallback(async () => {
     if (!isHost || !room) return;
