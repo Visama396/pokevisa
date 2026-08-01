@@ -1140,7 +1140,7 @@ const ui = {
   },
   "tough": {
     en: "Tough", es: "Duro", fr: "Coriace", de: "Zäh", it: "Robusto",
-    ja: "oughい", ko: "튼튼", "zh-hans": "坚韧", "zh-hant": "堅韌",
+    ja: "たくましい", ko: "튼튼", "zh-hans": "坚韧", "zh-hant": "堅韌",
   },
   "clever": {
     en: "Clever", es: "Listo", fr: "Rusé", de: "Klug", it: "Intelligente",

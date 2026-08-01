@@ -531,6 +531,20 @@ export async function getMovesAtLevel(pokemonId, level, maxMoves = 4) {
   return moves;
 }
 
+// Every move a Pokémon can know at the given level from its level-up learnset,
+// returned as full move data plus the level it is learned at. Used by the Move
+// Tutor NPC (Poliwhirl) so players can re-learn any move up to their current
+// level, and by dungeon captures so recruited Pokémon keep their moveset.
+export async function getAllMovesAtLevel(pokemonId, level) {
+  await ensureLoaded();
+  const entry = getFromCache(pokemonId);
+  if (!entry || !entry.moves || !entry.moves.levelUp) return [];
+  return entry.moves.levelUp
+    .filter(m => m.level <= level)
+    .sort((a, b) => a.level - b.level)
+    .map(m => ({ ...getMoveData(m.name), level: m.level }));
+}
+
 let _moveDataCache = null;
 export async function ensureMovesData() {
   if (!_moveDataCache) {

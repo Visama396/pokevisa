@@ -6,7 +6,7 @@ import {
 } from "../lib/village";
 import { isWalkable } from "../lib/dungeon";
 import {
-  getSpeciesName, getMoveName, getMovesAtLevel,
+  getSpeciesName, getMoveName, getMovesAtLevel, getAllMovesAtLevel,
   getEffectiveness, calcDamage, getStabMultiplier, getSpeciesTypes,
 } from "../lib/moves";
 import { pickNature } from "../lib/pokedex";
@@ -76,6 +76,36 @@ export default function VillageGame({
   const channelRef = useRef(null);
   const playersRef = useRef([]);
   const offlineCleanupRef = useRef(null);
+
+  // Realtime presence is the source of truth for who is genuinely connected to
+  // this room — it rides the live websocket, which closes the moment a tab
+  // closes or the network drops. Stale room_players rows can linger in the DB
+  // (pagehide cleanup is unreliable), so the rendered list is always reconciled
+  // against presence to keep disconnected players' sprites off the map.
+  function getOnlineIds() {
+    const state = channelRef.current?.presenceState() || {};
+    const ids = new Set(Object.values(state).flatMap((p) => p.map((p2) => p2.player_id)));
+    ids.add(session.playerId);
+    return ids;
+  }
+
+  function reconcileWithPresence(playerList) {
+    if (!session) return playerList;
+    const onlineIds = getOnlineIds();
+    return playerList.filter((p) => onlineIds.has(p.player_id));
+  }
+
+  // Remove disconnected players from LOBBY villages. Any connected client can
+  // run it; the DB trigger (migration 010) then garbage-collects the now-empty
+  // rooms. Connected players keep last_seen fresh via the heartbeat below, so
+  // only genuinely dead connections are swept.
+  async function sweepStaleLobbyPlayers() {
+    try {
+      await supabase.rpc("cleanup_stale_lobby_players", { min_age_seconds: 120 });
+    } catch (err) {
+      // Non-fatal: presence-based cleanup still covers live rooms.
+    }
+  }
 
   useEffect(() => subscribe(setLanguage), []);
   const [players, setPlayers] = useState([]);
@@ -159,6 +189,10 @@ export default function VillageGame({
   async function autoJoin() {
     setIsConnecting(true);
     setError("");
+
+    // Clean up disconnected players before scanning for a room to join, so a
+    // village that only contains ghosts isn't picked up (or seen as full).
+    await sweepStaleLobbyPlayers();
 
     try {
       const { data: existing } = await supabase
@@ -431,7 +465,7 @@ export default function VillageGame({
           .order("joined_at")
           .then(({ data }) => {
             if (data) {
-              setPlayers(data);
+              setPlayers(reconcileWithPresence(data));
               const me = data.find((p) => p.player_id === session.playerId);
               if (me) setMyPlayer(me);
             }
@@ -465,10 +499,7 @@ export default function VillageGame({
       // Filter them from the local list and, after a grace period, remove them
       // from room_players so stale players don't get carried into the dungeon.
       .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState();
-        const onlineIds = new Set(
-          Object.values(state).flatMap((p) => p.map((p2) => p2.player_id))
-        );
+        const onlineIds = getOnlineIds();
         // Never treat ourselves as offline while connected.
         onlineIds.add(session.playerId);
         setPlayers((prev) => prev.filter((p) => onlineIds.has(p.player_id)));
@@ -537,7 +568,9 @@ export default function VillageGame({
     ]);
     if (roomData.data) setRoom(roomData.data);
     if (playersData.data) {
-      setPlayers(playersData.data);
+      // Presence is the source of truth for who is truly connected, so a stale
+      // row (closed tab) is filtered out instead of rendering a ghost sprite.
+      setPlayers(reconcileWithPresence(playersData.data));
       const me = playersData.data.find((p) => p.player_id === session.playerId);
       if (me) setMyPlayer(me);
     }
@@ -564,7 +597,7 @@ export default function VillageGame({
 
     await supabase
       .from("room_players")
-      .update({ position_x: x, position_y: y })
+      .update({ position_x: x, position_y: y, last_seen: new Date().toISOString() })
       .eq("player_id", session.playerId)
       .eq("room_id", session.roomId);
 
@@ -718,6 +751,12 @@ export default function VillageGame({
     const nature = storedPkm.nature && storedPkm.nature !== "_"
       ? storedPkm.nature
       : pickNature(`${accountId}-${storedPkm.pokemon_id}-active`);
+    // Recruited Pokémon keep the moves they knew when captured (dungeon captures
+    // now save them). Entries captured before that fix have no moves, so derive
+    // the level-up moveset as a fallback instead of recruiting them empty.
+    const moves = (storedPkm.moves && storedPkm.moves.length > 0)
+      ? storedPkm.moves
+      : await getMovesAtLevel(storedPkm.pokemon_id, storedPkm.level || 5);
     await addTeamMember(accountId, {
       pokemon_id: storedPkm.pokemon_id,
       nickname: storedPkm.nickname || getSpeciesName(storedPkm.pokemon_id),
@@ -725,7 +764,7 @@ export default function VillageGame({
       hp: storedPkm.hp || 100,
       max_hp: storedPkm.max_hp || 100,
       nature,
-      moves: storedPkm.moves || [],
+      moves,
       slot: 0,
       is_starter: false,
     });
@@ -819,6 +858,40 @@ export default function VillageGame({
     return () => window.removeEventListener("pagehide", cleanup);
   }, [session, accountId]);
 
+  // Heartbeat: keep our room_players.last_seen fresh while connected so
+  // cleanup_stale_lobby_players can tell a dead connection from a live one.
+  // Background tabs throttle timers (worst case ~1/min), so the sweep threshold
+  // of 120s is safely wider than any drift a connected player can produce.
+  useEffect(() => {
+    if (!session || !accountId) return;
+    const beat = () => {
+      // postgrest-js builders are thenable but have no .catch — pass the
+      // rejection handler to .then instead so failures are silently ignored.
+      supabase
+        .from("room_players")
+        .update({ last_seen: new Date().toISOString() })
+        .eq("player_id", session.playerId)
+        .eq("room_id", session.roomId)
+        .then(
+          () => {},
+          () => {}
+        );
+    };
+    beat();
+    const id = setInterval(beat, 10000);
+    return () => clearInterval(id);
+  }, [session, accountId]);
+
+  // Periodic stale-player sweep. Any connected client can clean up lobby rooms
+  // that lost players without cleanup (closed tab, crash). Combined with the
+  // join-time sweep in autoJoin, disconnected players stop showing up quickly.
+  useEffect(() => {
+    if (!accountId) return;
+    sweepStaleLobbyPlayers();
+    const id = setInterval(sweepStaleLobbyPlayers, 30000);
+    return () => clearInterval(id);
+  }, [accountId]);
+
   // Live refresh: friends' dungeon status changes as they start/finish rooms.
   useEffect(() => {
     if (!accountId) return;
@@ -864,31 +937,43 @@ export default function VillageGame({
     await loadFriends();
   }
 
-  // Move changer
+  // Move changer (Poliwhirl tutor) — shows every move the Pokémon can learn by
+  // its current level and lets the player assign one. Persisted to player_team
+  // so the taught moves survive across devices/sessions.
   const [moveChangerPkm, setMoveChangerPkm] = useState(null);
   const [moveChangerSlot, setMoveChangerSlot] = useState(null);
   const [availableMoves, setAvailableMoves] = useState([]);
+  const [selectedMove, setSelectedMove] = useState(null);
 
-  function openMoveChanger(pkm) {
+  async function openMoveChanger(pkm) {
     setMoveChangerPkm(pkm);
     setMoveChangerSlot(null);
+    setSelectedMove(null);
     const pkmLevel = pkm.level || 5;
-    const allMoves = getMovesAtLevel(pkm.pokemonId || pkm.pokemon_id, pkmLevel);
-    const knownNames = new Set((pkm.moves || []).map((m) => m.name || m));
-    setAvailableMoves(allMoves.filter((m) => !knownNames.has(m)));
+    const allMoves = await getAllMovesAtLevel(pkm.pokemonId || pkm.pokemon_id, pkmLevel);
+    setAvailableMoves(allMoves);
   }
 
   async function handleChangeMove() {
-    if (!moveChangerPkm || moveChangerSlot === null) return;
-    const newMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
-    if (!newMove) return;
-
-    const newMoves = [...(moveChangerPkm.moves || [])];
-    newMoves[moveChangerSlot] = { name: newMove };
+    if (!moveChangerPkm || !selectedMove) return;
+    // Store the full move data (not just the name) so battles can use its type,
+    // power and accuracy. The display-only `level` field is dropped.
+    const move = {
+      name: selectedMove.name,
+      type: selectedMove.type,
+      category: selectedMove.category,
+      power: selectedMove.power,
+      accuracy: selectedMove.accuracy,
+    };
+    const currentMoves = moveChangerPkm.moves || [];
+    const newMoves = currentMoves.length < 4
+      ? [...currentMoves, move]
+      : currentMoves.map((m, i) => (i === moveChangerSlot ? move : m));
 
     await updateTeamMember(moveChangerPkm.id, { moves: newMoves });
     setMoveChangerPkm(null);
     setMoveChangerSlot(null);
+    setSelectedMove(null);
     setActiveNPC(null);
     loadTeam();
   }
@@ -1518,35 +1603,88 @@ export default function VillageGame({
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-xs text-stone-400">
-                  Replace a move for {moveChangerPkm.nickname || getSpeciesName(moveChangerPkm.pokemonId || moveChangerPkm.pokemon_id)}:
-                </p>
-                {(moveChangerPkm.moves || []).map((move, si) => (
-                  <button
-                    key={si}
-                    onClick={() => setMoveChangerSlot(si)}
-                    className={`w-full rounded-xl p-3 text-left flex items-center gap-2 transition-colors ${
-                      moveChangerSlot === si
-                        ? "bg-green-800/40 ring-1 ring-green-600"
-                        : "bg-stone-700/40 hover:bg-stone-600/40"
-                    }`}
-                  >
-                    <span className="text-sm text-stone-200">{getMoveName(move, language)}</span>
-                    {moveChangerSlot === si && availableMoves.length > 0 && (
-                      <span className="ml-auto text-xs text-green-400">
-                        Replace with: {getMoveName(availableMoves[0], language)}
-                      </span>
-                    )}
-                  </button>
-                ))}
-                {moveChangerSlot !== null && (
-                  <button
-                    onClick={handleChangeMove}
-                    disabled={availableMoves.length === 0}
-                    className="w-full rounded-xl bg-green-700 px-4 py-2 text-sm text-white hover:bg-green-600 disabled:opacity-40 transition-colors"
-                  >
-                    Confirm
-                  </button>
+                <div className="flex items-center gap-2">
+                  <img src={`${SPRITE_URL}/${moveChangerPkm.pokemonId || moveChangerPkm.pokemon_id || 25}.png`} alt="" className="w-6 h-6" />
+                  <p className="text-sm text-stone-200 font-semibold">
+                    {moveChangerPkm.nickname || getSpeciesName(moveChangerPkm.pokemonId || moveChangerPkm.pokemon_id)}
+                    <span className="text-stone-400 font-normal"> · Lv.{moveChangerPkm.level || 5}</span>
+                  </p>
+                </div>
+
+                {/* Current moves — pick one to replace when the set is full */}
+                <div className="space-y-1.5">
+                  <p className="text-xs text-stone-400">Current moves:</p>
+                  {(moveChangerPkm.moves || []).map((move, si) => (
+                    <button
+                      key={si}
+                      onClick={() => setMoveChangerSlot(si)}
+                      className={`w-full rounded-xl p-2.5 text-left flex items-center gap-2 transition-colors ${
+                        moveChangerSlot === si
+                          ? "bg-green-800/40 ring-1 ring-green-600"
+                          : "bg-stone-700/40 hover:bg-stone-600/40"
+                      }`}
+                    >
+                      <span className="text-sm text-stone-200">{getMoveName(move, language)}</span>
+                      {moveChangerSlot === si && (
+                        <span className="ml-auto text-[10px] text-green-400">replace</span>
+                      )}
+                    </button>
+                  ))}
+                  {(moveChangerPkm.moves || []).length === 0 && (
+                    <p className="text-[10px] text-amber-400">No moves — pick one below to learn it.</p>
+                  )}
+                </div>
+
+                {/* All moves learnable by level — known ones are disabled */}
+                <div className="space-y-1.5">
+                  <p className="text-xs text-stone-400">
+                    {t("Moves by Level", language)} ({availableMoves.length})
+                  </p>
+                  {availableMoves.length === 0 ? (
+                    <p className="text-xs text-stone-500">No level-up moves available.</p>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                      {availableMoves.map((m) => {
+                        const known = (moveChangerPkm.moves || []).some((k) => (k.name || k) === m.name);
+                        const selected = selectedMove?.name === m.name;
+                        return (
+                          <button
+                            key={m.name}
+                            onClick={() => !known && setSelectedMove(m)}
+                            disabled={known}
+                            className={`w-full rounded-xl p-2.5 text-left flex items-center gap-2 transition-colors ${
+                              selected
+                                ? "bg-green-800/50 ring-1 ring-green-600"
+                                : known
+                                  ? "bg-stone-800/60 opacity-50 cursor-not-allowed"
+                                  : "bg-stone-700/40 hover:bg-stone-600/40"
+                            }`}
+                          >
+                            <span className={`text-sm ${known ? "text-stone-500 line-through" : "text-stone-200"}`}>
+                              {getMoveName(m, language)}
+                            </span>
+                            <span className="ml-auto flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] text-stone-400 capitalize">{m.type}</span>
+                              {m.power > 0 && <span className="text-[10px] text-stone-400">{m.power}</span>}
+                              <span className="text-[10px] text-stone-500">Lv.{m.level}</span>
+                              {known && <span className="text-[10px] text-stone-500">learned</span>}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleChangeMove}
+                  disabled={!selectedMove || ((moveChangerPkm.moves || []).length >= 4 && moveChangerSlot === null)}
+                  className="w-full rounded-xl bg-green-700 px-4 py-2 text-sm text-white hover:bg-green-600 disabled:opacity-40 transition-colors"
+                >
+                  Confirm
+                </button>
+                {(moveChangerPkm.moves || []).length >= 4 && moveChangerSlot === null && (
+                  <p className="text-[10px] text-amber-400">Select a current move to replace.</p>
                 )}
               </div>
             )}

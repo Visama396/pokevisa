@@ -1247,11 +1247,18 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     setCaptureAttempt(null);
     const profile = await getProfile(accountId);
     const existingStored = profile?.stored_pokemon || [];
+    // Persist the wild Pokémon with the moves it knew, its HP/max HP and nature
+    // so it keeps them when the player later makes it active via Club Wigglytuff
+    // (a stored entry without moves would be recruited with an empty moveset).
     await saveProfile(accountId, {
       stored_pokemon: [...existingStored, {
         pokemon_id: captureAttempt.pokemonId,
         level: captureAttempt.level,
         nickname: null,
+        moves: captureAttempt.moves || [],
+        hp: captureAttempt.hp,
+        max_hp: captureAttempt.maxHp,
+        nature: captureAttempt.nature || null,
       }],
     });
     if (onTeamUpdate) onTeamUpdate();
