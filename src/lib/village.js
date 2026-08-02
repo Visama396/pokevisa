@@ -54,12 +54,13 @@ export const VILLAGE_TILES = (() => {
 
 export const NPC_POSITIONS = [
   { id: "mart", name: "Shopkeep", x: 4, y: 4, label: "Shop", spriteId: 352 },
-  { id: "moves", name: "Tutor", x: 11, y: 3, label: "Move Changer", spriteId: 61 },
-  { id: "name", name: "Rater", x: 21, y: 4, label: "Name Rater", spriteId: 108 },
+  { id: "moves", name: "Tutor", x: 11, y: 3, label: "Move Changer", spriteId: 97 },
+  { id: "evolve", name: "Sage", x: 21, y: 4, label: "Sage", spriteId: 340 },
   { id: "bank", name: "Persian", x: 5, y: 5, label: "Bank", spriteId: 53 },
   { id: "storage", name: "Kangaskhan", x: 25, y: 4, label: "Kangaskhan Storage", spriteId: 115 },
   { id: "club", name: "Wigglytuff", x: 13, y: 10, label: "Club Wigglytuff", spriteId: 40 },
-  { id: "quiz-reset", name: "Xatu", x: 22, y: 3, label: "Quiz Reset", spriteId: 178 },
+  { id: "quiz-reset", name: "Xatu", x: 22, y: 3, label: "Account Reset", spriteId: 178 },
+  { id: "password", name: "Klefki", x: 21, y: 5, label: "Change Password", spriteId: 707 },
   { id: "adventure", name: "Explorer", x: 7, y: 14, label: "Adventure", spriteId: 297 },
 ];
 

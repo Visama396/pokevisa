@@ -332,7 +332,7 @@ export async function getFriendVillages(accountId) {
 export async function getIncomingGifts(accountId) {
   const { data } = await supabase
     .from("gifts")
-    .select("id, sender_id, items, gold, note, source_items, source_gold, created_at")
+    .select("id, sender_id, items, gold, pokemon, note, source_items, source_gold, created_at")
     .eq("receiver_id", accountId)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
@@ -351,7 +351,7 @@ export async function getIncomingGifts(accountId) {
 export async function getOutgoingGifts(accountId) {
   const { data } = await supabase
     .from("gifts")
-    .select("id, receiver_id, items, gold, note, status, created_at")
+    .select("id, receiver_id, items, gold, pokemon, note, status, created_at")
     .eq("sender_id", accountId)
     .order("created_at", { ascending: false })
     .limit(20);
@@ -367,15 +367,17 @@ export async function getOutgoingGifts(accountId) {
 
 // Create a pending gift. The sender removes the value from their own inventory
 // first (in the calling component) so the escrow is balanced; source_* records
-// where it came from so a decline can refund to the same place.
-export async function sendGift({ senderId, receiverId, items = [], gold = 0, sourceItems = "items", sourceGold = "pocket", note }) {
+// where items/gold came from so a decline can refund to the same place. A club
+// Pokémon can be sent too — it always comes from (and refunds to) stored_pokemon.
+export async function sendGift({ senderId, receiverId, items = [], gold = 0, pokemon = null, sourceItems = "items", sourceGold = "pocket", note }) {
   if (senderId === receiverId) return { error: "You can't send a gift to yourself" };
-  if (items.length === 0 && gold <= 0) return { error: "Nothing to send" };
+  if (items.length === 0 && gold <= 0 && !pokemon) return { error: "Nothing to send" };
   const { error } = await supabase.from("gifts").insert({
     sender_id: senderId,
     receiver_id: receiverId,
     items,
     gold,
+    pokemon: pokemon || null,
     note: note || null,
     source_items: sourceItems,
     source_gold: sourceGold,
@@ -385,8 +387,8 @@ export async function sendGift({ senderId, receiverId, items = [], gold = 0, sou
 }
 
 // Accept a pending gift: items → receiver's Kangaskhan Storage, gold → the
-// receiver's bank. Claims the row first so concurrent accept/decline races only
-// one winner.
+// receiver's bank, a club Pokémon → the receiver's stored_pokemon. Claims the
+// row first so concurrent accept/decline races only one winner.
 export async function acceptGift(giftId) {
   const { data: claimed } = await supabase
     .from("gifts")
@@ -398,7 +400,7 @@ export async function acceptGift(giftId) {
   const gift = claimed[0];
   const { data: prof } = await supabase
     .from("player_profiles")
-    .select("inventory")
+    .select("inventory, stored_pokemon")
     .eq("account_id", gift.receiver_id)
     .maybeSingle();
   if (!prof) return { error: "Receiver has no profile" };
@@ -408,15 +410,20 @@ export async function acceptGift(giftId) {
     storage: [...(inv.storage || []), ...(gift.items || [])],
     banked_gold: (inv.banked_gold || 0) + (gift.gold || 0),
   };
+  const stored = prof.stored_pokemon || [];
+  const updates = { inventory: next };
+  // The gifted Pokémon joins the receiver's club (safe from dungeon wipes).
+  if (gift.pokemon) updates.stored_pokemon = [...stored, gift.pokemon];
   const { error } = await supabase
     .from("player_profiles")
-    .update({ inventory: next })
+    .update(updates)
     .eq("account_id", gift.receiver_id);
   return error ? { error: error.message } : {};
 }
 
 // Decline a pending gift: refund items/gold to the sender's original buckets
-// (carried vs storage, pocket vs bank), as recorded when the gift was sent.
+// (carried vs storage, pocket vs bank) and any Pokémon back to stored_pokemon,
+// as recorded when the gift was sent.
 export async function declineGift(giftId) {
   const { data: claimed } = await supabase
     .from("gifts")
@@ -428,7 +435,7 @@ export async function declineGift(giftId) {
   const gift = claimed[0];
   const { data: prof } = await supabase
     .from("player_profiles")
-    .select("inventory")
+    .select("inventory, stored_pokemon")
     .eq("account_id", gift.sender_id)
     .maybeSingle();
   if (!prof) return { error: "Sender has no profile" };
@@ -440,9 +447,11 @@ export async function declineGift(giftId) {
     [itemKey]: [...(inv[itemKey] || []), ...(gift.items || [])],
     [goldKey]: (inv[goldKey] || 0) + (gift.gold || 0),
   };
+  const updates = { inventory: next };
+  if (gift.pokemon) updates.stored_pokemon = [...(prof.stored_pokemon || []), gift.pokemon];
   const { error } = await supabase
     .from("player_profiles")
-    .update({ inventory: next })
+    .update(updates)
     .eq("account_id", gift.sender_id);
   return error ? { error: error.message } : {};
 }

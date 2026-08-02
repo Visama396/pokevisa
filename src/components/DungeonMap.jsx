@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { TILE, getVisibleTiles } from "../lib/dungeon";
+import { TILE, getVisibleTiles, canTraverse } from "../lib/dungeon";
 import { getItemIcon } from "../lib/items";
 import SpriteImg from "./SpriteImg";
 
@@ -130,7 +130,7 @@ export default function DungeonMap({
             const enemy = enemyMap[key];
             const treasure = treasureMap[key];
             const goldCoin = goldMap[key];
-            const isAdjacentTile = !isPlayer && Math.abs(x - playerX) <= 1 && Math.abs(y - playerY) <= 1;
+            const isAdjacentTile = !isPlayer && Math.abs(x - playerX) <= 1 && Math.abs(y - playerY) <= 1 && canTraverse(tiles, playerX, playerY, x, y);
 
             let bgClass = "bg-slate-900";
             if (isVisible) {

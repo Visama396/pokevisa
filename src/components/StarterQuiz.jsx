@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { getLanguage } from "../stores/language";
 import { t } from "../stores/translations";
-import { getStartersForTrait, getMovesAtLevel } from "../lib/moves";
+import { getStartersForTrait, getMovesAtLevel, cumulativeExp } from "../lib/moves";
 import { computeStats, pickNature } from "../lib/pokedex";
 import PokeTypeBadge from "./PokeTypeBadge";
 import { addTeamMember, saveProfile } from "../lib/auth";
@@ -167,6 +167,9 @@ export default function StarterQuiz({ accountId, onComplete }) {
         pokemon_id: starter.pokemonId,
         nickname: starter.name,
         level: 5,
+        // Seed lifetime EXP to the cost of reaching level 5 so the EXP bar
+        // starts at 0 progress (matches handleEnemyDefeated's fallback).
+        exp: cumulativeExp(5),
         hp: stats.hp,
         max_hp: stats.maxHp,
         nature,

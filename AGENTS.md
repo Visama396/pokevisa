@@ -25,23 +25,70 @@ sessions. When a phase is finished, mark it `[x]` here.
 - Files: `src/lib/moves.js`, `src/lib/items.js`, `src/lib/dungeon.js`,
   `src/components/VillageGame.jsx`, `src/components/DungeonGame.jsx`.
 
-## Phase 3 — Gifts (async item/gold transfers) (IN PROGRESS)
-- Send items and gold to friends as pending gifts (escrow) instead of delivering
-  directly. Receiver gets a notification; nothing lands in their carried bag.
+## Phase 3 — Gifts (async item/gold/Pokémon transfers) (DONE)
+- Send items, gold, and club Pokémon to friends as pending gifts (escrow) instead
+  of delivering directly. Receiver gets a notification; nothing lands in their
+  carried bag.
 - Sources: items from carried inventory OR Kangaskhan Storage; gold from pocket
-  OR the bank. Declined gifts refund to the sender's original buckets.
-- Accept → items to receiver's Kangaskhan Storage, gold to their bank.
-  Decline → items/gold return to the sender (source buckets recorded on the row).
-- Table `gifts` (migration `015`, **apply in Supabase SQL editor — not yet
-  applied**); client-side RPC-style functions in `src/lib/auth.js`
-  (`sendGift`, `acceptGift`, `declineGift`, `getIncomingGifts`,
-  `getOutgoingGifts`) with an atomic `pending → accepted/declined` claim so
-  double-taps can't double-deliver.
+  OR the bank; Pokémon from the club. Declined gifts refund to the sender's
+  original buckets.
+- Accept → items to receiver's Kangaskhan Storage, gold to their bank, Pokémon
+  to their club. Decline → everything returns to the sender.
+- Table `gifts` (migration `015`) + `pokemon jsonb` column (migration `016`).
+  Client-side RPC-style functions in `src/lib/auth.js` (`sendGift`, `acceptGift`,
+  `declineGift`, `getIncomingGifts`, `getOutgoingGifts`) with an atomic
+  `pending → accepted/declined` claim so double-taps can't double-deliver.
 - UI in `src/components/VillageGame.jsx`: gift bell with pending count + panel
   (incoming accept/decline, outgoing status), storage "Send" for carried and
-  stored items, bank "Send gold to a friend" (bank or pocket source).
-- **Code is written and bundles clean; remaining: apply migration `015`,
-  then live-test the flow (gift → bell → accept/decline → delivery/refund).**
+  stored items, bank "Send gold to a friend" (bank or pocket source), Club
+  Wigglytuff "Send" per club member.
+- **Migrations `015`/`016` applied and the flow live-tested (gift → bell →
+  accept/decline → delivery/refund) including Pokémon gifts.**
+
+## Phase 4 — Village NPC rework (DONE)
+- Rename moved into Club Wigglytuff (each club member has Rename/Make Active/
+  Send). The Name Rater NPC is gone.
+- Sage (Whiscash #340) replaces it: evolution helper. Any team or club Pokémon
+  can evolve either by reaching a level-up evolution (`trigger: "level-up"`,
+  `item: null` — happiness/location variants excluded) or by using an evolution
+  item (`trigger: "use-item"`, e.g. Eevee branches) — item evolutions require
+  the player to own the stone (checked against Kangaskhan Storage + carried
+  bag, `getEvolutionOptions` returns `item`), and `handleEvolve` consumes it
+  from storage (fallback: carried). Multiple targets each get a button showing
+  the stone needed. HP recomputed via `calcStat(getBaseHp(id), level, true)`
+  keeping the ratio; default nickname updates to the new species, custom
+  nicknames are kept. Helpers live in `src/lib/pokedex.js`
+  (`getEvolutionOptions`, `getBaseHp`).
+- Klefki (password NPC) at `village.js` position (21,5); Xatu relabeled to
+  "Account Reset"; Move Changer tutor is now Hypno (sprite 97); all village UI
+  strings translated (9 languages).
+
+## Phase 5 — MMO-style progression & dungeon polish (DONE)
+- EXP curve reworked (`src/lib/moves.js`): `expToNext(level)` is a steep
+  geometric curve (10 EXP at level 1, ~10M at level 100); `cumulativeExp(level)`
+  is the total needed to reach a level; EXP stays cumulative so old saves keep
+  their banked EXP and just "catch up" on the next kill.
+- `calcExpGain(enemyLevel, playerLevel, enemyMaxHp)` — base scales with enemy
+  level + bulk, then a level-difference multiplier: on-level/above pays full
+  value (up to 2.5x for tougher foes), below-level collapses fast (~1 EXP/kill
+  for a L40 player on floor 1). Wild enemy level is `floor + 1..4`, so higher
+  floors are where the EXP is.
+- Dungeon sidebar: items list is always visible (accordion removed).
+- EXP seeding convention: Pokémon caught/created at level N carry no lifetime
+  EXP, so `handleEnemyDefeated` (and the sidebar EXP bar) treats a missing/zero
+  `exp` as `cumulativeExp(level)` — otherwise the first cumulativeExp(level)
+  EXP earned is invisible on the bar. New creations seed `exp: cumulativeExp(level)`
+  (capture, starter). Level-ups only add the max-HP delta to current HP — the
+  old `Math.max(hp, maxHp)` full-healed on every kill.
+- Accuracy roll: `moveHits(move)` (`src/lib/moves.js`) rolls the move's real
+  accuracy from `moves.json` in both the player (`processAttack`) and enemy
+  (`enemyTurn`) attack paths in `DungeonGame.jsx` — a miss consumes the turn
+  and applies no damage/status. `attachPP` also enriches accuracy (moves.json
+  stores `null` for never-miss moves, treated as 100).
+- Diagonal blocking (`src/lib/dungeon.js` `canTraverse`): diagonal moves and
+  attacks (player + enemy + enemy AI chase) are blocked when either corner tile
+  beside the diagonal is a wall — no squeezing between two walls. DungeonMap
+  greys out blocked diagonal targets so the cursor isn't misleading.
 
 ## Ongoing conventions
 - Dev server: `astro dev --background`; never run `astro build` during development.
@@ -72,10 +119,10 @@ Where to find each feature when you need to read or modify it.
 - `/dungeon` — `src/pages/dungeon.astro` → `src/components/Dungeon.jsx` (auth → starter quiz → village → dungeon)
 
 **Shared libs (`src/lib/`)**
-- `pokedex.js` — pokedex.json loading, stat formulas (`calcStat`, `computeStats`), natures, type lookup
+- `pokedex.js` — pokedex.json loading, stat formulas (`calcStat`, `computeStats`), natures, type lookup, evolution helpers (`getEvolutionOptions`, `getBaseHp`)
 - `moves.js` — move data, type effectiveness (`getEffectiveness`), damage formula (`calcDamage`), STAB, EXP/level-up, wild Pokémon selection, moves at level
 - `dungeon.js` — dungeon map generation (BSP), tile types, enemy movement AI, fog-of-war visibility
-- `village.js` — village spawn + shop items
+- `village.js` — village spawn, `NPC_POSITIONS` (mart, move changer/Hypno, Sage/Whiscash evolver, bank, storage, club, account reset, Klefki password, adventure), shop items
 - `auth.js` — profile/team/auth helpers
 - `supabase.js` — Supabase client
 - `spriteTrim.js` + `spriteTrim.json` — per-species sprite padding boxes (generated by `scripts/build-sprite-trim.js`); `spriteImgStyle` crops the transparent margins so sprites fill their grid cell
@@ -85,7 +132,7 @@ Where to find each feature when you need to read or modify it.
 - `DungeonBattle.jsx` — standalone turn-based battle screen
 - `DungeonMap.jsx` — dungeon grid rendering, damage popups
 - `DungeonLobby.jsx` — team selection
-- `VillageGame.jsx` / `VillageMap.jsx` — village movement, NPCs (mart, move changer, etc.)
+- `VillageGame.jsx` / `VillageMap.jsx` — village movement, NPCs (mart, move changer, etc.), gifts panel, club (rename/active/send)
 
 **Other**
 - `src/stores/language.js`, `src/stores/translations.js` — i18n

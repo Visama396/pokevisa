@@ -10,7 +10,7 @@ import {
   getEffectiveness, calcDamage, getStabMultiplier, getSpeciesTypes,
   getMoveDataBySlug, buildStoredMove, canLearnTM, getDailyTMs,
 } from "../lib/moves";
-import { pickNature } from "../lib/pokedex";
+import { pickNature, getEvolutionOptions, getBaseHp, calcStat } from "../lib/pokedex";
 import { getItem, getItemName, getItemIcon, applyHeal, isUsableItem, getTMMoveSlug } from "../lib/items";
 import {
   getTeam, getProfile, saveProfile,
@@ -29,6 +29,7 @@ import SpriteImg from "./SpriteImg";
 import PkmStatsTooltip from "./PkmStatsTooltip";
 import { Tooltip, TooltipTrigger } from "../../components/ui/tooltip";
 import { Bubble, BubbleContent } from "../../components/ui/bubble";
+import ChangePasswordDialog from "./ChangePasswordDialog";
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 
@@ -38,11 +39,16 @@ function mergeInventory(existing, patch) {
   return normalizeInventory({ ...(existing || {}), ...patch });
 }
 
-// Human-readable summary of a gift's contents, e.g. "2× Oran Berry + 500g".
-function formatGiftContents(items, gold, language) {
+// Human-readable summary of a gift's contents, e.g. "2× Oran Berry + 500g"
+// or "Pikachu (Sparky)". A gifted club Pokémon shows its species (+ nickname).
+function formatGiftContents(items, gold, pokemon, language) {
   const counts = {};
   for (const id of items || []) counts[id] = (counts[id] || 0) + 1;
   const parts = Object.entries(counts).map(([id, n]) => `${n > 1 ? `${n}× ` : ""}${getItemName(id, language)}`);
+  if (pokemon) {
+    const name = pokemon.nickname || getSpeciesName(pokemon.pokemon_id);
+    parts.push(`⚡ ${name}`);
+  }
   if (gold > 0) parts.push(`${gold}g`);
   return parts.join(" + ") || "—";
 }
@@ -161,6 +167,10 @@ export default function VillageGame({
   const [storageSendFriend, setStorageSendFriend] = useState(null);
   // Which bucket the item being sent comes from: "items" (carried) or "storage".
   const [storageSendSource, setStorageSendSource] = useState("items");
+
+  // Club Wigglytuff "send a club Pokémon to a friend" flow state — the Pokémon
+  // goes into escrow like items/gold and returns here if the friend declines.
+  const [clubSendPkm, setClubSendPkm] = useState(null);
 
   // Gifts (async item/gold transfers): escrow bell + panel state.
   const [giftsOpen, setGiftsOpen] = useState(false);
@@ -567,11 +577,9 @@ export default function VillageGame({
     channelRef.current = channel;
 
     return () => {
-      channel.send({
-        type: "broadcast",
-        event: "player_left",
-        payload: { playerId: session.playerId },
-      });
+      // Use httpSend (REST) here: this cleanup also runs after handleLogout
+      // removed the channel, when the realtime socket can't deliver a broadcast.
+      channel.httpSend("player_left", { playerId: session.playerId });
       supabase.removeChannel(channel);
     };
   }, [session]);
@@ -650,6 +658,9 @@ export default function VillageGame({
     setBankDeposit("");
     setBankWithdraw("");
     setShowQuizResetConfirm(false);
+    setClubSendPkm(null);
+    setRenamePkm(null);
+    setNewNickname("");
   }
 
   // Storage
@@ -746,6 +757,26 @@ export default function VillageGame({
     loadGifts();
   }
 
+  // Send one club Pokémon to a friend as a pending gift. The Pokémon leaves the
+  // club (stored_pokemon) immediately; if the friend declines it comes back.
+  async function handleSendPkmToFriend(friendId) {
+    if (!clubSendPkm || !friendId) return;
+    const stored = profile?.stored_pokemon || [];
+    const idx = stored.indexOf(clubSendPkm);
+    if (idx === -1) return;
+    const newStored = [...stored];
+    newStored.splice(idx, 1);
+    const res = await sendGift({
+      senderId: accountId, receiverId: friendId,
+      pokemon: clubSendPkm,
+    });
+    if (res.error) { setError(res.error); setTimeout(() => setError(""), 2500); return; }
+    await saveProfile(accountId, { stored_pokemon: newStored });
+    setProfile((p) => p ? { ...p, stored_pokemon: newStored } : p);
+    setClubSendPkm(null);
+    loadGifts();
+  }
+
   // Kangaskhan Storage: move one carried item into storage (safe from wipes).
   async function handleStoreItem(itemId) {
     const items = profile?.inventory?.items || [];
@@ -755,6 +786,16 @@ export default function VillageGame({
     newItems.splice(idx, 1);
     const storage = profile?.inventory?.storage || [];
     const inv = mergeInventory(profile?.inventory, { items: newItems, storage: [...storage, itemId] });
+    await saveProfile(accountId, { inventory: inv });
+    setProfile((p) => p ? { ...p, inventory: inv } : p);
+  }
+
+  // Kangaskhan Storage: move every carried item into storage in one go.
+  async function handleStoreAllItems() {
+    const items = profile?.inventory?.items || [];
+    if (items.length === 0) return;
+    const storage = profile?.inventory?.storage || [];
+    const inv = mergeInventory(profile?.inventory, { items: [], storage: [...storage, ...items] });
     await saveProfile(accountId, { inventory: inv });
     setProfile((p) => p ? { ...p, inventory: inv } : p);
   }
@@ -1059,7 +1100,7 @@ export default function VillageGame({
     if (accept) loadTeam();
   }
 
-  // Move changer (Poliwhirl tutor) — shows every move the Pokémon can learn by
+  // Move changer (Hypno tutor) — shows every move the Pokémon can learn by
   // its current level and lets the player assign one. Persisted to player_team
   // so the taught moves survive across devices/sessions.
   const [moveChangerPkm, setMoveChangerPkm] = useState(null);
@@ -1172,7 +1213,7 @@ export default function VillageGame({
     setProfile((p) => p ? { ...p, inventory: inv } : p);
   }
 
-  // Name rater
+  // Name a club Pokémon (Club Wigglytuff handles renaming now).
   const [renamePkm, setRenamePkm] = useState(null);
   const [newNickname, setNewNickname] = useState("");
 
@@ -1180,9 +1221,93 @@ export default function VillageGame({
     if (!renamePkm) return;
     const name = newNickname.trim();
     if (!name || name.length > 20) return;
-    await updateTeamMember(renamePkm.id, { nickname: name });
+    // Update the matching stored_pokemon entry in place (identity-preserving
+    // filter so clubSendPkm/renamePkm references stay valid).
+    const stored = profile?.stored_pokemon || [];
+    const newStored = stored.map((p) => p === renamePkm ? { ...p, nickname: name } : p);
+    await saveProfile(accountId, { stored_pokemon: newStored });
+    setProfile((p) => p ? { ...p, stored_pokemon: newStored } : p);
     setRenamePkm(null);
     setNewNickname("");
+  }
+
+  // ─── Pokémon Evolver (Whiscash) ───
+  // Team + club Pokémon that reached a level-up evolution. Loading the options
+  // needs pokedex.json (async), so candidates are gathered when the modal opens.
+  const [evolvable, setEvolvable] = useState([]);
+  const [evolveLoading, setEvolveLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeNPC?.id !== "evolve") return;
+    let cancelled = false;
+    setEvolveLoading(true);
+    (async () => {
+      // Owned evolution items (stones) come from Kangaskhan Storage or the
+      // carried bag — only item evolutions the player can actually pay for
+      // are offered.
+      const owned = new Set([
+        ...(profile?.inventory?.storage || []),
+        ...(profile?.inventory?.items || []),
+      ]);
+      const buildOptions = async (p) => {
+        const all = await getEvolutionOptions(p.pokemonId || p.pokemon_id, p.level || 5);
+        return all.filter((o) => !o.item || owned.has(o.item));
+      };
+      const list = [];
+      for (const p of team) {
+        const options = await buildOptions(p);
+        if (options.length) list.push({ kind: "team", pkm: p, options });
+      }
+      for (const p of profile?.stored_pokemon || []) {
+        const options = await buildOptions(p);
+        if (options.length) list.push({ kind: "club", pkm: p, options });
+      }
+      if (!cancelled) setEvolvable(list);
+      if (!cancelled) setEvolveLoading(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNPC?.id]);
+
+  // Apply an evolution to a team or club Pokémon: swap the species, recompute
+  // max HP at the same level, keep HP proportionally, and update the default
+  // nickname to the new species unless the player gave it a custom one. Item
+  // evolutions consume the required stone from storage (or the carried bag).
+  async function handleEvolve(item, target) {
+    const pkm = item.pkm;
+    const level = pkm.level || 5;
+    const newMax = calcStat(getBaseHp(target.id), level, true);
+    const oldMax = pkm.max_hp || pkm.maxHp || newMax;
+    const newHp = Math.max(1, Math.round(((pkm.hp || oldMax) / oldMax) * newMax));
+    const custom = pkm.nickname && pkm.nickname !== getSpeciesName(pkm.pokemonId || pkm.pokemon_id);
+    const nickname = custom ? pkm.nickname : getSpeciesName(target.id);
+    if (target.item) {
+      // Consume one stone from storage first, falling back to the carried bag.
+      const storage = profile?.inventory?.storage || [];
+      const carried = profile?.inventory?.items || [];
+      let inv;
+      if (storage.includes(target.item)) {
+        const newStorage = [...storage];
+        newStorage.splice(newStorage.indexOf(target.item), 1);
+        inv = mergeInventory(profile?.inventory, { storage: newStorage });
+      } else if (carried.includes(target.item)) {
+        const newCarried = [...carried];
+        newCarried.splice(newCarried.indexOf(target.item), 1);
+        inv = mergeInventory(profile?.inventory, { items: newCarried });
+      }
+      if (inv) {
+        await saveProfile(accountId, { inventory: inv });
+        setProfile((p) => p ? { ...p, inventory: inv } : p);
+      }
+    }
+    if (item.kind === "team") {
+      await updateTeamMember(pkm.id, { pokemon_id: target.id, max_hp: newMax, hp: newHp, nickname });
+    } else {
+      const stored = profile?.stored_pokemon || [];
+      const newStored = stored.map((s) => s === pkm ? { ...s, pokemon_id: target.id, max_hp: newMax, hp: newHp, nickname } : s);
+      await saveProfile(accountId, { stored_pokemon: newStored });
+      setProfile((p) => p ? { ...p, stored_pokemon: newStored } : p);
+    }
     setActiveNPC(null);
     loadTeam();
   }
@@ -1554,6 +1679,10 @@ export default function VillageGame({
             <span>👥 {players.length}</span>
             <span>💰 {profile?.inventory?.gold || 0}</span>
             <LanguageSelector />
+            {/* Logout — clears the room channel and returns to the auth screen */}
+            <button onClick={handleLogout} className="text-stone-500 hover:text-stone-300 transition-colors">
+              {t("Logout", language)}
+            </button>
           </div>
         </div>
 
@@ -1576,7 +1705,7 @@ export default function VillageGame({
               className="flex items-center gap-1.5 rounded-xl bg-stone-800/60 border border-stone-700 px-3 py-1.5 text-xs text-stone-300 hover:bg-stone-700/60 transition-colors"
             >
               <SpriteImg id={npc.spriteId} size={28} />
-              {npc.label}
+              {t(npc.label, language)}
             </button>
           ))}
         </div>
@@ -1591,10 +1720,10 @@ export default function VillageGame({
           {players.map((p) => (
             <div
               key={p.player_id}
-              className="flex items-center gap-1.5 rounded-xl bg-stone-800/40 border border-stone-700/50 px-2.5 py-1"
+              className="flex items-center gap-1.5 rounded-xl bg-stone-800/40 border border-stone-700/50 px-3 py-1.5"
             >
-              <img src={`${SPRITE_URL}/${p.sprite_id || 25}.png`} alt="" className="w-5 h-5" />
-              <span className="text-[10px] text-stone-400">{p.player_name}</span>
+              <SpriteImg id={p.sprite_id || 25} size={28} />
+              <span className="text-xs text-stone-300">{p.player_name}</span>
             </div>
           ))}
         </div>
@@ -1623,15 +1752,15 @@ export default function VillageGame({
       {/* ─── NPC Modals ─── */}
       {activeNPC && activeNPC.id === "mart" && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
+          <div className="max-w-lg w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <img src={`${SPRITE_URL}/352.png`} alt="" className="w-6 h-6" />
-                <h2 className="text-lg font-bold text-stone-100">Shop</h2>
+                <h2 className="text-lg font-bold text-stone-100">{t("Shop", language)}</h2>
               </div>
               <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
             </div>
-            <p className="text-xs text-stone-400">💰 {profile?.inventory?.gold || 0} gold · 🏦 {profile?.inventory?.banked_gold || 0} banked</p>
+            <p className="text-xs text-stone-400">💰 {profile?.inventory?.gold || 0} {t("gold", language)} · 🏦 {profile?.inventory?.banked_gold || 0} {t("banked", language)}</p>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {SHOP_ITEMS.map((item) => (
                 <div
@@ -1686,13 +1815,13 @@ export default function VillageGame({
             )}
             {team.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-stone-500">Use an item on your Pokémon:</p>
+                <p className="text-xs text-stone-500">{t("Use an item on your Pokémon:", language)}</p>
                 {team.map((pkm, i) => (
                   <button
                     key={pkm.id || i}
                     onClick={async () => {
                       const items = profile?.inventory?.items || [];
-                      if (items.length === 0) { setError("No items!"); setTimeout(() => setError(""), 1500); return; }
+                      if (items.length === 0) { setError(t("No items!", language)); setTimeout(() => setError(""), 1500); return; }
                       // Quick-use applies the first usable healing item
                       // (berry/elixir). TMs are excluded — they need the
                       // teach flow from Kangaskhan Storage, not a one-click use.
@@ -1700,7 +1829,7 @@ export default function VillageGame({
                         const it = getItem(id);
                         return it && isUsableItem(id) && !it.effect?.tm;
                       });
-                      if (!itemId) { setError("No usable items!"); setTimeout(() => setError(""), 1500); return; }
+                      if (!itemId) { setError(t("No usable items!", language)); setTimeout(() => setError(""), 1500); return; }
                       const shopItem = SHOP_ITEMS.find((s) => s.id === itemId);
                       if (!shopItem) return;
                       const effect = shopItem.effect || {};
@@ -1717,7 +1846,7 @@ export default function VillageGame({
                         await updateTeamMember(pkm.id, { moves });
                         used = true;
                       }
-                      if (!used) { setError("It had no effect..."); setTimeout(() => setError(""), 1500); return; }
+                      if (!used) { setError(t("It had no effect...", language)); setTimeout(() => setError(""), 1500); return; }
                       const newItems = items.filter((id) => id !== itemId);
                       const inv = mergeInventory(profile?.inventory, { items: newItems });
                       await saveProfile(accountId, { inventory: inv });
@@ -1726,7 +1855,7 @@ export default function VillageGame({
                     }}
                     className="w-full rounded-lg bg-stone-700/40 px-3 py-2 text-xs text-stone-300 hover:bg-stone-600/40 text-left flex items-center gap-2"
                   >
-                    <img src={`${SPRITE_URL}/${pkm.pokemonId || pkm.pokemon_id || 25}.png`} alt="" className="w-5 h-5" />
+                    <SpriteImg id={pkm.pokemonId || pkm.pokemon_id || 25} size={28} />
                     <span>{pkm.nickname || getSpeciesName(pkm.pokemonId || pkm.pokemon_id)}</span>
                     <span className="ml-auto text-stone-500">HP {pkm.hp || 0}/{pkm.maxHp || pkm.max_hp || 100}</span>
                   </button>
@@ -1740,21 +1869,21 @@ export default function VillageGame({
       {/* ─── Bank (Persian) ─── */}
       {activeNPC && activeNPC.id === "bank" && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
+          <div className="max-w-lg w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <img src={`${SPRITE_URL}/53.png`} alt="" className="w-6 h-6" />
-                <h2 className="text-lg font-bold text-stone-100">Bank</h2>
+                <h2 className="text-lg font-bold text-stone-100">{t("Bank", language)}</h2>
               </div>
               <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
             </div>
             <div className="grid grid-cols-2 gap-3 text-center text-sm">
               <div className="rounded-xl bg-stone-700/40 p-3">
-                <p className="text-[10px] text-stone-400">Pocket</p>
+                <p className="text-[10px] text-stone-400">{t("Pocket", language)}</p>
                 <p className="text-yellow-400 font-bold">💰 {profile?.inventory?.gold || 0}</p>
               </div>
               <div className="rounded-xl bg-stone-700/40 p-3">
-                <p className="text-[10px] text-stone-400">Bank</p>
+                <p className="text-[10px] text-stone-400">{t("Bank", language)}</p>
                 <p className="text-blue-400 font-bold">🏦 {profile?.inventory?.banked_gold || 0}</p>
               </div>
             </div>
@@ -1765,7 +1894,7 @@ export default function VillageGame({
                   min={1}
                   value={bankDeposit}
                   onChange={(e) => setBankDeposit(e.target.value)}
-                  placeholder="Deposit amount"
+                  placeholder={t("Deposit amount", language)}
                   className="flex-1 min-w-0 rounded-lg bg-stone-700/60 border border-stone-600 px-3 py-2 text-xs text-stone-100 placeholder:text-stone-500"
                 />
                 <button
@@ -1773,15 +1902,15 @@ export default function VillageGame({
                   disabled={!bankDeposit || parseInt(bankDeposit) <= 0 || parseInt(bankDeposit) > (profile?.inventory?.gold || 0)}
                   className="rounded-lg bg-green-800 px-3 py-2 text-xs text-green-200 hover:bg-green-700 disabled:opacity-40 transition-colors"
                 >
-                  Deposit
+                  {t("Deposit", language)}
                 </button>
                 <button
                   onClick={() => handleBankTransfer(profile?.inventory?.gold || 0, "deposit")}
                   disabled={(profile?.inventory?.gold || 0) <= 0}
                   className="rounded-lg bg-green-900/70 px-3 py-2 text-xs text-green-300 hover:bg-green-800 disabled:opacity-40 transition-colors"
-                  title="Deposit all pocket gold"
+                  title={t("Deposit all pocket gold", language)}
                 >
-                  All
+                  {t("All", language)}
                 </button>
               </div>
               <div className="flex gap-2">
@@ -1790,7 +1919,7 @@ export default function VillageGame({
                   min={1}
                   value={bankWithdraw}
                   onChange={(e) => setBankWithdraw(e.target.value)}
-                  placeholder="Withdraw amount"
+                  placeholder={t("Withdraw amount", language)}
                   className="flex-1 min-w-0 rounded-lg bg-stone-700/60 border border-stone-600 px-3 py-2 text-xs text-stone-100 placeholder:text-stone-500"
                 />
                 <button
@@ -1798,15 +1927,15 @@ export default function VillageGame({
                   disabled={!bankWithdraw || parseInt(bankWithdraw) <= 0 || parseInt(bankWithdraw) > (profile?.inventory?.banked_gold || 0)}
                   className="rounded-lg bg-blue-800 px-3 py-2 text-xs text-blue-200 hover:bg-blue-700 disabled:opacity-40 transition-colors"
                 >
-                  Withdraw
+                  {t("Withdraw", language)}
                 </button>
                 <button
                   onClick={() => handleBankTransfer(profile?.inventory?.banked_gold || 0, "withdraw")}
                   disabled={(profile?.inventory?.banked_gold || 0) <= 0}
                   className="rounded-lg bg-blue-900/70 px-3 py-2 text-xs text-blue-300 hover:bg-blue-800 disabled:opacity-40 transition-colors"
-                  title="Withdraw all bank gold"
+                  title={t("Withdraw all bank gold", language)}
                 >
-                  All
+                  {t("All", language)}
                 </button>
               </div>
             </div>
@@ -1825,7 +1954,7 @@ export default function VillageGame({
                         : "bg-stone-700 text-stone-400 hover:bg-stone-600"
                     }`}
                   >
-                    {src === "bank" ? `Bank (${profile?.inventory?.banked_gold || 0})` : `Pocket (${profile?.inventory?.gold || 0})`}
+                    {src === "bank" ? `${t("Bank", language)} (${profile?.inventory?.banked_gold || 0})` : `${t("Pocket", language)} (${profile?.inventory?.gold || 0})`}
                   </button>
                 ))}
               </div>
@@ -1836,15 +1965,15 @@ export default function VillageGame({
                     min={1}
                     value={bankSendGold}
                     onChange={(e) => setBankSendGold(e.target.value)}
-                    placeholder="Amount"
+                    placeholder={t("Amount", language)}
                     className="flex-1 min-w-0 rounded-lg bg-stone-700/60 border border-stone-600 px-3 py-2 text-xs text-stone-100 placeholder:text-stone-500"
                   />
                   <button
-                    onClick={() => handleSendGoldToFriend(bankSendFriend)}
+                    onClick={() => handleSendGoldToFriend(bankSendFriend.id)}
                     disabled={!bankSendGold || parseInt(bankSendGold) <= 0}
                     className="rounded-lg bg-emerald-800 px-3 py-2 text-xs text-emerald-200 hover:bg-emerald-700 disabled:opacity-40 transition-colors"
                   >
-                    Send to {bankSendFriend.display_name || bankSendFriend.username}
+                    {t("Send to", language)} {bankSendFriend.display_name || bankSendFriend.username}
                   </button>
                   <button onClick={() => setBankSendFriend(null)} className="text-stone-500 hover:text-stone-300 text-sm">&times;</button>
                 </div>
@@ -1864,31 +1993,31 @@ export default function VillageGame({
                 </div>
               )}
             </div>
-            <p className="text-[10px] text-stone-500 text-center">Gold in the bank is safe if you die in a dungeon.</p>
+            <p className="text-[10px] text-stone-500 text-center">{t("Gold in the bank is safe if you die in a dungeon.", language)}</p>
           </div>
         </div>
       )}
 
       {activeNPC && activeNPC.id === "moves" && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
+          <div className="max-w-lg w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-stone-100">Move Changer</h2>
+              <h2 className="text-lg font-bold text-stone-100">{t("Move Changer", language)}</h2>
               <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
             </div>
             {!moveChangerPkm ? (
               <div className="space-y-2">
-                <p className="text-xs text-stone-400">Choose a Pokémon to change its moves:</p>
+                <p className="text-xs text-stone-400">{t("Choose a Pokémon to change its moves:", language)}</p>
                 {team.map((pkm, i) => (
                   <button
                     key={pkm.id || i}
                     onClick={() => openMoveChanger(pkm)}
                     className="w-full rounded-xl bg-stone-700/40 p-3 flex items-center gap-2 hover:bg-stone-600/40 transition-colors"
                   >
-                    <img src={`${SPRITE_URL}/${pkm.pokemonId || pkm.pokemon_id || 25}.png`} alt="" className="w-8 h-8" />
+                    <SpriteImg id={pkm.pokemonId || pkm.pokemon_id || 25} size={34} />
                     <div className="text-left">
                       <p className="text-sm text-stone-200">{pkm.nickname || getSpeciesName(pkm.pokemonId || pkm.pokemon_id)}</p>
-                      <p className="text-[10px] text-stone-400">Lv.{pkm.level || 5}</p>
+                      <p className="text-[10px] text-stone-400">{t("Lv.", language)}{pkm.level || 5}</p>
                     </div>
                   </button>
                 ))}
@@ -1896,16 +2025,16 @@ export default function VillageGame({
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <img src={`${SPRITE_URL}/${moveChangerPkm.pokemonId || moveChangerPkm.pokemon_id || 25}.png`} alt="" className="w-6 h-6" />
+                  <SpriteImg id={moveChangerPkm.pokemonId || moveChangerPkm.pokemon_id || 25} size={30} />
                   <p className="text-sm text-stone-200 font-semibold">
                     {moveChangerPkm.nickname || getSpeciesName(moveChangerPkm.pokemonId || moveChangerPkm.pokemon_id)}
-                    <span className="text-stone-400 font-normal"> · Lv.{moveChangerPkm.level || 5}</span>
+                    <span className="text-stone-400 font-normal"> · {t("Lv.", language)}{moveChangerPkm.level || 5}</span>
                   </p>
                 </div>
 
                 {/* Current moves — pick one to replace when the set is full */}
                 <div className="space-y-1.5">
-                  <p className="text-xs text-stone-400">Current moves:</p>
+                  <p className="text-xs text-stone-400">{t("Current moves:", language)}</p>
                   {(moveChangerPkm.moves || []).map((move, si) => (
                     <button
                       key={si}
@@ -1918,12 +2047,12 @@ export default function VillageGame({
                     >
                       <span className="text-sm text-stone-200">{getMoveName(move, language)}</span>
                       {moveChangerSlot === si && (
-                        <span className="ml-auto text-[10px] text-green-400">replace</span>
+                        <span className="ml-auto text-[10px] text-green-400">{t("replace", language)}</span>
                       )}
                     </button>
                   ))}
                   {(moveChangerPkm.moves || []).length === 0 && (
-                    <p className="text-[10px] text-amber-400">No moves — pick one below to learn it.</p>
+                    <p className="text-[10px] text-amber-400">{t("No moves — pick one below to learn it.", language)}</p>
                   )}
                 </div>
 
@@ -1933,7 +2062,7 @@ export default function VillageGame({
                     {t("Moves by Level", language)} ({availableMoves.length})
                   </p>
                   {availableMoves.length === 0 ? (
-                    <p className="text-xs text-stone-500">No level-up moves available.</p>
+                    <p className="text-xs text-stone-500">{t("No level-up moves available.", language)}</p>
                   ) : (
                     <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
                       {availableMoves.map((m) => {
@@ -1959,7 +2088,7 @@ export default function VillageGame({
                               <span className="text-[10px] text-stone-400 capitalize">{m.type}</span>
                               {m.power > 0 && <span className="text-[10px] text-stone-400">{m.power}</span>}
                               <span className="text-[10px] text-stone-500">Lv.{m.level}</span>
-                              {known && <span className="text-[10px] text-stone-500">learned</span>}
+                              {known && <span className="text-[10px] text-stone-500">{t("learned", language)}</span>}
                             </span>
                           </button>
                         );
@@ -1976,7 +2105,7 @@ export default function VillageGame({
                   Confirm
                 </button>
                 {(moveChangerPkm.moves || []).length >= 4 && moveChangerSlot === null && (
-                  <p className="text-[10px] text-amber-400">Select a current move to replace.</p>
+                  <p className="text-[10px] text-amber-400">{t("Select a current move to replace.", language)}</p>
                 )}
               </div>
             )}
@@ -1984,47 +2113,55 @@ export default function VillageGame({
         </div>
       )}
 
-      {activeNPC && activeNPC.id === "name" && (
+      {/* ─── Sage (Whiscash) — evolution helper, replaces the old Name Rater. ─── */}
+      {activeNPC && activeNPC.id === "evolve" && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
+          <div className="max-w-lg w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-stone-100">Name Rater</h2>
+              <div className="flex items-center gap-2">
+                <img src={`${SPRITE_URL}/340.png`} alt="" className="w-6 h-6" />
+                <h2 className="text-lg font-bold text-stone-100">{t("Sage", language)}</h2>
+              </div>
               <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
             </div>
-            {!renamePkm ? (
-              <div className="space-y-2">
-                <p className="text-xs text-stone-400">Choose a Pokémon to rename:</p>
-                {team.map((pkm, i) => (
-                  <button
-                    key={pkm.id || i}
-                    onClick={() => { setRenamePkm(pkm); setNewNickname(pkm.nickname || getSpeciesName(pkm.pokemonId || pkm.pokemon_id)); }}
-                    className="w-full rounded-xl bg-stone-700/40 p-3 flex items-center gap-2 hover:bg-stone-600/40 transition-colors"
-                  >
-                    <img src={`${SPRITE_URL}/${pkm.pokemonId || pkm.pokemon_id || 25}.png`} alt="" className="w-8 h-8" />
-                    <div className="text-left">
-                      <p className="text-sm text-stone-200">{pkm.nickname || getSpeciesName(pkm.pokemonId || pkm.pokemon_id)}</p>
-                      <p className="text-[10px] text-stone-400">Lv.{pkm.level || 5}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+            <p className="text-xs text-stone-400">
+              {t("Whiscash is a wise old sage who has seen countless evolutions. He can help a Pokémon that reached the right level evolve — from your team or the club!", language)}
+            </p>
+            {evolveLoading ? (
+              <p className="text-xs text-stone-500 text-center py-4">{t("Checking...", language)}</p>
+            ) : evolvable.length === 0 ? (
+              <p className="text-xs text-stone-500 text-center py-4">{t("No Pokémon can evolve yet. Keep leveling up in dungeons!", language)}</p>
             ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-stone-400">New nickname:</p>
-                <input
-                  value={newNickname}
-                  onChange={(e) => setNewNickname(e.target.value)}
-                  maxLength={20}
-                  className="w-full rounded-xl bg-stone-700/60 border border-stone-600 px-4 py-2.5 text-sm text-stone-100 text-center"
-                  onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
-                />
-                <button
-                  onClick={handleRename}
-                  disabled={!newNickname.trim()}
-                  className="w-full rounded-xl bg-green-700 px-4 py-2 text-sm text-white hover:bg-green-600 disabled:opacity-40 transition-colors"
-                >
-                  Confirm
-                </button>
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {evolvable.map((item, i) => {
+                  const pkm = item.pkm;
+                  const id = pkm.pokemonId || pkm.pokemon_id;
+                  return (
+                    <div key={`${item.kind}-${pkm.id || i}-${id}`} className="rounded-xl bg-stone-700/40 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <SpriteImg id={id} size={30} />
+                        <span className="text-sm text-stone-200">{pkm.nickname || getSpeciesName(id)}</span>
+                        <span className="ml-auto text-[10px] text-stone-500">{t("Lv.", language)}{pkm.level || 5}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {item.options.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => handleEvolve(item, opt)}
+                            className="flex-1 min-w-[8rem] rounded-lg bg-purple-800 px-2 py-1.5 text-xs text-purple-200 hover:bg-purple-700 transition-colors"
+                          >
+                            {t("Evolve", language)} → {getSpeciesName(opt.id)}
+                            {opt.item && (
+                              <span className="block text-[10px] text-purple-300/80">
+                                {getItemIcon(opt.item)} {getItemName(opt.item, language)}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -2036,7 +2173,7 @@ export default function VillageGame({
         onClick={() => setChatOpen((o) => !o)}
         className="fixed bottom-4 right-4 z-50 rounded-full bg-stone-700 px-4 py-2 text-xs text-stone-300 shadow-lg hover:bg-stone-600 transition-colors"
       >
-        {chatOpen ? "Close" : "Chat"}
+        {chatOpen ? t("Close", language) : t("Chat", language)}
       </button>
 
       {/* ─── Friends toggle button ─── */}
@@ -2044,14 +2181,14 @@ export default function VillageGame({
         onClick={() => { setFriendsOpen((o) => !o); if (!friendsOpen) loadFriends(); }}
         className="fixed bottom-4 right-24 z-50 rounded-full bg-slate-700 px-4 py-2 text-xs text-slate-300 shadow-lg hover:bg-slate-600 transition-colors"
       >
-        {friendsOpen ? "Close" : "Friends"}
+        {friendsOpen ? t("Close", language) : t("Friends", language)}
       </button>
 
       {/* ─── Friends panel ─── */}
       {friendsOpen && (
         <div className="fixed bottom-16 right-24 z-50 w-80 rounded-xl border border-slate-700 bg-slate-800/95 backdrop-blur shadow-xl flex flex-col">
           <div className="flex items-center justify-between border-b border-slate-700 px-3 py-2">
-            <span className="text-xs font-semibold text-slate-300">Friends</span>
+            <span className="text-xs font-semibold text-slate-300">{t("Friends", language)}</span>
             <button onClick={closeFriends} className="text-slate-500 hover:text-slate-300 text-sm">&times;</button>
           </div>
 
@@ -2065,7 +2202,7 @@ export default function VillageGame({
                   friendsTab === tab ? "text-slate-100 bg-slate-700/50" : "text-slate-500 hover:text-slate-300"
                 }`}
               >
-                {tab === "friends" ? `Friends (${friends.length})` : tab === "requests" ? `Requests (${incomingRequests.length})` : "Add"}
+                {tab === "friends" ? `${t("Friends", language)} (${friends.length})` : tab === "requests" ? `${t("Requests", language)} (${incomingRequests.length})` : t("Add", language)}
               </button>
             ))}
           </div>
@@ -2074,7 +2211,7 @@ export default function VillageGame({
             {friendsTab === "friends" && (
               friends.length === 0 ? (
                 <p className="text-[10px] text-slate-500 text-center py-4">
-                  No friends yet. Add friends to see who's exploring and join their dungeons!
+                  {t("No friends yet. Add friends to see who's exploring and join their dungeons!", language)}
                 </p>
               ) : (
                 friends.map((f) => {
@@ -2092,18 +2229,18 @@ export default function VillageGame({
                           disabled={friendBusy || actionBusy !== null}
                           className="rounded-lg bg-blue-800 px-2 py-1 text-[10px] text-blue-200 hover:bg-blue-700 disabled:opacity-40 transition-colors"
                         >
-                          Join village
+                          {t("Join village", language)}
                         </button>
                       ) : (
                         <span className="text-[9px] text-slate-600">
-                          {isCurrentVillage ? "Same village" : inDungeon ? "In dungeon" : "Offline"}
+                          {isCurrentVillage ? t("Same village", language) : inDungeon ? t("In dungeon", language) : t("Offline", language)}
                         </span>
                       )}
                       <button
                         onClick={() => handleRemoveFriend(f.id)}
                         className="rounded-lg bg-red-900/60 px-2 py-1 text-[10px] text-red-300 hover:bg-red-800/60 transition-colors"
                       >
-                        Remove
+                        {t("Remove", language)}
                       </button>
                     </div>
                   );
@@ -2114,7 +2251,7 @@ export default function VillageGame({
             {friendsTab === "requests" && (
               <>
                 {incomingRequests.length === 0 && outgoingRequests.length === 0 ? (
-                  <p className="text-[10px] text-slate-500 text-center py-4">No pending requests.</p>
+                  <p className="text-[10px] text-slate-500 text-center py-4">{t("No pending requests.", language)}</p>
                 ) : (
                   <>
                     {incomingRequests.map((r) => (
@@ -2123,7 +2260,7 @@ export default function VillageGame({
                           <span className="text-xs text-slate-200 font-medium truncate flex-1">
                             {r.display_name || r.username}
                           </span>
-                          <span className="text-[9px] text-slate-500">wants to be friends</span>
+                          <span className="text-[9px] text-slate-500">{t("wants to be friends", language)}</span>
                         </div>
                         <div className="flex gap-1.5">
                           <button
@@ -2131,14 +2268,14 @@ export default function VillageGame({
                             disabled={friendBusy}
                             className="flex-1 rounded-lg bg-green-800 px-2 py-1 text-[10px] text-green-200 hover:bg-green-700 disabled:opacity-40"
                           >
-                            Accept
+                            {t("Accept", language)}
                           </button>
                           <button
                             onClick={() => handleRespond(r.id, false)}
                             disabled={friendBusy}
                             className="flex-1 rounded-lg bg-stone-700 px-2 py-1 text-[10px] text-stone-400 hover:bg-stone-600 disabled:opacity-40"
                           >
-                            Decline
+                            {t("Decline", language)}
                           </button>
                         </div>
                       </div>
@@ -2146,7 +2283,7 @@ export default function VillageGame({
                     {outgoingRequests.map((r) => (
                       <div key={r.id} className="flex items-center gap-2 rounded-lg bg-slate-700/40 px-3 py-2">
                         <span className="text-xs text-slate-400 truncate flex-1">
-                          {r.display_name || r.username} <span className="text-slate-600">(request sent)</span>
+                          {r.display_name || r.username} <span className="text-slate-600">{t("(request sent)", language)}</span>
                         </span>
                       </div>
                     ))}
@@ -2164,7 +2301,7 @@ export default function VillageGame({
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by username..."
+                    placeholder={t("Search by username...", language)}
                     className="flex-1 rounded-lg bg-slate-700/60 border border-slate-600 px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 outline-none focus:border-slate-500"
                   />
                   <button
@@ -2172,12 +2309,12 @@ export default function VillageGame({
                     disabled={searchQuery.trim().length < 2}
                     className="rounded-lg bg-blue-800 px-2.5 py-1.5 text-[10px] text-blue-200 hover:bg-blue-700 disabled:opacity-40"
                   >
-                    Search
+                    {t("Search", language)}
                   </button>
                 </form>
                 {searchResults.length === 0 ? (
                   <p className="text-[10px] text-slate-500 text-center py-3">
-                    {searchQuery.trim().length >= 2 ? "No accounts found." : "Type at least 2 characters to search."}
+                    {searchQuery.trim().length >= 2 ? t("No accounts found.", language) : t("Type at least 2 characters to search.", language)}
                   </p>
                 ) : (
                   searchResults.map((a) => {
@@ -2194,7 +2331,7 @@ export default function VillageGame({
                           disabled={friendBusy || alreadyFriend || requestSent || isSelf}
                           className="rounded-lg bg-green-800 px-2 py-1 text-[10px] text-green-200 hover:bg-green-700 disabled:opacity-40"
                         >
-                          {isSelf ? "You" : alreadyFriend ? "Friends" : requestSent ? "Sent" : "Add"}
+                          {isSelf ? t("You", language) : alreadyFriend ? t("Friends", language) : requestSent ? t("Sent", language) : t("Add", language)}
                         </button>
                       </div>
                     );
@@ -2234,7 +2371,7 @@ export default function VillageGame({
                       </span>
                       <span className="text-[9px] text-stone-500">{t("gift-sent-you", language)}</span>
                     </div>
-                    <p className="text-[10px] text-stone-400">{formatGiftContents(g.items, g.gold, language)}</p>
+                    <p className="text-[10px] text-stone-400">{formatGiftContents(g.items, g.gold, g.pokemon, language)}</p>
                     {g.note && <p className="text-[10px] text-stone-500 italic">"{g.note}"</p>}
                     <div className="flex gap-1.5">
                       <button
@@ -2257,7 +2394,7 @@ export default function VillageGame({
                 {outgoingGifts.map((g) => (
                   <div key={g.id} className="flex items-center gap-2 rounded-lg bg-stone-700/40 px-3 py-2">
                     <span className="text-xs text-stone-400 truncate flex-1">
-                      {g.receiver?.display_name || g.receiver?.username || "?"} — {formatGiftContents(g.items, g.gold, language)}
+                      {g.receiver?.display_name || g.receiver?.username || "?"} — {formatGiftContents(g.items, g.gold, g.pokemon, language)}
                     </span>
                     <span className={`text-[9px] ${
                       g.status === "accepted" ? "text-green-400"
@@ -2277,12 +2414,12 @@ export default function VillageGame({
       {chatOpen && (
         <div className="fixed bottom-16 right-4 z-50 w-72 rounded-xl border border-stone-700 bg-stone-800/95 backdrop-blur shadow-xl flex flex-col">
           <div className="flex items-center justify-between border-b border-stone-700 px-3 py-2">
-            <span className="text-xs font-semibold text-stone-300">Chat</span>
+            <span className="text-xs font-semibold text-stone-300">{t("Chat", language)}</span>
             <button onClick={() => setChatOpen(false)} className="text-stone-500 hover:text-stone-300 text-sm">&times;</button>
           </div>
           <div className="flex-1 overflow-y-auto max-h-60 px-3 py-2 space-y-1.5">
             {messages.length === 0 && (
-              <p className="text-[10px] text-stone-500 text-center">No messages yet</p>
+              <p className="text-[10px] text-stone-500 text-center">{t("No messages yet", language)}</p>
             )}
             {messages.map((msg) => {
               const isOwn = msg.playerName === accountName;
@@ -2302,7 +2439,7 @@ export default function VillageGame({
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Type a message..."
+              placeholder={t("Type a message...", language)}
               maxLength={200}
               className="flex-1 min-w-0 rounded-lg bg-stone-700/60 border border-stone-600 px-2.5 py-1.5 text-xs text-stone-100 placeholder:text-stone-500"
             />
@@ -2311,7 +2448,7 @@ export default function VillageGame({
               disabled={!chatInput.trim()}
               className="rounded-lg bg-blue-700 px-2.5 py-1.5 text-xs text-white hover:bg-blue-600 disabled:opacity-40 transition-colors"
             >
-              Send
+              {t("Send", language)}
             </button>
           </form>
         </div>
@@ -2320,11 +2457,11 @@ export default function VillageGame({
       {/* ─── Kangaskhan Storage ─── */}
       {activeNPC && activeNPC.id === "storage" && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
+          <div className="max-w-lg w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <img src={`${SPRITE_URL}/115.png`} alt="" className="w-6 h-6" />
-                <h2 className="text-lg font-bold text-stone-100">Kangaskhan Storage</h2>
+                <h2 className="text-lg font-bold text-stone-100">{t("Kangaskhan Storage", language)}</h2>
               </div>
               <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
             </div>
@@ -2332,12 +2469,22 @@ export default function VillageGame({
             {!storageSelectedItem && !storageSendItem ? (
               <>
                 <p className="text-xs text-stone-400">
-                  Items you carry can be lost if you faint in a dungeon. Store them to keep them safe!
+                  {t("Items you carry can be lost if you faint in a dungeon. Store them to keep them safe!", language)}
                 </p>
+                {(profile?.inventory?.items || []).length > 0 && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleStoreAllItems}
+                      className="rounded-lg bg-amber-800 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-700 transition-colors"
+                    >
+                      {t("Store All", language)}
+                    </button>
+                  </div>
+                )}
                 <div className="space-y-3 max-h-72 overflow-y-auto">
                   <StorageItemGroup
                     items={profile?.inventory?.items}
-                    label={`Carried (${(profile?.inventory?.items || []).length})`}
+                    label={`${t("Carried", language)} (${(profile?.inventory?.items || []).length})`}
                     language={language}
                     action={(itemId) => (
                       <>
@@ -2345,26 +2492,26 @@ export default function VillageGame({
                           onClick={() => setStorageSelectedItem(itemId)}
                           className="rounded-lg bg-blue-800 px-2.5 py-1.5 text-xs text-blue-200 hover:bg-blue-700 transition-colors"
                         >
-                          Use
+                          {t("Use", language)}
                         </button>
                         <button
                           onClick={() => handleStoreItem(itemId)}
                           className="rounded-lg bg-amber-800 px-2.5 py-1.5 text-xs text-amber-200 hover:bg-amber-700 transition-colors"
                         >
-                          Store
+                          {t("Store", language)}
                         </button>
                         <button
                           onClick={() => { setStorageSendItem(itemId); setStorageSendSource("items"); setStorageSendFriend(null); }}
                           className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
                         >
-                          Send
+                          {t("Send", language)}
                         </button>
                       </>
                     )}
                   />
                   <StorageItemGroup
                     items={profile?.inventory?.storage}
-                    label={`Stored (${(profile?.inventory?.storage || []).length})`}
+                    label={`${t("Stored", language)} (${(profile?.inventory?.storage || []).length})`}
                     language={language}
                     action={(itemId) => (
                       <>
@@ -2372,13 +2519,13 @@ export default function VillageGame({
                           onClick={() => handleWithdrawItem(itemId)}
                           className="rounded-lg bg-slate-600 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-slate-500 transition-colors"
                         >
-                          Withdraw
+                          {t("Withdraw", language)}
                         </button>
                         <button
                           onClick={() => { setStorageSendItem(itemId); setStorageSendSource("storage"); setStorageSendFriend(null); }}
                           className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
                         >
-                          Send
+                          {t("Send", language)}
                         </button>
                       </>
                     )}
@@ -2410,7 +2557,7 @@ export default function VillageGame({
                   onClick={() => setTmTeaching(null)}
                   className="w-full rounded-lg bg-stone-700 px-3 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
                 >
-                  Back
+                  {t("Back", language)}
                 </button>
               </div>
             ) : storageSendItem ? (
@@ -2421,8 +2568,8 @@ export default function VillageGame({
                 </p>
                 <p className="text-[10px] text-stone-500">
                   {storageSendSource === "storage"
-                    ? "From Kangaskhan Storage — returns here if declined."
-                    : "From your carried items — returns to your bag if declined."}
+                    ? t("From Kangaskhan Storage — returns here if declined.", language)
+                    : t("From your carried items — returns to your bag if declined.", language)}
                 </p>
                 {friends.length === 0 ? (
                   <p className="text-xs text-stone-500 text-center py-4">{t("gift-no-friends", language)}</p>
@@ -2444,19 +2591,19 @@ export default function VillageGame({
                   onClick={() => setStorageSendItem(null)}
                   className="w-full rounded-lg bg-stone-700 px-3 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
                 >
-                  Back
+                  {t("Back", language)}
                 </button>
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-stone-400">Choose a Pokémon to use this item on:</p>
+                <p className="text-xs text-stone-400">{t("Choose a Pokémon to use this item on:", language)}</p>
                 {team.map((pkm, i) => (
                   <button
                     key={pkm.id || i}
                     onClick={() => handleUseStorageItem(storageSelectedItem, pkm)}
                     className="w-full rounded-lg bg-stone-700/40 px-3 py-2 text-xs text-stone-300 hover:bg-stone-600/40 text-left flex items-center gap-2"
                   >
-                    <img src={`${SPRITE_URL}/${pkm.pokemonId || pkm.pokemon_id || 25}.png`} alt="" className="w-5 h-5" />
+                    <SpriteImg id={pkm.pokemonId || pkm.pokemon_id || 25} size={28} />
                     <span>{pkm.nickname || getSpeciesName(pkm.pokemonId || pkm.pokemon_id)}</span>
                     <span className="ml-auto text-stone-500">HP {pkm.hp || 0}/{pkm.maxHp || pkm.max_hp || 100}</span>
                   </button>
@@ -2465,7 +2612,7 @@ export default function VillageGame({
                   onClick={() => setStorageSelectedItem(null)}
                   className="w-full rounded-lg bg-stone-700 px-3 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
                 >
-                  Back
+                  {t("Back", language)}
                 </button>
               </div>
             )}
@@ -2476,103 +2623,186 @@ export default function VillageGame({
       {/* ─── Club Wigglytuff ─── */}
       {activeNPC && activeNPC.id === "club" && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
+          <div className="max-w-lg w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <img src={`${SPRITE_URL}/40.png`} alt="" className="w-6 h-6" />
-                <h2 className="text-lg font-bold text-stone-100">Club Wigglytuff</h2>
+                <h2 className="text-lg font-bold text-stone-100">{t("Club Wigglytuff", language)}</h2>
               </div>
               <button onClick={closeNPC} className="text-stone-500 hover:text-stone-300 text-lg">&times;</button>
             </div>
             <p className="text-xs text-stone-400">
-              Wild Pokémon that want to join you wait here — they're safe even if you faint in a dungeon. Choose one to adventure with.
+              {t("Wild Pokémon that want to join you wait here — they're safe even if you faint in a dungeon. Choose one to adventure with.", language)}
             </p>
 
             {/* Current active partner */}
             {team[0] && (
               <div className="rounded-xl bg-stone-700/60 border border-stone-600 p-3 flex items-center gap-3">
-                <img src={`${SPRITE_URL}/${team[0].pokemonId || team[0].pokemon_id || 25}.png`} alt="" className="w-8 h-8" />
+                <SpriteImg id={team[0].pokemonId || team[0].pokemon_id || 25} size={40} />
                 <div>
                   <p className="text-sm text-stone-200 font-semibold">{team[0].nickname || getSpeciesName(team[0].pokemonId || team[0].pokemon_id)}</p>
-                  <p className="text-[10px] text-stone-400">Active partner · Lv.{team[0].level || 5}</p>
+                  <p className="text-[10px] text-stone-400">{t("Active partner", language)} · {t("Lv.", language)}{team[0].level || 5}</p>
                 </div>
               </div>
             )}
 
             {/* Club pool */}
-            <p className="text-xs text-stone-500">Club members ({profile?.stored_pokemon?.length || 0})</p>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {(profile?.stored_pokemon || []).length === 0 ? (
-                <p className="text-xs text-stone-500 text-center py-4">No one here yet. Catch some wild Pokémon in dungeons!</p>
-              ) : (
-                (profile?.stored_pokemon || []).map((pkm, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-xl bg-stone-700/40 p-3">
-                    <div className="flex items-center gap-2">
-                      <img src={`${SPRITE_URL}/${pkm.pokemon_id}.png`} alt="" className="w-6 h-6" />
-                      <div>
-                        <p className="text-sm text-stone-200">{getSpeciesName(pkm.pokemon_id)}</p>
-                        <p className="text-[10px] text-stone-500">Lv.{pkm.level || 5}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleMakeActive(pkm)}
-                      className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
-                    >
-                      Make Active
-                    </button>
+            {clubSendPkm ? (
+              // Sending a club Pokémon to a friend — pick who gets it.
+              <div className="space-y-2">
+                <p className="text-xs text-stone-400">{t("gift-send-pkm", language)}</p>
+                <p className="text-sm text-stone-200 font-medium">
+                  ⚡ {clubSendPkm.nickname || getSpeciesName(clubSendPkm.pokemon_id)} ({t("Lv.", language)}{clubSendPkm.level || 5})
+                </p>
+                <p className="text-[10px] text-stone-500">{t("gift-send-pkm-hint", language)}</p>
+                {friends.length === 0 ? (
+                  <p className="text-xs text-stone-500 text-center py-4">{t("gift-no-friends", language)}</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {friends.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => handleSendPkmToFriend(f.id)}
+                        className="w-full flex items-center gap-2 rounded-lg bg-stone-700/40 px-3 py-2 text-xs text-stone-300 hover:bg-stone-600/40 transition-colors"
+                      >
+                        <span className="text-sm">{f.display_name || f.username}</span>
+                        <span className="ml-auto text-[10px] text-stone-500">{f.username}</span>
+                      </button>
+                    ))}
                   </div>
-                ))
-              )}
-            </div>
+                )}
+                <button
+                  onClick={() => setClubSendPkm(null)}
+                  className="w-full rounded-lg bg-stone-700 px-3 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
+                >
+                  {t("Back", language)}
+                </button>
+              </div>
+            ) : renamePkm ? (
+              // Naming a club Pokémon — input + confirm.
+              <div className="space-y-3">
+                <p className="text-sm text-stone-200 font-medium">
+                  ⚡ {renamePkm.nickname || getSpeciesName(renamePkm.pokemon_id)} ({t("Lv.", language)}{renamePkm.level || 5})
+                </p>
+                <p className="text-xs text-stone-400">{t("New nickname:", language)}</p>
+                <input
+                  value={newNickname}
+                  onChange={(e) => setNewNickname(e.target.value)}
+                  maxLength={20}
+                  className="w-full rounded-xl bg-stone-700/60 border border-stone-600 px-4 py-2.5 text-sm text-stone-100 text-center"
+                  onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setRenamePkm(null)}
+                    className="flex-1 rounded-lg bg-stone-700 px-4 py-2 text-sm text-stone-400 hover:bg-stone-600 transition-colors"
+                  >
+                    {t("Back", language)}
+                  </button>
+                  <button
+                    onClick={handleRename}
+                    disabled={!newNickname.trim()}
+                    className="flex-1 rounded-xl bg-green-700 px-4 py-2 text-sm text-white hover:bg-green-600 disabled:opacity-40 transition-colors"
+                  >
+                    {t("Confirm", language)}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-stone-500">{t("Club members", language)} ({profile?.stored_pokemon?.length || 0})</p>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {(profile?.stored_pokemon || []).length === 0 ? (
+                    <p className="text-xs text-stone-500 text-center py-4">{t("No one here yet. Catch some wild Pokémon in dungeons!", language)}</p>
+                  ) : (
+                    (profile?.stored_pokemon || []).map((pkm, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-xl bg-stone-700/40 p-3 gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <SpriteImg id={pkm.pokemon_id} size={34} />
+                          <div className="min-w-0">
+                            <p className="text-sm text-stone-200 truncate">{pkm.nickname || getSpeciesName(pkm.pokemon_id)}</p>
+                            <p className="text-[10px] text-stone-500">{t("Lv.", language)}{pkm.level || 5}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap justify-end">
+                          <button
+                            onClick={() => handleMakeActive(pkm)}
+                            className="rounded-lg bg-green-800 px-2.5 py-1.5 text-xs text-green-200 hover:bg-green-700 transition-colors"
+                          >
+                            {t("Make Active", language)}
+                          </button>
+                          <button
+                            onClick={() => { setRenamePkm(pkm); setNewNickname(pkm.nickname || getSpeciesName(pkm.pokemon_id)); }}
+                            className="rounded-lg bg-blue-800 px-2.5 py-1.5 text-xs text-blue-200 hover:bg-blue-700 transition-colors"
+                          >
+                            {t("Rename", language)}
+                          </button>
+                          <button
+                            onClick={() => setClubSendPkm(pkm)}
+                            className="rounded-lg bg-emerald-800 px-2.5 py-1.5 text-xs text-emerald-200 hover:bg-emerald-700 transition-colors"
+                          >
+                            {t("Send", language)}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* ─── Quiz Reset (Xatu) ─── */}
+      {/* ─── Account Reset (Xatu) ─── */}
       {activeNPC && activeNPC.id === "quiz-reset" && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="max-w-sm w-full rounded-2xl border border-stone-700 bg-stone-800 p-6 space-y-4 text-center">
             <div className="flex items-center justify-center gap-2">
               <img src={`${SPRITE_URL}/178.png`} alt="" className="w-8 h-8" />
-              <h2 className="text-lg font-bold text-stone-100">Quiz Reset</h2>
+              <h2 className="text-lg font-bold text-stone-100">{t("Account Reset", language)}</h2>
             </div>
             {!showQuizResetConfirm ? (
               <>
                 <p className="text-sm text-stone-300">
-                  Xatu can erase your memory of the starter quiz, letting you choose a new partner.
+                  {t("Xatu can erase your memory of the starter quiz, letting you choose a new partner.", language)}
                 </p>
                 <p className="text-xs text-amber-400">
-                  Your starter Pokémon will be released. Other Pokémon and items are safe.
+                  {t("Your starter Pokémon will be released. Other Pokémon and items are safe.", language)}
                 </p>
                 <button
                   onClick={() => setShowQuizResetConfirm(true)}
                   className="w-full rounded-xl bg-red-800 px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-700 transition-colors"
                 >
-                  Reset Quiz
+                  {t("Reset Account", language)}
                 </button>
               </>
             ) : (
               <>
-                <p className="text-sm text-amber-400 font-semibold">Are you sure?</p>
-                <p className="text-xs text-stone-400">This will delete your starter Pokémon. This cannot be undone.</p>
+                <p className="text-sm text-amber-400 font-semibold">{t("Are you sure?", language)}</p>
+                <p className="text-xs text-stone-400">{t("This will delete your starter Pokémon. This cannot be undone.", language)}</p>
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={handleQuizReset}
                     className="w-full rounded-xl bg-red-800 px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-700 transition-colors"
                   >
-                    Yes, Reset Everything
+                    {t("Yes, Reset Everything", language)}
                   </button>
                   <button
                     onClick={() => setShowQuizResetConfirm(false)}
                     className="w-full rounded-xl bg-stone-700 px-4 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors"
                   >
-                    Cancel
+                    {t("Cancel", language)}
                   </button>
                 </div>
               </>
             )}
           </div>
         </div>
+      )}
+
+      {activeNPC && activeNPC.id === "password" && (
+        <ChangePasswordDialog accountId={accountId} onClose={closeNPC} />
       )}
 
       {activeNPC && activeNPC.id === "adventure" && (
@@ -2603,11 +2833,11 @@ export default function VillageGame({
               </button>
               <div className="space-y-1.5">
                 <p className="text-[10px] uppercase tracking-wider text-stone-500 text-left">
-                  Friends in dungeons
+                  {t("Friends in dungeons", language)}
                 </p>
                 {friendDungeons.length === 0 ? (
                   <p className="text-xs text-stone-500 rounded-xl bg-stone-700/40 px-4 py-3">
-                    No friends are exploring right now. Ask them to start a dungeon, then come back!
+                    {t("No friends are exploring right now. Ask them to start a dungeon, then come back!", language)}
                   </p>
                 ) : (
                   friendDungeons.map((d) => (
@@ -2621,7 +2851,7 @@ export default function VillageGame({
                         {d.friends.map((f) => f.display_name || f.player_name).join(", ")}
                       </span>
                       <span className="text-[10px] text-blue-300">
-                        Room {d.code} · Floor {d.floor}
+                        {t("Room", language)} {d.code} · {t("Floor", language)} {d.floor}
                       </span>
                     </button>
                   ))
@@ -2631,7 +2861,7 @@ export default function VillageGame({
                   disabled={actionBusy !== null}
                   className="w-full rounded-xl bg-stone-700/60 px-4 py-2 text-xs text-stone-400 hover:bg-stone-600 transition-colors disabled:opacity-50"
                 >
-                  Refresh
+                  {t("Refresh", language)}
                 </button>
               </div>
               <button

@@ -533,19 +533,34 @@ function withDefaultPP(move) {
   return { ...move, pp: move.pp ?? defaultPP(move) };
 }
 
-// Attach the real PP value (from public/moves.json) to a move object. Used
-// when building/persisting moves so the battle can enforce PP costs.
+// Attach the real PP (and accuracy) value from public/moves.json to a move
+// object. Used when building/persisting moves so the battle can enforce PP
+// costs and the accuracy roll uses the real per-move accuracy (moves.json
+// stores null for never-miss moves). Values already present are kept.
 export async function attachPP(move) {
   if (!move) return move;
-  if (typeof move.pp === "number" && move.pp > 0) return move;
   const data = await ensureMovesData();
   const real = data?.[move.key || move.name];
-  return { ...move, pp: typeof real?.pp === "number" ? real.pp : defaultPP(move) };
+  const hasPP = typeof move.pp === "number" && move.pp > 0;
+  const hasAcc = typeof move.accuracy === "number";
+  if (!real || (hasPP && hasAcc)) return move;
+  const next = { ...move };
+  if (!hasPP) next.pp = typeof real?.pp === "number" ? real.pp : defaultPP(move);
+  if (!hasAcc) next.accuracy = typeof real?.accuracy === "number" ? real.accuracy : 100;
+  return next;
 }
 
 // Move PP at battle time: prefer the stored value, fall back to the estimate.
 export function getMovePP(move) {
   return (typeof move?.pp === "number" && move.pp > 0) ? move.pp : defaultPP(move);
+}
+
+// Roll whether a move lands this use. Moves with no accuracy value (never-miss
+// moves like Swift, or status moves without a roll) always hit; the accuracy
+// comes from moves.json via attachPP / buildStoredMove.
+export function moveHits(move) {
+  const acc = typeof move?.accuracy === "number" ? move.accuracy : 100;
+  return Math.random() * 100 < acc;
 }
 
 // Maps dedicated status-inflicting moves to the condition they apply. Damaging
@@ -1433,14 +1448,47 @@ export function getRandomWildPokemon(level, rng = Math.random) {
   return valid[Math.floor(rng() * valid.length)];
 }
 
-// EXP formula: base EXP from defeating an enemy
-export function calcExpGain(enemyLevel) {
-  return 10 + enemyLevel * 5;
+// ─── EXP system ────────────────────────────────────────────────────────────
+// MMO-style grind curve: level-ups cost very little early (10 EXP at level 1)
+// and grow steeply so end-game takes real effort. EXP accumulates across
+// levels (a Pokémon's `exp` is the total it has earned), so level-up checks
+// compare against the *cumulative* threshold.
+const EXP_GROWTH = 1.15;
+
+// Marginal EXP required to go from `level` to `level+1`. 10 at level 1, ~10M
+// at level 100.
+export function expToNext(level) {
+  return Math.max(1, Math.floor(10 * Math.pow(EXP_GROWTH, level - 1)));
 }
 
-// Level up check: returns new level if leveled up, else null
+// Total EXP required to REACH `level` from scratch (sum of expToNext up to it).
+export function cumulativeExp(level) {
+  let total = 0;
+  for (let l = 1; l < level; l++) total += expToNext(l);
+  return total;
+}
+
+// EXP gained from defeating an enemy. Base scales with the enemy's level and
+// bulk (maxHp), then a multiplier based on the level difference vs the player:
+// at/above the player's level you get full value (with a growing bonus for
+// tougher enemies), while enemies below your level pay out a fraction that
+// collapses fast — a level 40 player grinding early floors gets ~1 EXP/kill.
+export function calcExpGain(enemyLevel, playerLevel, enemyMaxHp = 0) {
+  const base = 10 + enemyLevel * 5 + Math.floor(enemyMaxHp / 10);
+  const diff = enemyLevel - playerLevel;
+  let mult;
+  if (diff >= 0) {
+    mult = Math.min(2.5, 1 + diff * 0.1);
+  } else {
+    mult = Math.max(0.02, Math.pow(0.7, -diff));
+  }
+  return Math.max(1, Math.round(base * mult));
+}
+
+// Level up check: returns new level if leveled up, else null. `currentExp` is
+// the cumulative EXP; the loop in the caller handles multi-level-ups.
 export function checkLevelUp(currentLevel, currentExp) {
-  const threshold = currentLevel * 20 + 30;
+  const threshold = cumulativeExp(currentLevel + 1);
   if (currentExp >= threshold) {
     return currentLevel + 1;
   }

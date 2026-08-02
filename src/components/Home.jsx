@@ -65,6 +65,29 @@ const COLOR_MAP = {
 
 const CHANGELOG = [
   {
+    date: "2026-08-02",
+    title: "MMO-style progression & dungeon polish",
+    items: [
+      "Leveling now works like an MMO — 10 EXP to reach level 2, and millions at high levels (level 100 takes ~10M for one level)",
+      "EXP gain scales with the fight: on-level and tougher enemies pay well, but grinding floors far below your level is nearly pointless",
+      "Wild Pokémon can no longer slip diagonally between two walls, and neither can you — movement and attacks respect walls at corners",
+      "The items bag in the dungeon is always open, no more clicking to unfold it",
+    ],
+  },
+  {
+    date: "2026-08-02",
+    title: "Village upgrades: gifts, evolutions & a new NPC",
+    items: [
+      "Added Klefki NPC to change your password, and renamed Xatu's service to Account Reset",
+      "Rename a Pokémon from Club Wigglytuff (the Name Rater NPC moved on)",
+      "Sage (Whiscash) now helps Pokémon evolve — by reaching the right level or using an evolution stone (Eevee, Vulpix, Poliwhirl, etc.) from your storage or bag",
+      "Send items, gold, or club Pokémon to friends as gifts (accept or decline)",
+      "The Move Changer tutor is now Hypno (Tutor Movimientos) — renamed from Cambiador de Movimientos",
+      "Kangaskhan Storage is now Consigna Kangaskhan in Spanish",
+      "All village UI (shop, bank, storage, club, friends, chat, adventure) is now translated into 9 languages",
+    ],
+  },
+  {
     date: "2026-07-31",
     title: "Dungeon modes: solo, invade & play with a friend",
     items: [

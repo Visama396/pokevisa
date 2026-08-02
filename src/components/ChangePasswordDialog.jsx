@@ -17,12 +17,12 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
     setError("");
 
     if (newPassword.length < 4) {
-      setError("New password must be at least 4 characters");
+      setError(t("New password must be at least 4 characters", language));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords don't match");
+      setError(t("Passwords don't match", language));
       return;
     }
 
@@ -36,7 +36,7 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
         setSuccess(true);
       }
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      setError(err.message || t("Something went wrong", language));
     } finally {
       setLoading(false);
     }
@@ -46,12 +46,12 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
         <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4 text-center">
-          <p className="text-green-400 font-semibold">Password changed successfully</p>
+          <p className="text-green-400 font-semibold">{t("Password changed successfully", language)}</p>
           <button
             onClick={onClose}
             className="w-full rounded-xl bg-yellow-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-yellow-500 transition-colors"
           >
-            Done
+            {t("Done", language)}
           </button>
         </div>
       </div>
@@ -61,11 +61,11 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-slate-200">Change Password</h2>
+        <h2 className="text-lg font-semibold text-slate-200">{t("Change Password", language)}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="text-xs text-slate-400 block mb-1">Current Password</label>
+            <label className="text-xs text-slate-400 block mb-1">{t("Current Password", language)}</label>
             <input
               type="password"
               value={currentPassword}
@@ -76,7 +76,7 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
           </div>
 
           <div>
-            <label className="text-xs text-slate-400 block mb-1">New Password</label>
+            <label className="text-xs text-slate-400 block mb-1">{t("New Password", language)}</label>
             <input
               type="password"
               value={newPassword}
@@ -87,7 +87,7 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
           </div>
 
           <div>
-            <label className="text-xs text-slate-400 block mb-1">Confirm New Password</label>
+            <label className="text-xs text-slate-400 block mb-1">{t("Confirm New Password", language)}</label>
             <input
               type="password"
               value={confirmPassword}
@@ -107,14 +107,14 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
               onClick={onClose}
               className="flex-1 rounded-xl border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition-colors"
             >
-              Cancel
+              {t("Cancel", language)}
             </button>
             <button
               type="submit"
               disabled={loading || !currentPassword || !newPassword || !confirmPassword}
               className="flex-1 rounded-xl bg-yellow-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-yellow-500 transition-colors disabled:opacity-50"
             >
-              {loading ? "Saving..." : "Save"}
+              {loading ? t("Saving...", language) : t("Save", language)}
             </button>
           </div>
         </form>

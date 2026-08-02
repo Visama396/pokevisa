@@ -93,6 +93,46 @@ export async function getTypes(id) {
   return entry?.types || ['normal']
 }
 
+// Returns the base HP stat of a species (used to recompute max HP on evolution).
+export function getBaseHp(pokemonId) {
+  const entry = getFromCache(pokemonId)
+  return entry?.baseStats?.find(s => s.name === 'hp')?.value || 50
+}
+
+// Find the evolutions a species can undergo at the given level, from
+// pokedex.json's evolutionChart. Two kinds come back:
+//   - level-up: `trigger: "level-up"` with a min level the Pokémon reached
+//     (happiness/location variants like Eevee → Espeon are excluded — they
+//     have no minLevel, so they never qualify).
+//   - use-item: `trigger: "use-item"` — needs an evolution stone (the caller
+//     checks whether the player owns `opt.item`).
+// Trade/happiness evolutions are excluded — the Sage NPC only handles level
+// and stone evolutions. Returns [{ id, slug, minLevel, item }]; empty when the
+// Pokémon can't evolve.
+export async function getEvolutionOptions(pokemonId, level) {
+  await ensureLoaded()
+  const species = getFromCache(pokemonId)
+  if (!species || !species.evolutionChart || !species.slug) return []
+  const node = species.evolutionChart.find(n => n.name === species.slug)
+  if (!node || !node.evolvesTo) return []
+  return (node.evolvesTo || [])
+    .filter(e => {
+      if (e.trigger === 'level-up' && e.item === null) {
+        return e.minLevel && e.minLevel <= (level || 1)
+      }
+      if (e.trigger === 'use-item' && e.item) {
+        return true
+      }
+      return false
+    })
+    .map(e => ({
+      id: e.id,
+      slug: e.name,
+      minLevel: e.trigger === 'level-up' ? e.minLevel : null,
+      item: e.item || null,
+    }))
+}
+
 // Computes all 6 stats for a Pokémon at a given level with a specific nature.
 // Used by: DungeonGame (real combat), StarterQuiz, CaptureScreen.
 // Pokeroguelite uses calcStat directly (neutral natures only).

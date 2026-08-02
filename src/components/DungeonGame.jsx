@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getLanguage, subscribe } from "../stores/language";
 import { t, getTypeName } from "../stores/translations";
 import { supabase } from "../lib/supabase";
-import { generateDungeon, isWalkable, moveEnemyToward, getVisibleTiles, TILE } from "../lib/dungeon";
-import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesTypes, getSpeciesSpeed, getMovesAtLevel, getAllMovesAtLevel, getMoveName, calcExpGain, checkLevelUp, getEffectiveness, calcDamage, getStabMultiplier, getRandomWildPokemon, getMovePP, getMoveInflictedStatus, getMoveDataBySlug, buildStoredMove, canLearnTM } from "../lib/moves";
+import { generateDungeon, isWalkable, canTraverse, moveEnemyToward, wanderEnemy, getVisibleTiles, TILE } from "../lib/dungeon";
+import { getSpeciesName, getRandomMovesForSpecies, getSpeciesType, getSpeciesTypes, getSpeciesSpeed, getMovesAtLevel, getAllMovesAtLevel, getMoveName, calcExpGain, checkLevelUp, expToNext, cumulativeExp, getEffectiveness, calcDamage, getStabMultiplier, getRandomWildPokemon, getMovePP, moveHits, getMoveInflictedStatus, getMoveDataBySlug, buildStoredMove, canLearnTM } from "../lib/moves";
 import { ensureLoaded, computeStats, pickNature } from "../lib/pokedex";
 import { removeTeamMember, updateTeamMember, getTeam, getProfile, saveProfile, normalizeInventory } from "../lib/auth";
 import { getItem, getItemName, getItemIcon, countItems, isUsableItem, applyHeal } from "../lib/items";
@@ -59,9 +59,6 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
   const [error, setError] = useState("");
   const [goldCount, setGoldCount] = useState(0);
   const [dungeonItems, setDungeonItems] = useState([]);
-  // Sidebar toggle that lists collected items (berries/elixir) and lets the
-  // player use them on the active Pokémon mid-run.
-  const [showItemsPanel, setShowItemsPanel] = useState(false);
   const [enemiesMoved, setEnemiesMoved] = useState(true);
   const [floorNum, setFloorNum] = useState(1);
   const [showStairsChoice, setShowStairsChoice] = useState(false);
@@ -644,11 +641,10 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     channelRef.current = channel;
 
     return () => {
-      channel.send({
-        type: "broadcast",
-        event: "player_left",
-        payload: { playerId },
-      });
+      // httpSend (REST) — the cleanup can run when the channel is already
+      // closing, where socket send() would fall back to REST with a deprecation
+      // warning.
+      channel.httpSend("player_left", { playerId });
       supabase.removeChannel(channel);
     };
   }, [roomId, playerId, loadDungeonFromDb]);
@@ -675,7 +671,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
       const isAdjacent = Math.abs(e.x - px) <= 1 && Math.abs(e.y - py) <= 1 && (Math.abs(e.x - px) + Math.abs(e.y - py) > 0);
 
-      if (isAdjacent) {
+      // Diagonal attacks are blocked by a wall on either side of the corner.
+      if (isAdjacent && canTraverse(dungeon.tiles, e.x, e.y, px, py)) {
         const enemyMoves = e.moves || getRandomMovesForSpecies(e.pokemonId, 3);
         const move = enemyMoves[Math.floor(Math.random() * enemyMoves.length)];
         const atkStat = move.category === "physical" ? (e.atk || 10 + e.level * 3) : (e.spa || 10 + e.level * 3);
@@ -684,6 +681,12 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         const eff = getEffectiveness(move.type, defenderTypes);
         const stab = getStabMultiplier(move.type, e.types || getSpeciesTypes(e.pokemonId));
         const dmg = calcDamage(move, atkStat, defStat, eff, e.level, stab);
+
+        // Accuracy roll: a miss deals no damage (and no status) this turn.
+        if (!moveHits(move)) {
+          logEntries.push({ text: `Wild ${getSpeciesName(e.pokemonId)} used ${getMoveName(move, language, moveData)}! ${t("miss!", language)}`, side: "enemy" });
+          continue;
+        }
 
         showDamagePopup(px, py, dmg);
         logEntries.push({ text: `Wild ${getSpeciesName(e.pokemonId)} used ${getMoveName(move, language, moveData)}! ${dmg} dmg`, side: "enemy" });
@@ -838,7 +841,21 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       }
       if (!nearest) continue;
       const visible = getVisibleTiles(dungeon.tiles, e.x, e.y, 8);
-      if (!visible.has(`${nearest.position_x},${nearest.position_y}`)) continue;
+      if (!visible.has(`${nearest.position_x},${nearest.position_y}`)) {
+        // Player out of view — wander instead of freezing, so wild Pokémon roam
+        // the floor instead of stacking up at the stairs.
+        occupied.delete(`${e.x},${e.y}`);
+        const pos = wanderEnemy(dungeon.tiles, e.x, e.y, occupied, e.last);
+        if (pos) {
+          e.last = { x: e.x, y: e.y };
+          e.x = pos.x;
+          e.y = pos.y;
+          occupied.add(`${pos.x},${pos.y}`);
+        } else {
+          occupied.add(`${e.x},${e.y}`);
+        }
+        continue;
+      }
 
       if (Math.abs(e.x - nearest.position_x) <= 1 && Math.abs(e.y - nearest.position_y) <= 1) continue;
 
@@ -1251,6 +1268,9 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       const isAdjacent = Math.abs(x - px) <= 1 && Math.abs(y - py) <= 1 && (x !== px || y !== py);
       if (!isAdjacent) return;
 
+      // Diagonal moves/attacks can't squeeze between two walls.
+      if (!canTraverse(dungeon.tiles, px, py, x, y)) return;
+
       const isWalkableTile = isWalkable(dungeon.tiles, x, y);
       const enemyHere = dungeon.enemies.find((e) => e.x === x && e.y === y);
       const playerHere = players.find(
@@ -1441,6 +1461,14 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       // damage but still apply their condition).
       const status = getMoveInflictedStatus(move);
 
+      // Accuracy roll from moves.json: a miss consumes the turn and applies
+      // no damage or status.
+      if (!moveHits(move)) {
+        addLog(`${getMoveName(move, language, moveData)} ${t("miss!", language)}`, "player");
+        consumePP(move);
+        return true;
+      }
+
       let effText = "";
       if (eff > 1) effText = ` ${t("Super effective!", language)}`;
       else if (eff < 1 && eff > 0) effText = ` ${t("Not very effective...", language)}`;
@@ -1505,6 +1533,13 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       const stab = getStabMultiplier(move.type, activePokemon?.types || getSpeciesTypes(activePokemon?.pokemonId || 25));
       const dmg = calcDamage(move, atkStat, defStat, eff, activePokemon?.level || 5, stab);
 
+      // Accuracy roll applies to PvP attacks too.
+      if (!moveHits(move)) {
+        addLog(`${getMoveName(move, language, moveData)} ${t("miss!", language)}`, "player");
+        consumePP(move);
+        return true;
+      }
+
       let effText = "";
       if (eff > 1) effText = ` ${t("Super effective!", language)}`;
       else if (eff < 1 && eff > 0) effText = ` ${t("Not very effective...", language)}`;
@@ -1534,9 +1569,15 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     const pkm = activePokemon;
     let needsMoveChoice = false;
     let levelForCapture = 5;
+    let expGain = 0;
     if (pkm) {
-      const expGain = calcExpGain(enemy.level);
-      const newExp = (pkm.exp || 0) + expGain;
+      expGain = calcExpGain(enemy.level, pkm.level || 5, enemy.maxHp);
+      // Pokémon caught (or gifted/created) at level N carry no lifetime EXP —
+      // they never paid for levels 1..N-1. Without this fallback the first
+      // cumulativeExp(level) EXP they earn is invisible on the bar, so kills
+      // seem to award nothing and level-ups look broken.
+      const baseExp = Number.isFinite(pkm.exp) && pkm.exp > 0 ? pkm.exp : cumulativeExp(pkm.level || 5);
+      const newExp = baseExp + expGain;
       let newLevel = pkm.level || 5;
       // checkLevelUp returns a single level; loop to support multi-level-ups.
       let next = checkLevelUp(newLevel, newExp);
@@ -1566,7 +1607,10 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
         : newMove
           ? [...(pkm.moves || []), { ...newMove, ppUsed: 0 }].slice(0, 4)
           : (pkm.moves || []);
-      const updatedPkm = { ...pkm, ...newStats, level: newLevel, exp: newExp, moves, hp: Math.max(pkm.hp, newStats.maxHp) };
+      // Level-ups and kills never heal: recalculate stats but keep the current
+      // HP (only capped to the new max so it can't exceed it).
+      const newHp = Math.max(1, Math.min(newStats.maxHp, pkm.hp ?? newStats.maxHp));
+      const updatedPkm = { ...pkm, ...newStats, level: newLevel, exp: newExp, moves, hp: newHp };
       setTeam((prev) => {
         const updated = [...prev];
         updated[activeTeamIndex] = updatedPkm;
@@ -1589,6 +1633,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
     }
 
     addLog(`${getSpeciesName(enemy.pokemonId)} ${t("Enemy fainted!", language)}`, "player");
+    if (pkm) addLog(`+${expGain} ${t("EXP", language)}`, "player");
 
     // Capture chance — wait for the move choice so the overlays don't stack.
     if (!needsMoveChoice) {
@@ -1683,6 +1728,9 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
       stored_pokemon: [...existingStored, {
         pokemon_id: captureAttempt.pokemonId,
         level: captureAttempt.level,
+        // Seed lifetime EXP to the cost of reaching this level, so the EXP bar
+        // starts at 0 progress (matches handleEnemyDefeated's fallback).
+        exp: cumulativeExp(captureAttempt.level),
         nickname: null,
         moves: captureAttempt.moves || [],
         hp: captureAttempt.hp,
@@ -2043,10 +2091,16 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
             {/* EXP bar — progress toward the next level */}
             {(() => {
-              const exp = activePokemon?.exp || 0;
               const level = activePokemon?.level || myPlayer?.level || 5;
-              const threshold = level * 20 + 30;
-              const pct = Math.min(100, (exp / threshold) * 100);
+              // Same normalization as handleEnemyDefeated: a Pokémon created at
+              // level N with no lifetime EXP shows 0 progress, not a negative
+              // offset from cumulativeExp(level).
+              const exp = Number.isFinite(activePokemon?.exp) && activePokemon.exp > 0
+                ? activePokemon.exp
+                : cumulativeExp(level);
+              const next = expToNext(level);
+              const current = Math.max(0, exp - cumulativeExp(level));
+              const pct = Math.min(100, (current / next) * 100);
               return (
                 <div className="space-y-0.5">
                   <div className="w-full h-1.5 rounded-full bg-slate-700 overflow-hidden">
@@ -2056,7 +2110,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
                     />
                   </div>
                   <p className="text-[9px] text-slate-500 text-center">
-                    {t("EXP", language) || "EXP"} {exp}/{threshold}
+                    {t("EXP", language) || "EXP"} {current}/{next}
                   </p>
                 </div>
               );
@@ -2141,41 +2195,33 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               <span className="text-yellow-400 font-semibold">{goldCount}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <button
-                onClick={() => setShowItemsPanel((v) => !v)}
-                className="text-slate-400 hover:text-white flex items-center gap-1"
-              >
-                🎒 {t("Items", language)}
-                <span className="text-[9px] text-slate-500">{showItemsPanel ? "▲" : "▼"}</span>
-              </button>
+              <span className="text-slate-400 flex items-center gap-1">🎒 {t("Items", language)}</span>
               <span className="text-blue-400 font-semibold">{dungeonItems.length}</span>
             </div>
-            {showItemsPanel && (
-              <div className="border-t border-slate-700/50 pt-1 space-y-1 max-h-48 overflow-y-auto">
-                {dungeonItems.length === 0 ? (
-                  <p className="text-[10px] text-slate-500 text-center">{t("No items collected", language)}</p>
-                ) : (
-                  Object.entries(countItems(dungeonItems)).map(([itemId, count]) => {
-                    const usable = isUsableItem(itemId);
-                    return (
-                      <div key={itemId} className="flex items-center gap-1.5 text-xs">
-                        <span title={getItemName(itemId, language)}>{getItemIcon(itemId)}</span>
-                        <span className="text-slate-200 truncate flex-1">{getItemName(itemId, language)}</span>
-                        <span className="text-slate-500">×{count}</span>
-                        {usable && (
-                          <button
-                            onClick={() => useDungeonItem(itemId)}
-                            className="rounded bg-green-700/60 hover:bg-green-600/60 px-1.5 py-0.5 text-[9px] text-white"
-                          >
-                            {t("Use", language)}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
+            <div className="border-t border-slate-700/50 pt-1 space-y-1 max-h-48 overflow-y-auto">
+              {dungeonItems.length === 0 ? (
+                <p className="text-[10px] text-slate-500 text-center">{t("No items collected", language)}</p>
+              ) : (
+                Object.entries(countItems(dungeonItems)).map(([itemId, count]) => {
+                  const usable = isUsableItem(itemId);
+                  return (
+                    <div key={itemId} className="flex items-center gap-1.5 text-xs">
+                      <span title={getItemName(itemId, language)}>{getItemIcon(itemId)}</span>
+                      <span className="text-slate-200 truncate flex-1">{getItemName(itemId, language)}</span>
+                      <span className="text-slate-500">×{count}</span>
+                      {usable && (
+                        <button
+                          onClick={() => useDungeonItem(itemId)}
+                          className="rounded bg-green-700/60 hover:bg-green-600/60 px-1.5 py-0.5 text-[9px] text-white"
+                        >
+                          {t("Use", language)}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>

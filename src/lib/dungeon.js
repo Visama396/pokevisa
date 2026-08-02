@@ -260,7 +260,21 @@ export function isWalkable(tiles, x, y) {
   return tiles[y][x] !== TILE.WALL;
 }
 
-// Move enemy 1 step toward target (8-direction greedy chase)
+// A diagonal step/attack between two orthogonally adjacent tiles (x1,y1) and
+// (x2,y2) is only allowed when the two corner tiles beside the diagonal are
+// both open. A wall on either side blocks it — you can't squeeze between two
+// walls. Straight (orthogonal) moves are always fine.
+export function canTraverse(tiles, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  if (dx !== 0 && dy !== 0) {
+    if (tiles[y1]?.[x2] === TILE.WALL || tiles[y2]?.[x1] === TILE.WALL) return false;
+  }
+  return true;
+}
+
+// Move enemy 1 step toward target (8-direction greedy chase, no squeezing
+// diagonally between two walls)
 export function moveEnemyToward(tiles, ex, ey, tx, ty, occupiedPositions) {
   const dirs = [
     { dx: 0, dy: -1 }, { dx: 0, dy: 1 },
@@ -279,9 +293,46 @@ export function moveEnemyToward(tiles, ex, ey, tx, ty, occupiedPositions) {
     const nx = ex + dx;
     const ny = ey + dy;
     const key = `${nx},${ny}`;
-    if (isWalkable(tiles, nx, ny) && !occupiedPositions.has(key)) {
+    if (
+      isWalkable(tiles, nx, ny)
+      && canTraverse(tiles, ex, ey, nx, ny)
+      && !occupiedPositions.has(key)
+    ) {
       return { x: nx, y: ny };
     }
   }
   return null;
+}
+
+// Random one-step wander used when the player isn't in line of sight, so wild
+// Pokémon roam the dungeon instead of camping at their spawn point. `avoidPos`
+// is the tile the enemy just left — stepping straight back is a last resort so
+// enemies don't jitter between two tiles.
+export function wanderEnemy(tiles, ex, ey, occupiedPositions, avoidPos) {
+  const dirs = [
+    { dx: 0, dy: -1 }, { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+    { dx: -1, dy: -1 }, { dx: 1, dy: -1 },
+    { dx: -1, dy: 1 }, { dx: 1, dy: 1 },
+  ];
+  const valid = [];
+  for (const { dx, dy } of dirs) {
+    const nx = ex + dx;
+    const ny = ey + dy;
+    const key = `${nx},${ny}`;
+    if (
+      isWalkable(tiles, nx, ny)
+      && canTraverse(tiles, ex, ey, nx, ny)
+      && !occupiedPositions.has(key)
+    ) {
+      valid.push({ x: nx, y: ny, key });
+    }
+  }
+  if (valid.length === 0) return null;
+  if (avoidPos) {
+    const avoidKey = `${avoidPos.x},${avoidPos.y}`;
+    const forward = valid.filter((v) => v.key !== avoidKey);
+    if (forward.length > 0) return forward[Math.floor(Math.random() * forward.length)];
+  }
+  return valid[Math.floor(Math.random() * valid.length)];
 }

@@ -542,6 +542,10 @@ const ui = {
     en: "dmg", es: "daño", fr: "dégâts", de: "Schaden", it: "danno",
     ja: "ダメージ", ko: "피해", "zh-hans": "伤害", "zh-hant": "傷害",
   },
+  "miss!": {
+    en: "miss!", es: "¡fallo!", fr: "raté !", de: "verfehlt!", it: "fallito!",
+    ja: "ミス！", ko: "미스!", "zh-hans": "落空了！", "zh-hant": "落空了！",
+  },
   "Super effective!": {
     en: "Super effective!", es: "¡Muy eficaz!", fr: "Super efficace !", de: "Effektiv!", it: "Super efficace!",
     ja: "効果は抜群だ！", ko: "효과가 굉장했다!", "zh-hans": "效果拔群！", "zh-hant": "效果絕佳！",
@@ -1475,6 +1479,14 @@ const ui = {
     en: "You have no friends yet. Add friends from the Friends button first!", es: "Aún no tienes amigos. ¡Añade amigos desde el botón Amigos primero!", fr: "Vous n'avez pas encore d'amis. Ajoutez d'abord des amis via le bouton Amis !", de: "Du hast noch keine Freunde. Füge zuerst Freunde über den Freunde-Button hinzu!", it: "Non hai ancora amici. Aggiungi amici dal pulsante Amici prima!",
     ja: "まだ友達がいません。まず友達ボタンから友達を追加しよう！", ko: "아직 친구가 없습니다. 친구 버튼에서 먼저 친구를 추가하세요!", "zh-hans": "还没有朋友。先从好友按钮添加好友吧！", "zh-hant": "還沒有朋友。先從好友按鈕新增好友吧！",
   },
+  "gift-send-pkm": {
+    en: "Send this Pokémon to a friend:", es: "Enviar este Pokémon a un amigo:", fr: "Envoyer ce Pokémon à un ami :", de: "Dieses Pokémon an einen Freund senden:", it: "Invia questo Pokémon a un amico:",
+    ja: "このポケモンを友達に送る：", ko: "이 포켓몬을 친구에게 보내기:", "zh-hans": "将这只宝可梦发送给朋友：", "zh-hant": "將這隻寶可夢發送給朋友：",
+  },
+  "gift-send-pkm-hint": {
+    en: "They'll join your friend's club if accepted, or come back here if declined.", es: "Se unirán al club de tu amigo si se acepta, o volverán aquí si se rechaza.", fr: "Ils rejoindront le club de votre ami s'il accepte, ou reviendront ici s'il refuse.", de: "Sie schließen sich dem Club deines Freundes an, wenn angenommen, oder kommen hierher zurück, wenn abgelehnt.", it: "Si uniranno al club del tuo amico se accettato, o torneranno qui se rifiutato.",
+    ja: "受け取られると友達のクラブに加わり、断られるとここに戻ります。", ko: "수락하면 친구의 클럽에 합류하고, 거절하면 여기로 돌아옵니다.", "zh-hans": "接受后它们会加入朋友的俱乐部，拒绝后它们会回到这里。", "zh-hant": "接受後它們會加入朋友的俱樂部，拒絕後它們會回到這裡。",
+  },
   "Accept": {
     en: "Accept", es: "Aceptar", fr: "Accepter", de: "Annehmen", it: "Accetta",
     ja: "受け取る", ko: "수락", "zh-hans": "接受", "zh-hant": "接受",
@@ -1490,6 +1502,386 @@ const ui = {
   "Declined": {
     en: "Declined", es: "Rechazado", fr: "Refusé", de: "Abgelehnt", it: "Rifiutato",
     ja: "拒否済み", ko: "거절됨", "zh-hans": "已拒绝", "zh-hant": "已拒絕",
+  },
+
+  // ─── Village NPCs & shop ───
+  "Shop": {
+    en: "Shop", es: "Tienda", fr: "Boutique", de: "Laden", it: "Negozio",
+    ja: "ショップ", ko: "상점", "zh-hans": "商店", "zh-hant": "商店",
+  },
+  "Move Changer": {
+    en: "Move Changer", es: "Tutor Movimientos", fr: "Changeur de Capacités", de: "Attacken-Wechsler", it: "Cambia Mosse",
+    ja: "わざ変更", ko: "기술 변경가", "zh-hans": "招式变更者", "zh-hant": "招式變更者",
+  },
+  "Sage": {
+    en: "Sage", es: "Sabio", fr: "Sage", de: "Weiser", it: "Saggio",
+    ja: "賢者", ko: "현자", "zh-hans": "贤者", "zh-hant": "賢者",
+  },
+  "Whiscash is a wise old sage who has seen countless evolutions. He can help a Pokémon evolve — by reaching the right level, or with an evolution stone from your storage — whether it's on your team or in the club!": {
+    en: "Whiscash is a wise old sage who has seen countless evolutions. He can help a Pokémon evolve — by reaching the right level, or with an evolution stone from your storage — whether it's on your team or in the club!", es: "Whiscash es un viejo sabio que ha presenciado innumerables evoluciones. ¡Puede ayudar a evolucionar a un Pokémon alcanzando el nivel correcto o con una piedra evolutiva de tu almacén — ya sea de tu equipo o del club!", fr: "Whiscash est un vieux sage qui a vu d'innombrables évolutions. Il peut aider un Pokémon à évoluer — en atteignant le bon niveau, ou avec une pierre évolutive de votre stockage — qu'il soit dans votre équipe ou au club !", de: "Whiscash ist ein weiser alter Gelehrter, der unzählige Entwicklungen gesehen hat. Er kann ein Pokémon entwickeln — durch das richtige Level oder einen Evolutionsstein aus deinem Lager — im Team oder im Club!", it: "Whiscash è un vecchio saggio che ha visto innumerevoli evoluzioni. Può far evolvere un Pokémon — raggiungendo il livello giusto o con una pietra evolutiva dal tuo deposito — della tua squadra o del club!",
+    ja: "ナマズンは数えきれない進化を見てきた賢い老いたポケモンです。レベルに達するか、保管庫の進化の石を使ってポケモンを進化させられます — チームでもクラブでも！", ko: "메깅은 수많은 진화를 지켜본 현명한 늙은 포켓몬입니다. 알맞은 레벨에 도달하거나 보관소의 진화의 돌을 사용해 포켓몬을 진화시켜 줄 수 있어요 — 팀이든 클럽이든!", "zh-hans": "鲸鱼王是一位见多识广的老贤者，见证过无数进化。只要到达正确等级，或用仓库里的进化之石，他就能帮助宝可梦进化——无论是队伍还是俱乐部里的！", "zh-hant": "鯨魚王是一位見多識廣的老賢者，見證過無數進化。只要到達正確等級，或用倉庫裡的進化之石，他就能幫助寶可夢進化——無論是隊伍還是俱樂部裡的！",
+  },
+  "Checking...": {
+    en: "Checking...", es: "Comprobando...", fr: "Vérification...", de: "Prüfe...", it: "Controllo...",
+    ja: "確認中...", ko: "확인 중...", "zh-hans": "检查中...", "zh-hant": "檢查中...",
+  },
+  "No Pokémon can evolve yet. Reach a new level or find an evolution stone in dungeons!": {
+    en: "No Pokémon can evolve yet. Reach a new level or find an evolution stone in dungeons!", es: "Ningún Pokémon puede evolucionar aún. ¡Alcanza un nuevo nivel o encuentra una piedra evolutiva en las mazmorras!", fr: "Aucun Pokémon ne peut évoluer pour l'instant. Atteignez un nouveau niveau ou trouvez une pierre évolutive dans les donjons !", de: "Noch kein Pokémon kann sich entwickeln. Erreiche ein neues Level oder finde einen Evolutionsstein in Dungeons!", it: "Nessun Pokémon può ancora evolversi. Raggiungi un nuovo livello o trova una pietra evolutiva nei dungeon!",
+    ja: "まだ進化できるポケモンがいません。新しいレベルに達するか、ダンジョンで進化の石を見つけよう！", ko: "아직 진화할 수 있는 포켓몬이 없습니다. 새 레벨에 도달하거나 던전에서 진화의 돌을 찾으세요!", "zh-hans": "还没有可以进化的宝可梦。达到新等级，或在迷宫中找到进化之石吧！", "zh-hant": "還沒有可以進化的寶可夢。達到新等級，或在迷宮中找到進化之石吧！",
+  },
+  "Evolve": {
+    en: "Evolve", es: "Evolucionar", fr: "Évoluer", de: "Entwickeln", it: "Evolvi",
+    ja: "進化", ko: "진화", "zh-hans": "进化", "zh-hant": "進化",
+  },
+  "Rename": {
+    en: "Rename", es: "Renombrar", fr: "Renommer", de: "Umbenennen", it: "Rinomina",
+    ja: "名前を変える", ko: "이름 변경", "zh-hans": "重命名", "zh-hant": "重新命名",
+  },
+  "Bank": {
+    en: "Bank", es: "Banco", fr: "Banque", de: "Bank", it: "Banca",
+    ja: "銀行", ko: "은행", "zh-hans": "银行", "zh-hant": "銀行",
+  },
+  "Pocket": {
+    en: "Pocket", es: "Bolsillo", fr: "Poche", de: "Tasche", it: "Tasca",
+    ja: "ポケット", ko: "주머니", "zh-hans": "口袋", "zh-hant": "口袋",
+  },
+  "Kangaskhan Storage": {
+    en: "Kangaskhan Storage", es: "Consigna Kangaskhan", fr: "Stockage Kangourex", de: "Kangama-Lager", it: "Deposito Kangaskhan",
+    ja: "ガルーラ保管庫", ko: "캥카 보관소", "zh-hans": "袋兽仓库", "zh-hant": "袋獸倉庫",
+  },
+  "Club Wigglytuff": {
+    en: "Club Wigglytuff", es: "Club Wigglytuff", fr: "Club Grodoudou", de: "Club Knuddeluff", it: "Club Wigglytuff",
+    ja: "プクリンクラブ", ko: "푸크린 클럽", "zh-hans": "胖丁俱乐部", "zh-hant": "胖丁俱樂部",
+  },
+  "Account Reset": {
+    en: "Account Reset", es: "Reinicio de Cuenta", fr: "Réinitialisation du Compte", de: "Konto zurücksetzen", it: "Reset dell'Account",
+    ja: "アカウントリセット", ko: "계정 초기화", "zh-hans": "账户重置", "zh-hant": "帳戶重置",
+  },
+  "Change Password": {
+    en: "Change Password", es: "Cambiar Contraseña", fr: "Changer le mot de passe", de: "Passwort ändern", it: "Cambia Password",
+    ja: "パスワード変更", ko: "비밀번호 변경", "zh-hans": "修改密码", "zh-hant": "修改密碼",
+  },
+  "Adventure": {
+    en: "Adventure", es: "Aventura", fr: "Aventure", de: "Abenteuer", it: "Avventura",
+    ja: "冒険", ko: "모험", "zh-hans": "冒险", "zh-hant": "冒險",
+  },
+  "gold": {
+    en: "gold", es: "oro", fr: "or", de: "Gold", it: "oro",
+    ja: "ゴールド", ko: "골드", "zh-hans": "金币", "zh-hant": "金幣",
+  },
+  "banked": {
+    en: "banked", es: "en el banco", fr: "à la banque", de: "auf der Bank", it: "in banca",
+    ja: "預けた", ko: "은행에", "zh-hans": "已存入", "zh-hant": "已存入",
+  },
+  "Use an item on your Pokémon:": {
+    en: "Use an item on your Pokémon:", es: "Usa un objeto en tu Pokémon:", fr: "Utilisez un objet sur votre Pokémon :", de: "Benutze ein Item auf deinem Pokémon:", it: "Usa un oggetto sul tuo Pokémon:",
+    ja: "ポケモンにアイテムを使う：", ko: "포켓몬에게 아이템 사용:", "zh-hans": "对你的宝可梦使用道具：", "zh-hant": "對你的寶可夢使用道具：",
+  },
+  "No items!": {
+    en: "No items!", es: "¡No hay objetos!", fr: "Pas d'objets !", de: "Keine Items!", it: "Nessun oggetto!",
+    ja: "アイテムがない！", ko: "아이템이 없습니다!", "zh-hans": "没有道具！", "zh-hant": "沒有道具！",
+  },
+  "No usable items!": {
+    en: "No usable items!", es: "¡No hay objetos utilizables!", fr: "Pas d'objets utilisables !", de: "Keine benutzbaren Items!", it: "Nessun oggetto utilizzabile!",
+    ja: "使えるアイテムがない！", ko: "사용할 수 있는 아이템이 없습니다!", "zh-hans": "没有可用道具！", "zh-hant": "沒有可用道具！",
+  },
+  "Deposit amount": {
+    en: "Deposit amount", es: "Cantidad a depositar", fr: "Montant à déposer", de: "Einzahlbetrag", it: "Importo da depositare",
+    ja: "預ける金額", ko: "입금할 금액", "zh-hans": "存入金额", "zh-hant": "存入金額",
+  },
+  "Deposit": {
+    en: "Deposit", es: "Depositar", fr: "Déposer", de: "Einzahlen", it: "Deposita",
+    ja: "預ける", ko: "입금", "zh-hans": "存入", "zh-hant": "存入",
+  },
+  "All": {
+    en: "All", es: "Todo", fr: "Tout", de: "Alles", it: "Tutto",
+    ja: "すべて", ko: "전부", "zh-hans": "全部", "zh-hant": "全部",
+  },
+  "Withdraw amount": {
+    en: "Withdraw amount", es: "Cantidad a retirar", fr: "Montant à retirer", de: "Auszahlbetrag", it: "Importo da prelevare",
+    ja: "引き出す金額", ko: "출금할 금액", "zh-hans": "取出金额", "zh-hant": "取出金額",
+  },
+  "Withdraw": {
+    en: "Withdraw", es: "Retirar", fr: "Retirer", de: "Abheben", it: "Preleva",
+    ja: "引き出す", ko: "출금", "zh-hans": "取出", "zh-hant": "取出",
+  },
+  "Deposit all pocket gold": {
+    en: "Deposit all pocket gold", es: "Depositar todo el oro del bolsillo", fr: "Déposer tout l'or de la poche", de: "Das ganze Taschen-Gold einzahlen", it: "Deposita tutto l'oro della tasca",
+    ja: "ポケットのゴールドをすべて預ける", ko: "주머니 골드 전부 입금", "zh-hans": "存入口袋全部金币", "zh-hant": "存入口袋全部金幣",
+  },
+  "Withdraw all bank gold": {
+    en: "Withdraw all bank gold", es: "Retirar todo el oro del banco", fr: "Retirer tout l'or de la banque", de: "Das ganze Bank-Gold abheben", it: "Preleva tutto l'oro della banca",
+    ja: "銀行のゴールドをすべて引き出す", ko: "은행 골드 전부 출금", "zh-hans": "取出银行全部金币", "zh-hant": "取出銀行全部金幣",
+  },
+  "Amount": {
+    en: "Amount", es: "Cantidad", fr: "Montant", de: "Betrag", it: "Importo",
+    ja: "金額", ko: "금액", "zh-hans": "金额", "zh-hant": "金額",
+  },
+  "Send to": {
+    en: "Send to", es: "Enviar a", fr: "Envoyer à", de: "Senden an", it: "Invia a",
+    ja: "送る相手：", ko: "보낼 대상:", "zh-hans": "发送给", "zh-hant": "發送給",
+  },
+  "Gold in the bank is safe if you die in a dungeon.": {
+    en: "Gold in the bank is safe if you die in a dungeon.", es: "El oro en el banco está a salvo si mueres en una mazmorra.", fr: "L'or en banque est en sécurité si vous mourez dans un donjon.", de: "Gold auf der Bank ist sicher, wenn du in einem Dungeon stirbst.", it: "L'oro in banca è al sicuro se muori in un dungeon.",
+    ja: "ダンジョンで倒れても銀行のゴールドは安全です。", ko: "던전에서 죽어도 은행의 골드는 안전합니다.", "zh-hans": "如果你在地牢中倒下，银行里的金币是安全的。", "zh-hant": "如果你在地牢中倒下，銀行裡的金幣是安全的。",
+  },
+  "Choose a Pokémon to change its moves:": {
+    en: "Choose a Pokémon to change its moves:", es: "Elige un Pokémon para cambiar sus movimientos:", fr: "Choisissez un Pokémon pour changer ses capacités :", de: "Wähle ein Pokémon, um seine Attacken zu ändern:", it: "Scegli un Pokémon per cambiare le sue mosse:",
+    ja: "わざを変えるポケモンを選べ：", ko: "기술을 변경할 포켓몬을 선택하세요:", "zh-hans": "选择要更改招式的宝可梦：", "zh-hant": "選擇要更改招式的寶可夢：",
+  },
+  "Current moves:": {
+    en: "Current moves:", es: "Movimientos actuales:", fr: "Capacités actuelles :", de: "Aktuelle Attacken:", it: "Mosse attuali:",
+    ja: "現在のわざ：", ko: "현재 기술:", "zh-hans": "当前招式：", "zh-hant": "當前招式：",
+  },
+  "replace": {
+    en: "replace", es: "reemplazar", fr: "remplacer", de: "ersetzen", it: "sostituisci",
+    ja: "入れ替え", ko: "교체", "zh-hans": "替换", "zh-hant": "替換",
+  },
+  "No moves — pick one below to learn it.": {
+    en: "No moves — pick one below to learn it.", es: "No hay movimientos — elige uno abajo para aprenderlo.", fr: "Pas de capacités — choisissez-en une ci-dessous pour l'apprendre.", de: "Keine Attacken — wähle unten eine zum Lernen.", it: "Nessuna mossa — scegline una qui sotto per impararla.",
+    ja: "わざがありません — 下から覚えるわざを選んでください。", ko: "기술이 없습니다 — 아래에서 배울 기술을 선택하세요.", "zh-hans": "没有招式——从下方选择一个来学会它。", "zh-hant": "沒有招式——從下方選擇一個來學會它。",
+  },
+  "No level-up moves available.": {
+    en: "No level-up moves available.", es: "No hay movimientos por nivel disponibles.", fr: "Aucune capacité de niveau disponible.", de: "Keine Level-up-Attacken verfügbar.", it: "Nessuna mossa di livello disponibile.",
+    ja: "レベル技がありません。", ko: "레벨업 기술이 없습니다.", "zh-hans": "没有可用的升级招式。", "zh-hant": "沒有可用的升級招式。",
+  },
+  "Select a current move to replace.": {
+    en: "Select a current move to replace.", es: "Selecciona un movimiento actual para reemplazar.", fr: "Sélectionnez une capacité actuelle à remplacer.", de: "Wähle eine aktuelle Attacke zum Ersetzen.", it: "Seleziona una mossa attuale da sostituire.",
+    ja: "入れ替える現在のわざを選択してください。", ko: "교체할 현재 기술을 선택하세요.", "zh-hans": "选择要替换的当前招式。", "zh-hant": "選擇要替換的當前招式。",
+  },
+  "Choose a Pokémon to rename:": {
+    en: "Choose a Pokémon to rename:", es: "Elige un Pokémon para renombrar:", fr: "Choisissez un Pokémon à renommer :", de: "Wähle ein Pokémon zum Umbenennen:", it: "Scegli un Pokémon da rinominare:",
+    ja: "名前を変えるポケモンを選べ：", ko: "이름을 바꿀 포켓몬을 선택하세요:", "zh-hans": "选择要重命名的宝可梦：", "zh-hant": "選擇要重命名的寶可夢：",
+  },
+  "New nickname:": {
+    en: "New nickname:", es: "Nuevo apodo:", fr: "Nouveau surnom :", de: "Neuer Spitzname:", it: "Nuovo soprannome:",
+    ja: "新しいニックネーム：", ko: "새 별명:", "zh-hans": "新昵称：", "zh-hant": "新暱稱：",
+  },
+  "Close": {
+    en: "Close", es: "Cerrar", fr: "Fermer", de: "Schließen", it: "Chiudi",
+    ja: "閉じる", ko: "닫기", "zh-hans": "关闭", "zh-hant": "關閉",
+  },
+  "Chat": {
+    en: "Chat", es: "Chat", fr: "Discussion", de: "Chat", it: "Chat",
+    ja: "チャット", ko: "채팅", "zh-hans": "聊天", "zh-hant": "聊天",
+  },
+  "No messages yet": {
+    en: "No messages yet", es: "Aún no hay mensajes", fr: "Aucun message pour l'instant", de: "Noch keine Nachrichten", it: "Nessun messaggio ancora",
+    ja: "メッセージはまだありません", ko: "아직 메시지가 없습니다", "zh-hans": "还没有消息", "zh-hant": "還沒有消息",
+  },
+  "Type a message...": {
+    en: "Type a message...", es: "Escribe un mensaje...", fr: "Tapez un message...", de: "Nachricht eingeben...", it: "Scrivi un messaggio...",
+    ja: "メッセージを入力...", ko: "메시지 입력...", "zh-hans": "输入消息...", "zh-hant": "輸入訊息...",
+  },
+  "Send": {
+    en: "Send", es: "Enviar", fr: "Envoyer", de: "Senden", it: "Invia",
+    ja: "送信", ko: "보내기", "zh-hans": "发送", "zh-hant": "發送",
+  },
+  "Friends": {
+    en: "Friends", es: "Amigos", fr: "Amis", de: "Freunde", it: "Amici",
+    ja: "友達", ko: "친구", "zh-hans": "好友", "zh-hant": "好友",
+  },
+  "Requests": {
+    en: "Requests", es: "Solicitudes", fr: "Demandes", de: "Anfragen", it: "Richieste",
+    ja: "リクエスト", ko: "요청", "zh-hans": "请求", "zh-hant": "請求",
+  },
+  "Add": {
+    en: "Add", es: "Añadir", fr: "Ajouter", de: "Hinzufügen", it: "Aggiungi",
+    ja: "追加", ko: "추가", "zh-hans": "添加", "zh-hant": "新增",
+  },
+  "No friends yet. Add friends to see who's exploring and join their dungeons!": {
+    en: "No friends yet. Add friends to see who's exploring and join their dungeons!", es: "Aún no tienes amigos. ¡Añade amigos para ver quién explora y unirte a sus mazmorras!", fr: "Pas encore d'amis. Ajoutez des amis pour voir qui explore et rejoindre leurs donjons !", de: "Noch keine Freunde. Füge Freunde hinzu, um zu sehen, wer erkundet und tritt ihren Dungeons bei!", it: "Non hai ancora amici. Aggiungi amici per vedere chi esplora e unirti ai loro dungeon!",
+    ja: "まだ友達がいません。友達を追加して、誰が探索しているか見てダンジョンに参加しよう！", ko: "아직 친구가 없습니다. 친구를 추가하여 누가 탐험 중인지 보고 던전에 참여하세요!", "zh-hans": "还没有好友。添加好友以查看谁在探索并加入他们的地牢！", "zh-hant": "還沒有好友。新增好友以查看誰在探索並加入他們的地牢！",
+  },
+  "Join village": {
+    en: "Join village", es: "Unirse a la aldea", fr: "Rejoindre le village", de: "Dorf beitreten", it: "Entra nel villaggio",
+    ja: "村に参加", ko: "마을 참여", "zh-hans": "加入村庄", "zh-hant": "加入村莊",
+  },
+  "Same village": {
+    en: "Same village", es: "Misma aldea", fr: "Même village", de: "Gleiches Dorf", it: "Stesso villaggio",
+    ja: "同じ村", ko: "같은 마을", "zh-hans": "同一村庄", "zh-hant": "同一村莊",
+  },
+  "In dungeon": {
+    en: "In dungeon", es: "En mazmorra", fr: "En donjon", de: "Im Dungeon", it: "Nel dungeon",
+    ja: "ダンジョン中", ko: "던전 중", "zh-hans": "地牢中", "zh-hant": "地牢中",
+  },
+  "Offline": {
+    en: "Offline", es: "Desconectado", fr: "Hors ligne", de: "Offline", it: "Offline",
+    ja: "オフライン", ko: "오프라인", "zh-hans": "离线", "zh-hant": "離線",
+  },
+  "Remove": {
+    en: "Remove", es: "Eliminar", fr: "Retirer", de: "Entfernen", it: "Rimuovi",
+    ja: "削除", ko: "제거", "zh-hans": "移除", "zh-hant": "移除",
+  },
+  "No pending requests.": {
+    en: "No pending requests.", es: "No hay solicitudes pendientes.", fr: "Aucune demande en attente.", de: "Keine ausstehenden Anfragen.", it: "Nessuna richiesta in attesa.",
+    ja: "保留中のリクエストはありません。", ko: "대기 중인 요청이 없습니다.", "zh-hans": "没有待处理的请求。", "zh-hant": "沒有待處理的請求。",
+  },
+  "wants to be friends": {
+    en: "wants to be friends", es: "quiere ser tu amigo", fr: "veut être votre ami", de: "möchte befreundet sein", it: "vuole essere tuo amico",
+    ja: "友達になりたいと言っている", ko: "친구가 되고 싶어합니다", "zh-hans": "想成为好友", "zh-hant": "想成為好友",
+  },
+  "(request sent)": {
+    en: "(request sent)", es: "(solicitud enviada)", fr: "(demande envoyée)", de: "(Anfrage gesendet)", it: "(richiesta inviata)",
+    ja: "（送信済み）", ko: "(요청 보냄)", "zh-hans": "（请求已发送）", "zh-hant": "（請求已發送）",
+  },
+  "Search by username...": {
+    en: "Search by username...", es: "Buscar por usuario...", fr: "Chercher par nom d'utilisateur...", de: "Nach Benutzername suchen...", it: "Cerca per nome utente...",
+    ja: "ユーザー名で検索...", ko: "사용자 이름으로 검색...", "zh-hans": "按用户名搜索...", "zh-hant": "按用戶名搜尋...",
+  },
+  "Search": {
+    en: "Search", es: "Buscar", fr: "Rechercher", de: "Suchen", it: "Cerca",
+    ja: "検索", ko: "검색", "zh-hans": "搜索", "zh-hant": "搜尋",
+  },
+  "No accounts found.": {
+    en: "No accounts found.", es: "No se encontraron cuentas.", fr: "Aucun compte trouvé.", de: "Keine Konten gefunden.", it: "Nessun account trovato.",
+    ja: "アカウントが見つかりません。", ko: "계정을 찾을 수 없습니다.", "zh-hans": "未找到账户。", "zh-hant": "未找到帳戶。",
+  },
+  "Type at least 2 characters to search.": {
+    en: "Type at least 2 characters to search.", es: "Escribe al menos 2 caracteres para buscar.", fr: "Saisissez au moins 2 caractères pour rechercher.", de: "Gib mindestens 2 Zeichen ein, um zu suchen.", it: "Digita almeno 2 caratteri per cercare.",
+    ja: "2文字以上入力して検索してください。", ko: "검색하려면 2자 이상 입력하세요.", "zh-hans": "输入至少 2 个字符进行搜索。", "zh-hant": "輸入至少 2 個字元進行搜尋。",
+  },
+  "You": {
+    en: "You", es: "Tú", fr: "Vous", de: "Du", it: "Tu",
+    ja: "あなた", ko: "나", "zh-hans": "你", "zh-hant": "你",
+  },
+  "Sent": {
+    en: "Sent", es: "Enviado", fr: "Envoyée", de: "Gesendet", it: "Inviata",
+    ja: "送信済み", ko: "보냄", "zh-hans": "已发送", "zh-hant": "已發送",
+  },
+  "Items you carry can be lost if you faint in a dungeon. Store them to keep them safe!": {
+    en: "Items you carry can be lost if you faint in a dungeon. Store them to keep them safe!", es: "Los objetos que llevas pueden perderse si te debilitas en una mazmorra. ¡Guárdalos para mantenerlos a salvo!", fr: "Les objets que vous portez peuvent être perdus si vous tombez K.O. dans un donjon. Stockez-les pour les garder en sécurité !", de: "Gegenstände in deiner Tasche können verloren gehen, wenn du in einem Dungeon fällst. Lagere sie, um sie zu schützen!", it: "Gli oggetti che porti possono andare persi se svieni in un dungeon. Depositali per tenerli al sicuro!",
+    ja: "ダンジョンで倒れると持っているアイテムを失うことがあります。保管庫で安全にしまいましょう！", ko: "던전에서 기절하면 소지한 아이템을 잃을 수 있습니다. 보관소에 안전하게 보관하세요!", "zh-hans": "如果你在地牢中倒下，携带的道具可能会丢失。存起来以保安全！", "zh-hant": "如果你在地牢中倒下，攜帶的道具可能會丟失。存起來以保安全！",
+  },
+  "Carried": {
+    en: "Carried", es: "Llevados", fr: "Portés", de: "Getragen", it: "Portati",
+    ja: "持っている", ko: "소지품", "zh-hans": "携带", "zh-hant": "攜帶",
+  },
+  "Stored": {
+    en: "Stored", es: "Guardados", fr: "Stockés", de: "Gelagert", it: "Depositati",
+    ja: "預けている", ko: "보관됨", "zh-hans": "已存", "zh-hant": "已存",
+  },
+  "Nothing here yet.": {
+    en: "Nothing here yet.", es: "Nada aquí todavía.", fr: "Rien ici pour l'instant.", de: "Noch nichts hier.", it: "Niente qui per ora.",
+    ja: "まだ何もありません。", ko: "아직 아무것도 없습니다.", "zh-hans": "这里还没有东西。", "zh-hant": "這裡還沒有東西。",
+  },
+  "Store": {
+    en: "Store", es: "Guardar", fr: "Stocker", de: "Lagern", it: "Deposita",
+    ja: "預ける", ko: "보관", "zh-hans": "存放", "zh-hant": "存放",
+  },
+  "Store All": {
+    en: "Store All", es: "Guardar Todo", fr: "Tout Stocker", de: "Alle Lagern", it: "Deposita Tutto",
+    ja: "すべて預ける", ko: "전부 보관", "zh-hans": "全部存放", "zh-hant": "全部存放",
+  },
+  "From Kangaskhan Storage — returns here if declined.": {
+    en: "From Kangaskhan Storage — returns here if declined.", es: "De la Consigna Kangaskhan — vuelve aquí si se rechaza.", fr: "Du Stockage Kangourex — revient ici si refusé.", de: "Aus dem Kangama-Lager — kommt hierher zurück, wenn abgelehnt.", it: "Dal Deposito Kangaskhan — torna qui se rifiutato.",
+    ja: "ガルーラ保管庫から — 断られたらここに戻ります。", ko: "캥카 보관소에서 — 거절되면 여기로 돌아옵니다.", "zh-hans": "来自袋兽仓库——若被拒绝则返回此处。", "zh-hant": "來自袋獸倉庫——若被拒絕則返回此處。",
+  },
+  "From your carried items — returns to your bag if declined.": {
+    en: "From your carried items — returns to your bag if declined.", es: "De tus objetos llevados — vuelve a tu bolsa si se rechaza.", fr: "De vos objets portés — revient dans votre sac si refusé.", de: "Aus deiner Tasche — kommt in deine Tasche zurück, wenn abgelehnt.", it: "Dai tuoi oggetti portati — torna nella tua borsa se rifiutato.",
+    ja: "持っているアイテムから — 断られたらバッグに戻ります。", ko: "소지 아이템에서 — 거절되면 가방으로 돌아옵니다.", "zh-hans": "来自携带的道具——若被拒绝则返回背包。", "zh-hant": "來自攜帶的道具——若被拒絕則返回背包。",
+  },
+  "Choose a Pokémon to use this item on:": {
+    en: "Choose a Pokémon to use this item on:", es: "Elige un Pokémon para usar este objeto:", fr: "Choisissez un Pokémon sur qui utiliser cet objet :", de: "Wähle ein Pokémon, auf dem du das Item benutzt:", it: "Scegli un Pokémon su cui usare questo oggetto:",
+    ja: "このアイテムを使うポケモンを選べ：", ko: "이 아이템을 사용할 포켓몬을 선택하세요:", "zh-hans": "选择要使用此道具的宝可梦：", "zh-hant": "選擇要使用此道具的寶可夢：",
+  },
+  "Wild Pokémon that want to join you wait here — they're safe even if you faint in a dungeon. Choose one to adventure with.": {
+    en: "Wild Pokémon that want to join you wait here — they're safe even if you faint in a dungeon. Choose one to adventure with.", es: "Los Pokémon salvajes que quieren unirse a ti esperan aquí — están a salvo aunque te debilites en una mazmorra. Elige uno para tu aventura.", fr: "Les Pokémon sauvages qui veulent vous rejoindre attendent ici — ils sont en sécurité même si vous tombez K.O. dans un donjon. Choisissez-en un pour l'aventure.", de: "Wilde Pokémon, die sich dir anschließen wollen, warten hier — sie sind sicher, auch wenn du in einem Dungeon fällst. Wähle eines für dein Abenteuer.", it: "I Pokémon selvatici che vogliono unirsi a te aspettano qui — sono al sicuro anche se svieni in un dungeon. Scegline uno per l'avventura.",
+    ja: "仲間になりたい野生ポケモンがここで待っています — ダンジョンで倒れても安全です。冒険に連れていく1匹を選んでください。", ko: "함께하고 싶은 야생 포켓몬이 여기서 기다립니다 — 던전에서 기절해도 안전합니다. 함께 모험할 포켓몬을 선택하세요.", "zh-hans": "想要加入你的野生宝可梦在此等待——即使你在地牢中倒下它们也是安全的。选择一只一起冒险。", "zh-hant": "想要加入你的野生寶可夢在此等待——即使你在地牢中倒下它們也是安全的。選擇一隻一起冒險。",
+  },
+  "Active partner": {
+    en: "Active partner", es: "Compañero activo", fr: "Partenaire actif", de: "Aktiver Partner", it: "Partner attivo",
+    ja: "現在のパートナー", ko: "현재 파트너", "zh-hans": "当前搭档", "zh-hant": "當前搭檔",
+  },
+  "Club members": {
+    en: "Club members", es: "Miembros del club", fr: "Membres du club", de: "Clubmitglieder", it: "Membri del club",
+    ja: "クラブメンバー", ko: "클럽 멤버", "zh-hans": "俱乐部成员", "zh-hant": "俱樂部成員",
+  },
+  "No one here yet. Catch some wild Pokémon in dungeons!": {
+    en: "No one here yet. Catch some wild Pokémon in dungeons!", es: "Aún no hay nadie aquí. ¡Captura Pokémon salvajes en mazmorras!", fr: "Personne ici pour l'instant. Attrapez des Pokémon sauvages dans les donjons !", de: "Noch niemand hier. Fang wilde Pokémon in Dungeons!", it: "Nessuno qui ancora. Cattura dei Pokémon selvatici nei dungeon!",
+    ja: "まだ誰もいません。ダンジョンで野生ポケモンを捕まえよう！", ko: "아직 아무도 없습니다. 던전에서 야생 포켓몬을 잡으세요!", "zh-hans": "这里还没有人。去地牢里捕捉野生宝可梦吧！", "zh-hant": "這裡還沒有任何人。去地牢裡捕捉野生寶可夢吧！",
+  },
+  "Make Active": {
+    en: "Make Active", es: "Hacer Activo", fr: "Rendre Actif", de: "Aktiv machen", it: "Rendi Attivo",
+    ja: "アクティブにする", ko: "활성화", "zh-hans": "设为当前", "zh-hant": "設為當前",
+  },
+  "Xatu can erase your memory of the starter quiz, letting you choose a new partner.": {
+    en: "Xatu can erase your memory of the starter quiz, letting you choose a new partner.", es: "Xatu puede borrar tu memoria del quiz inicial, permitiéndote elegir un nuevo compañero.", fr: "Natu peut effacer votre souvenir du quiz de starter, vous permettant de choisir un nouveau partenaire.", de: "Natu kann deine Erinnerung an den Starter-Quiz löschen und dir so ein neues Partner-Pokémon ermöglichen.", it: "Xatu può cancellare il tuo ricordo del quiz iniziale, permettendoti di scegliere un nuovo partner.",
+    ja: "ネイティオは最初のクイズの記憶を消して、新しい相棒を選べるようにしてくれます。", ko: "네이티오가 스타터 퀴즈의 기억을 지워 새로운 파트너를 선택할 수 있게 해줍니다.", "zh-hans": "天然鸟可以抹去你对初始测验的记忆，让你选择新的搭档。", "zh-hant": "天然鳥可以抹去你對初始測驗的記憶，讓你選擇新的搭檔。",
+  },
+  "Your starter Pokémon will be released. Other Pokémon and items are safe.": {
+    en: "Your starter Pokémon will be released. Other Pokémon and items are safe.", es: "Tu Pokémon inicial será liberado. Los demás Pokémon y objetos están a salvo.", fr: "Votre starter sera relâché. Les autres Pokémon et objets sont en sécurité.", de: "Dein Starter-Pokémon wird freigelassen. Andere Pokémon und Items sind sicher.", it: "Il tuo starter verrà rilasciato. Gli altri Pokémon e oggetti sono al sicuro.",
+    ja: "スターターポケモンは解放されます。他のポケモンとアイテムは安全です。", ko: "스타터 포켓몬은 방생됩니다. 다른 포켓몬과 아이템은 안전합니다.", "zh-hans": "你的初始宝可梦将被放生。其他宝可梦和道具都是安全的。", "zh-hant": "你的初始寶可夢將被放生。其他寶可夢和道具都是安全的。",
+  },
+  "Reset Account": {
+    en: "Reset Account", es: "Reiniciar Cuenta", fr: "Réinitialiser le Compte", de: "Konto zurücksetzen", it: "Reset dell'Account",
+    ja: "アカウントをリセット", ko: "계정 초기화", "zh-hans": "重置账户", "zh-hant": "重置帳戶",
+  },
+  "Are you sure?": {
+    en: "Are you sure?", es: "¿Estás seguro?", fr: "Êtes-vous sûr ?", de: "Bist du sicher?", it: "Sei sicuro?",
+    ja: "本当にしますか？", ko: "확실합니까?", "zh-hans": "你确定吗？", "zh-hant": "你確定嗎？",
+  },
+  "This will delete your starter Pokémon. This cannot be undone.": {
+    en: "This will delete your starter Pokémon. This cannot be undone.", es: "Esto eliminará tu Pokémon inicial. No se puede deshacer.", fr: "Cela supprimera votre starter. Cette action est irréversible.", de: "Dies löscht dein Starter-Pokémon. Das kann nicht rückgängig gemacht werden.", it: "Questo eliminerà il tuo starter. Non può essere annullato.",
+    ja: "スターターポケモンが削除されます。元に戻せません。", ko: "스타터 포켓몬이 삭제됩니다. 되돌릴 수 없습니다.", "zh-hans": "这将删除你的初始宝可梦。此操作无法撤销。", "zh-hant": "這將刪除你的初始寶可夢。此操作無法撤銷。",
+  },
+  "Yes, Reset Everything": {
+    en: "Yes, Reset Everything", es: "Sí, reiniciar todo", fr: "Oui, tout réinitialiser", de: "Ja, alles zurücksetzen", it: "Sì, resetta tutto",
+    ja: "はい、すべてリセットします", ko: "네, 모두 초기화합니다", "zh-hans": "是，重置一切", "zh-hant": "是，重置一切",
+  },
+  "Friends in dungeons": {
+    en: "Friends in dungeons", es: "Amigos en mazmorras", fr: "Amis dans les donjons", de: "Freunde in Dungeons", it: "Amici nei dungeon",
+    ja: "ダンジョンにいる友達", ko: "던전에 있는 친구", "zh-hans": "地牢中的好友", "zh-hant": "地牢中的好友",
+  },
+  "No friends are exploring right now. Ask them to start a dungeon, then come back!": {
+    en: "No friends are exploring right now. Ask them to start a dungeon, then come back!", es: "Ningún amigo está explorando ahora. ¡Pídeles que inicien una mazmorra y vuelve!", fr: "Aucun ami n'explore en ce moment. Demandez-leur de lancer un donjon puis revenez !", de: "Gerade erkundet kein Freund einen Dungeon. Bitte sie, einen zu starten, und komm zurück!", it: "Nessun amico sta esplorando ora. Chiedi loro di iniziare un dungeon e torna!",
+    ja: "今ダンジョンにいる友達はいません。友達にダンジョンを始めてもらって、また来てください！", ko: "지금 던전을 탐험 중인 친구가 없습니다. 친구에게 던전을 시작해 달라고 하고 다시 오세요!", "zh-hans": "现在没有好友在探索。让他们开始一个地牢再回来吧！", "zh-hant": "現在沒有好友在探索。讓他們開始一個地牢再回來吧！",
+  },
+  "Refresh": {
+    en: "Refresh", es: "Actualizar", fr: "Actualiser", de: "Aktualisieren", it: "Aggiorna",
+    ja: "更新", ko: "새로고침", "zh-hans": "刷新", "zh-hant": "刷新",
+  },
+  "Explore alone, join a friend, or invade someone else's dungeon!": {
+    en: "Explore alone, join a friend, or invade someone else's dungeon!", es: "¡Explora solo, únete a un amigo o invade la mazmorra de otro!", fr: "Explorez seul, rejoignez un ami ou envahissez le donjon de quelqu'un d'autre !", de: "Erkunde allein, tritt einem Freund bei oder falle in den Dungeon eines anderen ein!", it: "Esplora da solo, unisciti a un amico o invadi il dungeon di qualcun altro!",
+    ja: "ひとりで探索、友達と参加、または他人のダンジョンに侵入！", ko: "혼자 탐험, 친구와 참여, 또는 다른 사람의 던전 침입!", "zh-hans": "独自探索、加入好友，或入侵他人的地牢！", "zh-hant": "獨自探索、加入好友，或入侵他人的地牢！",
+  },
+
+  // ─── Change Password dialog ───
+  "Current Password": {
+    en: "Current Password", es: "Contraseña actual", fr: "Mot de passe actuel", de: "Aktuelles Passwort", it: "Password attuale",
+    ja: "現在のパスワード", ko: "현재 비밀번호", "zh-hans": "当前密码", "zh-hant": "當前密碼",
+  },
+  "New Password": {
+    en: "New Password", es: "Nueva contraseña", fr: "Nouveau mot de passe", de: "Neues Passwort", it: "Nuova password",
+    ja: "新しいパスワード", ko: "새 비밀번호", "zh-hans": "新密码", "zh-hant": "新密碼",
+  },
+  "Confirm New Password": {
+    en: "Confirm New Password", es: "Confirmar nueva contraseña", fr: "Confirmer le nouveau mot de passe", de: "Neues Passwort bestätigen", it: "Conferma nuova password",
+    ja: "新しいパスワード（確認）", ko: "새 비밀번호 확인", "zh-hans": "确认新密码", "zh-hant": "確認新密碼",
+  },
+  "New password must be at least 4 characters": {
+    en: "New password must be at least 4 characters", es: "La nueva contraseña debe tener al menos 4 caracteres", fr: "Le nouveau mot de passe doit contenir au moins 4 caractères", de: "Das neue Passwort muss mindestens 4 Zeichen lang sein", it: "La nuova password deve avere almeno 4 caratteri",
+    ja: "新しいパスワードは4文字以上で入力してください", ko: "새 비밀번호는 4자 이상이어야 합니다", "zh-hans": "新密码必须至少 4 个字符", "zh-hant": "新密碼必須至少 4 個字元",
+  },
+  "Passwords don't match": {
+    en: "Passwords don't match", es: "Las contraseñas no coinciden", fr: "Les mots de passe ne correspondent pas", de: "Passwörter stimmen nicht überein", it: "Le password non coincidono",
+    ja: "パスワードが一致しません", ko: "비밀번호가 일치하지 않습니다", "zh-hans": "密码不匹配", "zh-hant": "密碼不匹配",
+  },
+  "Something went wrong": {
+    en: "Something went wrong", es: "Algo salió mal", fr: "Quelque chose s'est mal passé", de: "Etwas ist schiefgelaufen", it: "Qualcosa è andato storto",
+    ja: "エラーが発生しました", ko: "문제가 발생했습니다", "zh-hans": "出了点问题", "zh-hant": "出了點問題",
+  },
+  "Password changed successfully": {
+    en: "Password changed successfully", es: "Contraseña cambiada con éxito", fr: "Mot de passe changé avec succès", de: "Passwort erfolgreich geändert", it: "Password cambiata con successo",
+    ja: "パスワードを変更しました", ko: "비밀번호가 변경되었습니다", "zh-hans": "密码修改成功", "zh-hant": "密碼修改成功",
+  },
+  "Done": {
+    en: "Done", es: "Hecho", fr: "Terminé", de: "Fertig", it: "Fatto",
+    ja: "完了", ko: "완료", "zh-hans": "完成", "zh-hant": "完成",
+  },
+  "Save": {
+    en: "Save", es: "Guardar", fr: "Enregistrer", de: "Speichern", it: "Salva",
+    ja: "保存", ko: "저장", "zh-hans": "保存", "zh-hant": "儲存",
   },
 };
 
