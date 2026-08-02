@@ -1698,8 +1698,8 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
   // Return to village (does not delete room_players — Dungeon.jsx handles that).
   // Heals to full and restores all PP; statuses are in-memory and clear on exit.
-  // Gold/items collected this run are saved to the profile first so the defeat
-  // path (and backing out of the lobby) never loses loot.
+  // Used for a safe exit (victory, retreat, backing out of the lobby): the run's
+  // loot is banked first so nothing collected is lost.
   const returnToVillage = useCallback(async () => {
     await persistLoot();
 
@@ -1715,6 +1715,34 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
 
     if (onLeave) onLeave();
   }, [onLeave, team, persistLoot]);
+
+  // Player fainted: drop everything they were carrying. The profile inventory
+  // is wiped down to an empty bag (pocket gold 0, items []) — everything
+  // brought into the run plus what was collected is lost. The bank and any
+  // captured Pokémon are untouched. Team is healed back at the village.
+  const handleDefeat = useCallback(async () => {
+    const profile = await getProfile(accountId);
+    await saveProfile(accountId, {
+      inventory: {
+        gold: 0,
+        banked_gold: profile?.inventory?.banked_gold || 0,
+        items: [],
+        storage: profile?.inventory?.storage || [],
+      },
+    });
+
+    for (const p of team) {
+      const maxHp = p.maxHp ?? p.max_hp ?? 1;
+      if (p.id) {
+        const updates = { hp: maxHp };
+        const moves = (p.moves || []).map((m) => ({ ...m, ppUsed: 0 }));
+        if (moves.length) updates.moves = moves;
+        await updateTeamMember(p.id, updates);
+      }
+    }
+
+    if (onLeave) onLeave();
+  }, [onLeave, team, accountId]);
 
   // Capture handlers
   const handleCapture = useCallback(async () => {
@@ -1993,7 +2021,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
           </h2>
           {battleResult.result === "lost" && (
             <button
-              onClick={returnToVillage}
+              onClick={handleDefeat}
               className="rounded-xl bg-slate-700 px-6 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-600 transition-colors"
             >
               {t("Back", language)}

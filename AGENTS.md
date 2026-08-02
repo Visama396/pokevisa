@@ -89,6 +89,13 @@ sessions. When a phase is finished, mark it `[x]` here.
   attacks (player + enemy + enemy AI chase) are blocked when either corner tile
   beside the diagonal is a wall — no squeezing between two walls. DungeonMap
   greys out blocked diagonal targets so the cursor isn't misleading.
+- Defeat loot loss: fainting in combat now wipes your carried inventory. The
+  game-over screen's Back button calls `handleDefeat` (DungeonGame), which
+  saves the profile with pocket gold 0 and an empty item bag — everything
+  carried into the run plus everything collected is lost, while the bank and
+  captured Pokémon are untouched — and heals the team. Safe exits
+  (`returnToVillage`, `leaveRoom`, lobby Back) still bank the loot via
+  `persistLoot`.
 
 ## Ongoing conventions
 - Dev server: `astro dev --background`; never run `astro build` during development.

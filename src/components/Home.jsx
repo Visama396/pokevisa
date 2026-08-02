@@ -72,6 +72,8 @@ const CHANGELOG = [
       "EXP gain scales with the fight: on-level and tougher enemies pay well, but grinding floors far below your level is nearly pointless",
       "Wild Pokémon can no longer slip diagonally between two walls, and neither can you — movement and attacks respect walls at corners",
       "The items bag in the dungeon is always open, no more clicking to unfold it",
+      "Moves now use their real accuracy — a move that misses costs your turn and deals no damage",
+      "Fainting in the dungeon is costly again: you lose everything you were carrying — pocket gold and all items — keeping only your bank and captured Pokémon",
     ],
   },
   {
