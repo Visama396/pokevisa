@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getLanguage, subscribe } from "../stores/language";
 import { t } from "../stores/translations";
+import { useIsMobile } from "../lib/useIsMobile";
 import LanguageSelector from "./LanguageSelector";
 
 const GAMES = [
@@ -209,6 +210,7 @@ const CHANGELOG = [
 export default function Home() {
   const [language, setLanguage] = useState(getLanguage());
   const [showChangelog, setShowChangelog] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => subscribe(setLanguage), []);
 
@@ -242,6 +244,11 @@ export default function Home() {
                 {t(game.titleKey, language)}
               </span>
               <span className="text-sm text-slate-400">{t(game.descKey, language)}</span>
+              {isMobile && game.href === "/dungeon" && (
+                <span className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 text-[10px] text-amber-400">
+                  {t("dungeon-mobile-warning", language)}
+                </span>
+              )}
             </a>
           );
         })}

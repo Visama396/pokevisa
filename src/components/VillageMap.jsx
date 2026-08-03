@@ -1,11 +1,11 @@
 import { TILE } from "../lib/dungeon";
 import { VILLAGE_TILES, NPC_POSITIONS, VILLAGE_WIDTH, VILLAGE_HEIGHT } from "../lib/village";
+import { TERRAIN_SHEETS, WALL_TILE, FLOOR_TILE } from "../lib/terrain";
+import TerrainTile from "./TerrainTile";
 import SpriteImg from "./SpriteImg";
 
-const TILE_COLORS = {
-  [TILE.FLOOR]: "bg-green-900/30",
-  [TILE.WALL]: "bg-stone-800",
-};
+// The village always uses palette 1 of the terrain tileset.
+const SHEET = TERRAIN_SHEETS[1];
 
 export default function VillageMap({
   playerX, playerY, playerSpriteId,
@@ -58,32 +58,30 @@ export default function VillageMap({
                 Math.abs(vx - playerX) <= 1 &&
                 Math.abs(vy - playerY) <= 1;
 
-              let bgClass = TILE_COLORS[tile] || "bg-stone-900";
-              if (isPlayer) bgClass = "bg-green-800/60";
-              else if (otherInfo) bgClass = "bg-blue-800/40";
-              else if (npc) bgClass = "bg-amber-800/40";
+              const isWall = tile === TILE.WALL;
+              const highlight = isPlayer ? "bg-green-800/50" : otherInfo ? "bg-blue-800/40" : npc ? "bg-amber-800/40" : null;
 
               return (
                 <button
                   key={key}
                   onClick={() => handleTileClick(vx, vy)}
-                  className={`flex items-center justify-center ${bgClass} border border-stone-800/30 transition-all ${
-                    isAdjacent
-                      ? "hover:bg-stone-600/40 cursor-pointer"
-                      : "cursor-default"
+                  className={`relative flex items-center justify-center border border-stone-800/30 transition-all ${
+                    isAdjacent ? "cursor-pointer" : "cursor-default"
                   }`}
                   style={{ width: 32, height: 32 }}
                 >
-                  {isPlayer && <SpriteImg id={playerSpriteId} size={30} title="You" />}
-                  {otherInfo && !isPlayer && (
-                    <SpriteImg id={otherInfo.spriteId || 25} size={26} title={otherInfo.name} />
-                  )}
-                  {npc && !isPlayer && !otherInfo && (
-                    <SpriteImg id={npc.spriteId} size={26} title={npc.label} />
-                  )}
-                  {tile === TILE.WALL && (
-                    <div className="text-stone-700 text-[10px] leading-none">⬛</div>
-                  )}
+                  <TerrainTile sheet={SHEET} tile={isWall ? WALL_TILE : FLOOR_TILE} />
+                  {highlight && <div className={`absolute inset-0 ${highlight}`} />}
+                  {isAdjacent && <div className="absolute inset-0 hover:bg-stone-600/40" />}
+                  <span className="relative z-10 flex items-center justify-center">
+                    {isPlayer && <SpriteImg id={playerSpriteId} size={30} title="You" />}
+                    {otherInfo && !isPlayer && (
+                      <SpriteImg id={otherInfo.spriteId || 25} size={26} title={otherInfo.name} />
+                    )}
+                    {npc && !isPlayer && !otherInfo && (
+                      <SpriteImg id={npc.spriteId} size={26} title={npc.label} />
+                    )}
+                  </span>
                 </button>
               );
             })

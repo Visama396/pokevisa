@@ -2069,6 +2069,7 @@ export default function DungeonGame({ roomId, roomCode, playerId, isHost, accoun
               targeting={selectedMove}
               damagePopups={damagePopups}
               rooms={dungeon.rooms}
+              floor={floorNum}
             />
           ) : (
             <div className="text-center text-slate-400 py-10">

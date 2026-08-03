@@ -5,6 +5,9 @@ import DungeonGame from "./DungeonGame";
 import VillageGame from "./VillageGame";
 import { getProfile, getTeam, resetProfile } from "../lib/auth";
 import { supabase } from "../lib/supabase";
+import { useIsMobile } from "../lib/useIsMobile";
+import { getLanguage, subscribe } from "../stores/language";
+import { t } from "../stores/translations";
 
 export default function Dungeon() {
   const [account, setAccount] = useState(null);
@@ -13,6 +16,10 @@ export default function Dungeon() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
   const [inDungeon, setInDungeon] = useState(false);
+  const [language, setLanguage] = useState(getLanguage());
+  const isMobile = useIsMobile();
+
+  useEffect(() => subscribe(setLanguage), []);
 
   // Restore session from localStorage
   useEffect(() => {
@@ -128,6 +135,27 @@ export default function Dungeon() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
         <p className="text-sm text-slate-400">...</p>
+      </div>
+    );
+  }
+
+  // The dungeon/village flow uses a fixed 32px tile grid and isn't playable on
+  // small screens yet, so mobile users only get a notice + a way back home.
+  // The rest of the flow (auth, village, dungeon) is never mounted.
+  if (isMobile) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4 text-center">
+        <span className="text-5xl">📱</span>
+        <h1 className="text-2xl font-bold text-slate-100">{t("Dungeon Crawler", language)}</h1>
+        <p className="max-w-sm text-sm text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-6 py-4">
+          {t("dungeon-mobile-warning", language)}
+        </p>
+        <a
+          href="/"
+          className="rounded-xl bg-slate-700 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-600 transition-colors"
+        >
+          {t("Back to Pokédex", language)}
+        </a>
       </div>
     );
   }

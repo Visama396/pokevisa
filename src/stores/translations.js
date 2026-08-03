@@ -671,6 +671,17 @@ const ui = {
     "zh-hans": "与朋友分享房间代码加入游戏！",
     "zh-hant": "與朋友分享房間代碼加入遊戲！",
   },
+  "dungeon-mobile-warning": {
+    en: "The Dungeon Crawler is designed for larger screens and isn't playable on mobile yet — play on a desktop for the best experience.",
+    es: "El Dungeon Crawler está diseñado para pantallas grandes y todavía no se puede jugar en móvil — juega en un ordenador para la mejor experiencia.",
+    fr: "Le Donjon est conçu pour les grands écrans et n'est pas encore jouable sur mobile — jouez sur un ordinateur pour la meilleure expérience.",
+    de: "Der Dungeon ist für größere Bildschirme gedacht und auf dem Handy noch nicht spielbar — spiele am besten am Desktop.",
+    it: "Il Dungeon è progettato per schermi grandi e non è ancora giocabile su mobile — gioca su desktop per la migliore esperienza.",
+    ja: "ダンジョンは大きな画面向けに設計されており、モバイルではまだプレイできません。デスクトップでプレイするのがおすすめです。",
+    ko: "던전은 큰 화면에 맞게 설계되어 있으며 모바일에서는 아직 플레이할 수 없습니다. 데스크톱에서 플레이하는 것이 가장 좋습니다.",
+    "zh-hans": "地牢探险是为大屏幕设计的，手机上暂时无法游玩——在电脑上玩体验最佳。",
+    "zh-hant": "地牢探險是為大螢幕設計的，手機上暫時無法遊玩——在電腦上玩體驗最佳。",
+  },
   "dungeon-controls-hint": {
     en: "Click adjacent tiles to move. Explore the dungeon and find the exit!",
     es: "Haz clic en casillas adyacentes para moverte. ¡Explora y encuentra la salida!",

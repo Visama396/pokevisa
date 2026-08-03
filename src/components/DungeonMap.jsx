@@ -1,16 +1,9 @@
 import { useMemo } from "react";
 import { TILE, getVisibleTiles, canTraverse } from "../lib/dungeon";
 import { getItemIcon } from "../lib/items";
+import { WALL_TILE, FLOOR_TILE, terrainSheetForFloor } from "../lib/terrain";
+import TerrainTile from "./TerrainTile";
 import SpriteImg from "./SpriteImg";
-
-const TILE_COLORS = {
-  [TILE.FLOOR]: "bg-slate-700/40",
-  [TILE.WALL]: "bg-slate-900",
-  [TILE.STAIRS]: "bg-yellow-900/60",
-  [TILE.ENEMY]: "bg-red-900/30",
-  [TILE.TREASURE]: "bg-amber-900/30",
-  [TILE.PLAYER]: "bg-green-900/30",
-};
 
 function TileContent({ tile, enemy, treasure, gold, isPlayer, isOtherPlayer, otherPlayerName, playerSpriteId, otherSpriteId }) {
   if (isPlayer) {
@@ -46,7 +39,9 @@ export default function DungeonMap({
   targeting,
   damagePopups,
   rooms,
+  floor = 1,
 }) {
+  const sheet = terrainSheetForFloor(floor);
   const visibleTiles = useMemo(() => {
     if (!dungeon) return new Set();
     return getVisibleTiles(dungeon.tiles, playerX, playerY, 6);
@@ -132,42 +127,53 @@ export default function DungeonMap({
             const goldCoin = goldMap[key];
             const isAdjacentTile = !isPlayer && Math.abs(x - playerX) <= 1 && Math.abs(y - playerY) <= 1 && canTraverse(tiles, playerX, playerY, x, y);
 
-            let bgClass = "bg-slate-900";
-            if (isVisible) {
-              bgClass = TILE_COLORS[tile] || "bg-slate-700/40";
-              if (isPlayer) bgClass = "bg-green-800/60";
-              else if (otherInfo) bgClass = "bg-blue-800/40";
-            } else if (isVisited) {
-              bgClass = "bg-slate-800/60";
-            }
+            const showTerrain = isVisible || isVisited;
+            const isWall = tile === TILE.WALL;
+            const isDimmed = isVisited && !isVisible;
 
             return (
               <button
                 key={key}
                 onClick={() => handleTileClick(x, y)}
                 disabled={disabled || !isVisible}
-                className={`flex items-center justify-center ${bgClass} border border-slate-800/30 transition-all ${
+                className={`relative flex items-center justify-center border border-slate-800/30 transition-all ${
                   !disabled && isVisible && isAdjacentTile
                     ? targeting
-                      ? "hover:bg-red-600/40 cursor-crosshair ring-1 ring-red-500/30"
-                      : "hover:bg-slate-600/40 cursor-pointer"
+                      ? "cursor-crosshair ring-1 ring-red-500/30"
+                      : "cursor-pointer"
                     : "cursor-default"
                 }`}
                 style={{ width: 32, height: 32 }}
               >
-                {(isVisible || isVisited) && (
-                  <TileContent
-                    tile={tile}
-                    enemy={isVisible ? enemy : null}
-                    treasure={isVisible ? treasure : null}
-                    gold={isVisible ? goldCoin : null}
-                    isPlayer={isPlayer}
-                    isOtherPlayer={!!otherInfo}
-                    otherPlayerName={otherInfo?.name}
-                    playerSpriteId={playerSpriteId}
-                    otherSpriteId={otherInfo?.spriteId}
+                {showTerrain ? (
+                  <TerrainTile
+                    sheet={sheet}
+                    tile={isWall ? WALL_TILE : FLOOR_TILE}
+                    dim={isDimmed}
                   />
+                ) : (
+                  <div className="absolute inset-0 bg-slate-900" />
                 )}
+                {isVisible && isPlayer && <div className="absolute inset-0 bg-green-800/50" />}
+                {isVisible && otherInfo && <div className="absolute inset-0 bg-blue-800/40" />}
+                {!disabled && isVisible && isAdjacentTile && (
+                  <div className={`absolute inset-0 ${targeting ? "hover:bg-red-600/40" : "hover:bg-stone-600/40"}`} />
+                )}
+                <span className="relative z-10 flex items-center justify-center">
+                  {(isVisible || isVisited) && (
+                    <TileContent
+                      tile={tile}
+                      enemy={isVisible ? enemy : null}
+                      treasure={isVisible ? treasure : null}
+                      gold={isVisible ? goldCoin : null}
+                      isPlayer={isPlayer}
+                      isOtherPlayer={!!otherInfo}
+                      otherPlayerName={otherInfo?.name}
+                      playerSpriteId={playerSpriteId}
+                      otherSpriteId={otherInfo?.spriteId}
+                    />
+                  )}
+                </span>
               </button>
             );
           });
