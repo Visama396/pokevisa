@@ -1,70 +1,120 @@
 import { TILE } from "./dungeon";
 import { ITEMS } from "./items";
+import { parseSketch, tileFromCode, tileWalkable } from "./tilemap";
 
-const W = TILE.WALL;
-const F = TILE.FLOOR;
+// The village layout is an ASCII sketch in the tilemap-drawer format: the
+// palette grid (digits 1-5, "." = color 1), a blank line, the base grid, a
+// blank line, then the top grid. Edit VILLAGE_SKETCH to redesign the village;
+// the rest of this module derives width/height, the walkability grid and the
+// render layers from it. The tilemap-drawer can be used to design new maps.
+const VILLAGE_SKETCH = `
+...................4444.
+...222222.........4...4.
+...2....2.........4...4.
+...2....2.............4.
+...2....2.............4.
+...2..................4.
+...222222.............4.
+.....................4..
+........................
+........................
+..3.................3...
+..3.................3...
+..3.................3...
+..3.................3...
+..3333333333333333333...
+........................
 
-export const VILLAGE_WIDTH = 30;
-export const VILLAGE_HEIGHT = 20;
+wwwwwwwwwwwwwwwwwwwwwwww
+wwwwwwwwwwwwwwwwwwwdddww
+wwwwwwwwwwwwwwwwwwddddww
+wwawwwwwwawwwawwwwddddww
+wwawwwwwwawwwawwwwddddww
+wwawwwwwwawwwawwwwddddww
+wwuwwwwwwawwwawwwwddddww
+wwuaaaaaaawwwawwwwdddwww
+wwCwwwwwwwwwwaaaYYYYDwww
+wwlPPPPPPPPPuaavPPPPQwww
+wwpcccccccccuaavccccqwww
+wwpcccccccccuaavccccqwww
+wwpcccccccccCYYDccccqwww
+wwpcccccccccclPPPccccqwww
+wwyzzzzzzzzzzzzzzzzzAwww
+wwwwwwwwwwwwwwwwwwwwwwww
 
-export const VILLAGE_TILES = (() => {
-  const tiles = Array.from({ length: VILLAGE_HEIGHT }, () =>
-    Array(VILLAGE_WIDTH).fill(F)
-  );
-  for (let x = 0; x < VILLAGE_WIDTH; x++) {
-    tiles[0][x] = W;
-    tiles[VILLAGE_HEIGHT - 1][x] = W;
-  }
-  for (let y = 0; y < VILLAGE_HEIGHT; y++) {
-    tiles[y][0] = W;
-    tiles[y][VILLAGE_WIDTH - 1] = W;
-  }
+...................fhhi.
+...fhhhhi.........f...q.
+.fhubbbbvhhhhhhhhnp...q.
+.p.ubbbbv.aaa.aaav....q.
+.p.ubbbbv.aaa.aaav....q.
+.u.ubbbbbOaaa.aaav....q.
+.l.CYYYYDTaaa.aaaaO...A.
+...lPPPPQaaaa.aaavT..A..
+...aaaaaaaaaa.....KKL...
+........................
+........................
+...........N............
+...........S............
+........................
+........................
+........................
+`;
 
-  function building(tx, ty, bw, bh) {
-    for (let y = ty; y < ty + bh; y++)
-      for (let x = tx; x < tx + bw; x++)
-        tiles[y][x] = W;
-  }
+const LAYERS = parseSketch(VILLAGE_SKETCH);
 
-  building(3, 3, 2, 2);
-  building(3, 5, 2, 2);
-  building(10, 2, 2, 2);
-  building(10, 4, 2, 2);
-  building(20, 3, 2, 2);
-  building(20, 5, 2, 2);
-  building(24, 5, 2, 2);
-  building(6, 13, 2, 2);
-  building(6, 15, 2, 2);
-  building(14, 12, 2, 2);
-  building(14, 14, 2, 2);
-  building(23, 13, 2, 2);
-  building(23, 15, 2, 2);
+export const VILLAGE_WIDTH = LAYERS.width;
+export const VILLAGE_HEIGHT = LAYERS.height;
 
-  for (let x = 8; x <= 22; x++) tiles[9][x] = W;
+const PAD = (grid) =>
+  grid || Array.from({ length: VILLAGE_HEIGHT }, () => ".".repeat(VILLAGE_WIDTH));
 
-  for (let x = 3; x <= 26; x++) tiles[17][x] = W;
+// Per-cell character grids used by the village renderer: palette (digits
+// 1-5), base (background letters), top (foreground letters). A "." base cell
+// is transparent; a "." top cell shows the base layer beneath it.
+export const VILLAGE_LAYERS = {
+  palette: PAD(LAYERS.palette),
+  base: PAD(LAYERS.base),
+  top: LAYERS.top,
+};
 
-  tiles[2][6] = W; tiles[2][7] = W;
-  tiles[17][8] = W; tiles[18][8] = W;
-  tiles[2][22] = W; tiles[2][23] = W;
-  tiles[4][12] = W; tiles[4][13] = W; tiles[4][14] = W;
+// The tile visible at a cell: the top tile when one is painted, else the
+// base tile. Used to derive walkability (see tileWalkable in tilemap.js).
+export function villageTileAt(x, y) {
+  const paletteDigit = VILLAGE_LAYERS.palette[y]?.[x];
+  const palette = paletteDigit && paletteDigit !== "." ? Number(paletteDigit) : 1;
+  const top = VILLAGE_LAYERS.top[y]?.[x];
+  const base = VILLAGE_LAYERS.base[y]?.[x];
+  return tileFromCode(top !== "." ? top : base, palette);
+}
 
-  return tiles;
-})();
+export function villageWalkable(x, y) {
+  if (x < 0 || y < 0 || y >= VILLAGE_HEIGHT || x >= VILLAGE_WIDTH) return false;
+  return tileWalkable(villageTileAt(x, y));
+}
 
+// Movement grid kept as FLOOR/WALL so VillageGame's isWalkable keeps working.
+export const VILLAGE_TILES = Array.from({ length: VILLAGE_HEIGHT }, (_, y) =>
+  Array.from({ length: VILLAGE_WIDTH }, (_, x) =>
+    villageWalkable(x, y) ? TILE.FLOOR : TILE.WALL
+  )
+);
+
+// NPCs stand on the walkable interior floors of the two buildings (the
+// top-left services hall and the top-right special-services hall) and around
+// the bottom plaza by the stairs.
 export const NPC_POSITIONS = [
-  { id: "mart", name: "Shopkeep", x: 4, y: 4, label: "Shop", spriteId: 352 },
-  { id: "moves", name: "Tutor", x: 11, y: 3, label: "Move Changer", spriteId: 97 },
-  { id: "evolve", name: "Sage", x: 21, y: 4, label: "Sage", spriteId: 340 },
-  { id: "bank", name: "Persian", x: 5, y: 5, label: "Bank", spriteId: 53 },
-  { id: "storage", name: "Kangaskhan", x: 25, y: 4, label: "Kangaskhan Storage", spriteId: 115 },
-  { id: "club", name: "Wigglytuff", x: 13, y: 10, label: "Club Wigglytuff", spriteId: 40 },
-  { id: "quiz-reset", name: "Xatu", x: 22, y: 3, label: "Account Reset", spriteId: 178 },
-  { id: "password", name: "Klefki", x: 21, y: 5, label: "Change Password", spriteId: 707 },
-  { id: "adventure", name: "Explorer", x: 7, y: 14, label: "Adventure", spriteId: 297 },
+  { id: "mart", name: "Shopkeep", x: 11, y: 4, label: "Shop", spriteId: 352 },
+  { id: "moves", name: "Tutor", x: 10, y: 5, label: "Move Changer", spriteId: 97 },
+  { id: "bank", name: "Persian", x: 12, y: 5, label: "Bank", spriteId: 53 },
+  { id: "storage", name: "Kangaskhan", x: 11, y: 7, label: "Kangaskhan Storage", spriteId: 115 },
+  { id: "evolve", name: "Sage", x: 15, y: 4, label: "Sage", spriteId: 340 },
+  { id: "password", name: "Klefki", x: 16, y: 4, label: "Change Password", spriteId: 707 },
+  { id: "quiz-reset", name: "Xatu", x: 15, y: 5, label: "Account Reset", spriteId: 178 },
+  { id: "club", name: "Wigglytuff", x: 7, y: 12, label: "Club Wigglytuff", spriteId: 40 },
+  { id: "adventure", name: "Explorer", x: 10, y: 11, label: "Adventure", spriteId: 297 },
 ];
 
-export const VILLAGE_SPAWN = { x: 15, y: 10 };
+export const VILLAGE_SPAWN = { x: 10, y: 10 };
 
 // Shop stock is the full item catalog (see src/lib/items.js). Potions were
 // replaced by berries, and evolution items/elixir were added alongside.
