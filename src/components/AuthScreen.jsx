@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getLanguage } from "../stores/language";
+import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { register, login } from "../lib/auth";
 import LanguageSelector from "./LanguageSelector";
@@ -11,7 +11,7 @@ export default function AuthScreen({ onAuth }) {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const language = getLanguage();
+  const language = useLanguage();
 
   async function handleSubmit(e) {
     e.preventDefault();

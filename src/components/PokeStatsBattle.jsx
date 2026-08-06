@@ -95,12 +95,13 @@ export default function PokeStatsBattle() {
 
   const handlePick = useCallback((picked) => {
     if (result) return;
-    const winner =
-      getStat(champion, statName) >= getStat(challenger, statName)
-        ? champion
-        : challenger;
+    const champVal = getStat(champion, statName);
+    const chalVal = getStat(challenger, statName);
+    // On a tie both picks are correct — there is no single winner.
+    const isTie = champVal === chalVal;
+    const winner = isTie ? null : champVal > chalVal ? champion : challenger;
 
-    const isCorrect = picked.id === winner.id;
+    const isCorrect = isTie || picked.id === winner.id;
     const newScore = isCorrect ? score + 1 : score;
     const newStreak = isCorrect ? round : 0;
 
@@ -117,8 +118,8 @@ export default function PokeStatsBattle() {
         return;
       }
       const nextStat = STAT_NAMES[Math.floor(Math.random() * STAT_NAMES.length)];
-      const nextChallenger = pickRandom(pokemons, winner.id);
-      setChampion(winner);
+      const nextChallenger = pickRandom(pokemons, winner ? winner.id : champion.id);
+      setChampion(winner ? winner : champion);
       setChallenger(nextChallenger);
       setStatName(nextStat);
       setRound((r) => r + 1);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getLanguage } from "../stores/language";
+import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { changePassword } from "../lib/auth";
 
@@ -10,7 +10,7 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const language = getLanguage();
+  const language = useLanguage();
 
   async function handleSubmit(e) {
     e.preventDefault();

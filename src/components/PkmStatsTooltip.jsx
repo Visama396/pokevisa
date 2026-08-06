@@ -4,14 +4,14 @@ import SpriteImg from "./SpriteImg";
 import PokeTypeBadge from "./PokeTypeBadge";
 import { getSpeciesName, getMoveName, ensureMovesData } from "../lib/moves";
 import { computeStats } from "../lib/pokedex";
-import { getLanguage } from "../stores/language";
+import { useLanguage } from "../stores/language";
 
 // Hover tooltip for a party badge (below the village grid). Shows the
 // Pokémon's real stats — computed from pokedex base stats, level, and nature —
 // plus its known moves. Used together with the shared Tooltip component.
 export default function PkmStatsTooltip({ pkm }) {
   const [stats, setStats] = useState(null);
-  const language = getLanguage();
+  const language = useLanguage();
   const id = pkm.pokemonId || pkm.pokemon_id || 25;
   const level = pkm.level || 5;
   // Camp Pokémon stored without a nature default to neutral instead of a random pick.

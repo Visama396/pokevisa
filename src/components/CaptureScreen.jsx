@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getLanguage } from "../stores/language";
+import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { getSpeciesName } from "../lib/moves";
 
@@ -7,7 +7,7 @@ const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/spr
 
 export default function CaptureScreen({ enemy, playerLevel, team, accountId, onCapture, onDecline }) {
   const [saving, setSaving] = useState(false);
-  const language = getLanguage();
+  const language = useLanguage();
   const teamFull = team.length >= 1;
 
   const captureChance = Math.min(

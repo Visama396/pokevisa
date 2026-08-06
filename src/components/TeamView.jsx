@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getLanguage } from "../stores/language";
+import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { getSpeciesName } from "../lib/moves";
 import { updateTeamMember, removeTeamMember } from "../lib/auth";
@@ -31,7 +31,7 @@ export default function TeamView({ team, onUpdate }) {
   const [editing, setEditing] = useState(null);
   const [nickname, setNickname] = useState("");
   const [moveData, setMoveData] = useState(null);
-  const language = getLanguage();
+  const language = useLanguage();
 
   useEffect(() => {
     fetch("/moves.json").then(r => r.json()).then(setMoveData).catch(() => {});

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { getLanguage } from "../stores/language";
+import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { getStartersForTrait, getMovesAtLevel, cumulativeExp } from "../lib/moves";
 import { computeStats, pickNature } from "../lib/pokedex";
@@ -126,7 +126,7 @@ export default function StarterQuiz({ accountId, onComplete }) {
   const [starters, setStarters] = useState([]);
   const [rerollsLeft, setRerollsLeft] = useState(1);
   const [saving, setSaving] = useState(false);
-  const language = getLanguage();
+  const language = useLanguage();
 
   const question = QUESTIONS[step];
 
