@@ -66,6 +66,14 @@ const COLOR_MAP = {
 
 const CHANGELOG = [
   {
+    date: "2026-08-11",
+    title: "Pokédex moves QoL",
+    items: [
+      "Moves can now be sorted by multiple criteria at once — combine type, power, level or A-Z (e.g. order by type, then by power within each type)",
+      "New Move Searcher on the Pokémon details page: type a move name and see instantly whether the Pokémon learns it and how (level, TM, breeding, or tutor)",
+    ],
+  },
+  {
     date: "2026-08-02",
     title: "MMO-style progression & dungeon polish",
     items: [

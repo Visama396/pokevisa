@@ -38,7 +38,7 @@ wwlPPPPPPPPPuaavPPPPQwww
 wwpcccccccccuaavccccqwww
 wwpcccccccccuaavccccqwww
 wwpcccccccccCYYDccccqwww
-wwpcccccccccclPPPccccqwww
+wwpccccccccclPPPccccqwww
 wwyzzzzzzzzzzzzzzzzzAwww
 wwwwwwwwwwwwwwwwwwwwwwww
 
@@ -90,6 +90,41 @@ export function villageTileAt(x, y) {
 export function villageWalkable(x, y) {
   if (x < 0 || y < 0 || y >= VILLAGE_HEIGHT || x >= VILLAGE_WIDTH) return false;
   return tileWalkable(villageTileAt(x, y));
+}
+
+// ─── Elevation ─────────────────────────────────────────────────────────────
+// The village has two terrain heights. Ground (level 1) is the yellow/blue
+// grass (palettes 1 and 3); the two halls and the bottom dais are raised
+// platforms (level 2, olive grass, palettes 2 and 4) that can only be entered
+// at their stair tiles. Stairs are the sheet cells in rows 4-5, cols 0-3
+// (codes O/T/N/S). `villageLevel` returns 0 (blocked), 1 (ground), 2 (raised)
+// or 9 (stair); `villageCanStep` enforces "stairs are the only way up or down".
+const RAISED_REGIONS = [
+  { x0: 3, y0: 1, x1: 8, y1: 6 },   // left hall (services) platform
+  { x0: 18, y0: 0, x1: 22, y1: 7 }, // right hall platform
+  { x0: 13, y0: 8, x1: 20, y1: 8 }, // right hall south skirt + bridge (olive coast grass + the grass walkway that links it to the dais)
+  { x0: 11, y0: 9, x1: 20, y1: 13 }, // bottom dais: the raised plaza platform around the N/S stairs
+];
+
+export function villageLevel(x, y) {
+  if (x < 0 || y < 0 || y >= VILLAGE_HEIGHT || x >= VILLAGE_WIDTH) return 0;
+  const tile = villageTileAt(x, y);
+  if (!tileWalkable(tile)) return 0;
+  if (tile.kind === "sheet" && tile.row >= 4 && tile.col <= 3) return 9;
+  for (const r of RAISED_REGIONS) {
+    if (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) return 2;
+  }
+  return 1;
+}
+
+// Moving between two adjacent cells is allowed when both cells sit at the
+// same elevation, or when either cell is a stair tile (the only transition).
+export function villageCanStep(x1, y1, x2, y2) {
+  const l1 = villageLevel(x1, y1);
+  const l2 = villageLevel(x2, y2);
+  if (l1 === 0 || l2 === 0) return false;
+  if (l1 === 9 || l2 === 9) return true;
+  return l1 === l2;
 }
 
 // Movement grid kept as FLOOR/WALL so VillageGame's isWalkable keeps working.

@@ -203,6 +203,18 @@ const ui = {
     en: "Moves by Tutor", es: "Movimientos por Tutor", fr: "Capacités par Donneur", de: "Attacken durch Tutor", it: "Mosse dall'Insegnante",
     ja: "教え技", ko: "가르치기 기술", "zh-hans": "传授招式", "zh-hant": "傳授招式",
   },
+  "Move Searcher": {
+    en: "Move Searcher", es: "Buscador de Movimientos", fr: "Recherche de Capacités", de: "Attacken-Suche", it: "Cerca Mosse",
+    ja: "技検索", ko: "기술 검색", "zh-hans": "招式搜索", "zh-hant": "招式搜尋",
+  },
+  "Search moves": {
+    en: "Search moves", es: "Buscar movimientos", fr: "Rechercher des capacités", de: "Attacken suchen", it: "Cerca mosse",
+    ja: "技を検索", ko: "기술 검색", "zh-hans": "搜索招式", "zh-hant": "搜尋招式",
+  },
+  "No moves found.": {
+    en: "No moves found.", es: "No se encontraron movimientos.", fr: "Aucune capacité trouvée.", de: "Keine Attacken gefunden.", it: "Nessuna mossa trovata.",
+    ja: "技が見つかりません。", ko: "기술을 찾을 수 없습니다.", "zh-hans": "未找到招式。", "zh-hant": "未找到招式。",
+  },
   "Pokédex Entries": {
     en: "Pokédex Entries", es: "Entradas de la Pokédex", fr: "Descriptions du Pokédex", de: "Pokédex-Einträge", it: "Voci del Pokédex",
     ja: "図鑑説明文", ko: "도감 설명", "zh-hans": "图鉴介绍", "zh-hant": "圖鑑介紹",

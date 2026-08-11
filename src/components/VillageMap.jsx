@@ -1,22 +1,11 @@
-import { NPC_POSITIONS, VILLAGE_WIDTH, VILLAGE_HEIGHT, VILLAGE_LAYERS } from "../lib/village";
-import { TERRAIN_SHEETS, waterStyle } from "../lib/terrain";
-import { tileFromCode } from "../lib/tilemap";
+import { TILE } from "../lib/dungeon";
+import { VILLAGE_TILES, NPC_POSITIONS, VILLAGE_WIDTH, VILLAGE_HEIGHT } from "../lib/village";
+import { TERRAIN_SHEETS, WALL_TILE, FLOOR_TILE } from "../lib/terrain";
 import TerrainTile from "./TerrainTile";
 import SpriteImg from "./SpriteImg";
 
-// Render one layer of a village cell. Water and empty tiles are special-cased;
-// every other tile is a cropped chunk of its palette sheet (1-5).
-function LayerTile({ tile, cellSize }) {
-  if (!tile || tile.kind === "empty") return null;
-  if (tile.kind === "water") return <div className="absolute inset-0" style={waterStyle(cellSize)} />;
-  return (
-    <TerrainTile
-      sheet={TERRAIN_SHEETS[tile.palette || 1] || TERRAIN_SHEETS[1]}
-      tile={{ col: tile.col, row: tile.row }}
-      cellSize={cellSize}
-    />
-  );
-}
+// The village always uses palette 1 of the terrain tileset.
+const SHEET = TERRAIN_SHEETS[1];
 
 export default function VillageMap({
   playerX, playerY, playerSpriteId,
@@ -59,14 +48,7 @@ export default function VillageMap({
         >
           {Array.from({ length: VILLAGE_HEIGHT }, (_, vy) =>
             Array.from({ length: VILLAGE_WIDTH }, (_, vx) => {
-              // Decode the two layers (base under top) with the per-cell
-              // palette so tiles picked from sheets 2-5 render their color.
-              const paletteDigit = VILLAGE_LAYERS.palette[vy]?.[vx];
-              const palette = paletteDigit && paletteDigit !== "." ? Number(paletteDigit) : 1;
-              const base = VILLAGE_LAYERS.base[vy]?.[vx];
-              const top = VILLAGE_LAYERS.top[vy]?.[vx];
-              const baseTile = tileFromCode(base, palette);
-              const topTile = top !== "." ? tileFromCode(top, palette) : null;
+              const tile = VILLAGE_TILES[vy]?.[vx];
               const key = `${vx},${vy}`;
               const isPlayer = vx === playerX && vy === playerY;
               const otherInfo = otherPlayerMap[key];
@@ -76,6 +58,7 @@ export default function VillageMap({
                 Math.abs(vx - playerX) <= 1 &&
                 Math.abs(vy - playerY) <= 1;
 
+              const isWall = tile === TILE.WALL;
               const highlight = isPlayer ? "bg-green-800/50" : otherInfo ? "bg-blue-800/40" : npc ? "bg-amber-800/40" : null;
 
               return (
@@ -87,8 +70,7 @@ export default function VillageMap({
                   }`}
                   style={{ width: 32, height: 32 }}
                 >
-                  <LayerTile tile={baseTile} cellSize={32} />
-                  {topTile && <LayerTile tile={topTile} cellSize={32} />}
+                  <TerrainTile sheet={SHEET} tile={isWall ? WALL_TILE : FLOOR_TILE} />
                   {highlight && <div className={`absolute inset-0 ${highlight}`} />}
                   {isAdjacent && <div className="absolute inset-0 hover:bg-stone-600/40" />}
                   <span className="relative z-10 flex items-center justify-center">
@@ -112,7 +94,3 @@ export default function VillageMap({
     </div>
   );
 }
-
-/** The village layout (walkability + layers + NPC positions) lives in
- * src/lib/village.js, defined as a tilemap-drawer ASCII sketch. Use the
- * tilemap-drawer at /tilemap-drawer to design and export new layouts. */

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import {
   VILLAGE_TILES, VILLAGE_WIDTH, VILLAGE_HEIGHT,
-  NPC_POSITIONS, VILLAGE_SPAWN, SHOP_ITEMS,
+  NPC_POSITIONS, VILLAGE_SPAWN, SHOP_ITEMS, villageCanStep,
 } from "../lib/village";
 import { isWalkable } from "../lib/dungeon";
 import {
@@ -617,6 +617,8 @@ export default function VillageGame({
     if (!session || !myPlayer) return;
     if (!isWalkable(VILLAGE_TILES, x, y)) return;
     if (Math.abs(x - myPlayer.position_x) > 1 || Math.abs(y - myPlayer.position_y) > 1) return;
+    // Stairs are the only way between the ground level and the raised halls.
+    if (!villageCanStep(myPlayer.position_x, myPlayer.position_y, x, y)) return;
 
     const tileNPCs = NPC_POSITIONS.find((n) => n.x === x && n.y === y);
     if (tileNPCs) return;

@@ -97,6 +97,24 @@ sessions. When a phase is finished, mark it `[x]` here.
   (`returnToVillage`, `leaveRoom`, lobby Back) still bank the loot via
   `persistLoot`.
 
+## Phase 6 — Village elevation (DONE)
+- Stairs are now the only way up or down in the village terrain. The two halls
+  are raised platforms (level 2, olive grass) reached only via their stair
+  tiles; the yellow/blue grass plateau and plaza (level 1) can't be crossed
+  onto a hall's lip/roof without a stair.
+- `src/lib/village.js`: `villageLevel(x, y)` returns 0 blocked / 1 ground /
+  2 raised / 9 stair (stair = sheet tiles in rows 4-5 cols 0-3, codes O/T/N/S);
+  `villageCanStep(x1,y1,x2,y2)` allows moves between same-level cells or across
+  a stair. Raised regions are explicit rectangles (`RAISED_REGIONS`): the left
+  hall (cols 3-8, rows 1-6), the right hall (cols 18-22, rows 0-7), its olive
+  coast-grass south skirt + grass bridge (row 8, cols 13-20 — the "columns
+  12/13" boundary), and the bottom dais (cols 11-20, rows 9-13 — the raised
+  plaza platform entered only via the N/S stairs at (11,11)/(11,12)).
+  Region-based because the same coast-grass tiles are ground level elsewhere.
+- `VillageGame.jsx` `moveTo` enforces `villageCanStep` on top of
+  `isWalkable`. `VILLAGE_TILES`/`tileWalkable` unchanged; every walkable cell
+  stays reachable (verified by flood-fill + unit checks).
+
 ## Ongoing conventions
 - Dev server: `astro dev --background`; never run `astro build` during development.
 - Migrations are applied manually in the Supabase SQL editor.
