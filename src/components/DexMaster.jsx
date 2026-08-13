@@ -293,18 +293,36 @@ export default function DexMaster() {
     }
   }, [guessedPokemons, displayStats, pokemons]);
 
-  function handleGuess(e) {
-    e.preventDefault();
-    if (!guess.trim()) return;
+  // Allowed guess languages: English always works, plus the app language when
+  // it isn't English. Any other translated names (e.g. a Spanish name while the
+  // app is in English) are not accepted.
+  const allowedNameLangs = useMemo(() => {
+    const langs = ["en"];
+    if (language !== "en") langs.push(language);
+    return langs;
+  }, [language]);
 
-    const normalizedGuess = normalize(guess);
+  function nameMatches(pokemon, rawGuess) {
+    const normalizedGuess = normalize(rawGuess);
+    return allowedNameLangs.some(
+      (lang) => pokemon.names[lang] && normalize(pokemon.names[lang]) === normalizedGuess
+    );
+  }
+
+  function nameIncludes(pokemon, rawGuess) {
+    const partial = normalize(rawGuess);
+    return allowedNameLangs.some(
+      (lang) => pokemon.names[lang] && normalize(pokemon.names[lang]).includes(partial)
+    );
+  }
+
+  // Submits a guess for a raw input value; shared by the form submit and the
+  // auto-enter that fires as soon as a full name has been typed.
+  function submitGuess(rawGuess) {
+    if (!rawGuess.trim()) return;
 
     const pokemon = pokemons
-      .filter((p) =>
-        Object.values(p.names).some(
-          (n) => normalize(n) === normalizedGuess
-        )
-      )
+      .filter((p) => nameMatches(p, rawGuess))
       .find((p) => !guessedPokemons.has(p.id));
 
     if (!pokemon) {
@@ -331,13 +349,14 @@ export default function DexMaster() {
     setShowSuggestions(false);
   }
 
+  function handleGuess(e) {
+    e.preventDefault();
+    submitGuess(guess);
+  }
+
   const guessedList = guess.trim()
     ? pokemons.filter(
-        (p) =>
-          guessedPokemons.has(p.id) &&
-          Object.values(p.names).some((name) =>
-            normalize(name).includes(normalize(guess))
-          )
+        (p) => guessedPokemons.has(p.id) && nameIncludes(p, guess)
       )
     : [];
 
@@ -389,8 +408,18 @@ export default function DexMaster() {
             placeholder={t("Type a Pokémon name in any language...", language)}
             value={guess}
             onChange={(e) => {
-              setGuess(e.target.value);
+              const value = e.target.value;
+              setGuess(value);
               setShowSuggestions(true);
+
+              // Auto-enter the guess as soon as a full name is typed,
+              // skipping Pokémon that were already guessed.
+              if (value.trim()) {
+                const isFullName = pokemons.some(
+                  (p) => !guessedPokemons.has(p.id) && nameMatches(p, value)
+                );
+                if (isFullName) submitGuess(value);
+              }
             }}
             onFocus={() => guess.trim() && setShowSuggestions(true)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}

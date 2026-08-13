@@ -116,22 +116,41 @@ function formatMoveName(name) {
   return name.split("-").map((w) => capitalize(w)).join(" ");
 }
 
-// Toggle a sort key on/off; active keys are applied in click order (primary → secondary).
-function toggleSortKey(current, key) {
-  return current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+// Cycle a sort key: off → ascending → descending → off → … Active keys all
+// apply; their priority is fixed (see makeMoveComparator), so click order never
+// decides which criterion is primary.
+function cycleSortKey(state, key) {
+  const current = state[key];
+  if (current === undefined) return { ...state, [key]: "asc" };
+  if (current === "asc") return { ...state, [key]: "desc" };
+  const next = { ...state };
+  delete next[key];
+  return next;
 }
 
-// Build a multi-key comparator: iterate keys in order, using the first non-zero comparison.
-function makeMoveComparator(keys, moveData) {
+// Fixed priority for combined sorts: type groups first, then power, then level
+// or A-Z — so every active key contributes and the result is click-order agnostic.
+const SORT_PRIORITY = ["type", "power", "level", "alpha"];
+
+// Build a multi-key comparator: iterate active keys in fixed-priority order,
+// using the first non-zero comparison. Each key's direction (asc/desc) comes
+// from the sort state.
+function makeMoveComparator(sortState, moveData) {
   const nameOf = (m) => (typeof m === "string" ? m : m.name);
+  const dir = (key) => (sortState[key] === "desc" ? -1 : 1);
   const comparators = {
-    level: (a, b) => a.level - b.level,
-    alpha: (a, b) => nameOf(a).localeCompare(nameOf(b)),
-    type: (a, b) => (moveData?.[nameOf(a)]?.type || "").localeCompare(moveData?.[nameOf(b)]?.type || ""),
-    power: (a, b) => (moveData?.[nameOf(b)]?.power ?? -1) - (moveData?.[nameOf(a)]?.power ?? -1),
+    level: (a, b) => (a.level - b.level) * dir("level"),
+    alpha: (a, b) => nameOf(a).localeCompare(nameOf(b)) * dir("alpha"),
+    type: (a, b) =>
+      (moveData?.[nameOf(a)]?.type || "").localeCompare(moveData?.[nameOf(b)]?.type || "") * dir("type"),
+    power: (a, b) =>
+      ((moveData?.[nameOf(a)]?.power ?? -1) - (moveData?.[nameOf(b)]?.power ?? -1)) * dir("power"),
   };
+  const ordered = Object.keys(sortState).sort(
+    (a, b) => SORT_PRIORITY.indexOf(a) - SORT_PRIORITY.indexOf(b)
+  );
   return (a, b) => {
-    for (const key of keys) {
+    for (const key of ordered) {
       const c = comparators[key]?.(a, b) ?? 0;
       if (c !== 0) return c;
     }
@@ -144,14 +163,23 @@ function SortControls({ sort, onSort, options, language }) {
   return (
     <div className="flex gap-1 mt-2">
       {options.map((s) => {
-        const active = sort.includes(s);
+        const active = sort[s];
         return (
           <button
             key={s}
-            onClick={() => onSort(toggleSortKey(sort, s))}
-            className={`px-2 py-0.5 rounded text-xs font-bold ${active ? "bg-yellow-500/30 text-yellow-300" : "bg-slate-700/50 text-slate-400 hover:text-slate-200"}`}
+            onClick={() => onSort(cycleSortKey(sort, s))}
+            title={
+              active
+                ? `Sorting ${active === "desc" ? "descending" : "ascending"}`
+                : `Sort by ${labels[s]}`
+            }
+            className={`px-2 py-0.5 rounded text-xs font-bold ${
+              active
+                ? "bg-yellow-500/30 text-yellow-300"
+                : "bg-slate-700/50 text-slate-400 hover:text-slate-200"
+            }`}
           >
-            {labels[s]}
+            {labels[s]} {active ? (active === "desc" ? "↓" : "↑") : ""}
           </button>
         );
       })}
@@ -323,10 +351,10 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
   const [moveData, setMoveData] = useState(null);
   const [abilityData, setAbilityData] = useState(null);
   const [language, setLanguage] = useState(getLanguage());
-  const [sortLevelUp, setSortLevelUp] = useState(["level"]);
-  const [sortTM, setSortTM] = useState(["alpha"]);
-  const [sortEgg, setSortEgg] = useState(["alpha"]);
-  const [sortTutor, setSortTutor] = useState(["alpha"]);
+  const [sortLevelUp, setSortLevelUp] = useState({ level: "asc" });
+  const [sortTM, setSortTM] = useState({ alpha: "asc" });
+  const [sortEgg, setSortEgg] = useState({ alpha: "asc" });
+  const [sortTutor, setSortTutor] = useState({ alpha: "asc" });
   const [moveSearch, setMoveSearch] = useState("");
 
   useEffect(() => subscribe(setLanguage), []);

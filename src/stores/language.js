@@ -43,13 +43,14 @@ export function subscribe(fn) {
   listeners.add(fn);
   // Client-only: pull the persisted language right after React mounts (this
   // runs inside useEffect, so the initial hydration render already matched the
-  // SSR HTML). Notifies this listener so it re-renders with the stored value.
+  // SSR HTML). Always notify: every component renders with the "en" initial
+  // state, and effects fire child-first — if a child (e.g. LanguageSelector)
+  // flips the module-level `current` first, comparing stored vs current here
+  // would skip the notification and leave later components in English.
   if (typeof window !== "undefined") {
     const stored = getStored();
-    if (stored !== current) {
-      current = stored;
-      fn(stored);
-    }
+    current = stored;
+    fn(stored);
   }
   return () => listeners.delete(fn);
 }
