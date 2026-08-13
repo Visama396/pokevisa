@@ -10,6 +10,7 @@
     "build": "astro build",
     "build:pokedex": "node scripts/build-pokedex.js",
     "build:moves": "node scripts/build-moves.js",
+    "build:megas": "node scripts/build-megas.js",
     "build:sprite-trim": "node scripts/build-sprite-trim.js",
     "preview": "astro preview",
     "astro": "astro"

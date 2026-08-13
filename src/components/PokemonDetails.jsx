@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { capitalize } from "../utils/capitalize";
 import { formatDexEntryNumber } from "../utils/dexentrynumber";
 import { getLanguage, subscribe } from "../stores/language";
-import { t, getStatLabel, getTypeName } from "../stores/translations";
+import { t, getStatLabel } from "../stores/translations";
 import LanguageSelector from "./LanguageSelector";
 import PokeTypeBadge from "./PokeTypeBadge";
 import {
@@ -257,7 +257,7 @@ function MoveTooltipContent({ name, moveData, language }) {
   if (!info) return null;
   return (
     <TooltipContent className="max-w-xs bg-slate-700 text-slate-200 border border-slate-600 text-xs leading-relaxed p-3">
-      <div className="space-y-2">
+    <div className="space-y-2 divide-y divide-slate-700/50">
         <div className="flex items-center gap-2 text-slate-300">
           <PokeTypeBadge type={info.type} language={language} />
           <MoveIcon name={name} moveData={moveData} />
@@ -347,15 +347,136 @@ function formatCondition(cond) {
   return trigger || '';
 }
 
+// Renders a list of base stats as labelled bars plus a total row. Shared by
+// the base form and each Mega Evolution form on the details page.
+function StatRows({ stats, maxStat, language }) {
+  const total = (stats || []).reduce((s, st) => s + st.value, 0);
+  return (
+    <div className="space-y-2">
+      {(stats || []).map((stat) => {
+        const pct = Math.min((stat.value / maxStat) * 100, 100);
+        const barColor =
+          stat.value >= 120
+            ? "bg-green-500"
+            : stat.value >= 90
+              ? "bg-lime-500"
+              : stat.value >= 60
+                ? "bg-yellow-500"
+                : stat.value >= 30
+                  ? "bg-orange-500"
+                  : "bg-red-500";
+        return (
+          <div key={stat.name} className="grid grid-cols-[6rem_2.5rem_1fr_2.5rem] items-center gap-2 text-sm">
+            <span className="text-slate-300 font-medium text-right">
+              {getStatLabel(stat.name, language)}
+            </span>
+            <span className="font-mono font-bold text-slate-200 text-right">{stat.value}</span>
+            <div className="h-2 rounded-full bg-slate-700 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${barColor}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="text-xs text-slate-500">
+              {(stat.effort || 0) > 0 ? `+${stat.effort}` : ""}
+            </span>
+          </div>
+        );
+      })}
+      <div className="flex items-center gap-2 pt-2 border-t border-slate-700/50 text-sm font-bold">
+        <span className="text-slate-300">{t("Total", language)}</span>
+        <span className="font-mono text-slate-200">{total}</span>
+      </div>
+    </div>
+  );
+}
+
+// Display name of a mega form, e.g. "Charizard X" / "Mewtwo Y" / "Venusaur"
+// (single-mega species carry no suffix). Uses the current language's name for
+// the base species.
+function megaLabel(mega, pokemon, language) {
+  const base = capitalize(pokemon.names[language] || pokemon.names.en);
+  return mega.suffix ? `${base} ${mega.suffix}` : base;
+}
+
+// Button label for a mega form: "Charizard X" / "Mewtwo Y", or just "Mega"
+// when the mega shares the base species name (e.g. Venusaur → "Mega") so the
+// switcher doesn't show two identical buttons.
+function megaButtonLabel(mega, pokemon, language) {
+  return mega.suffix ? megaLabel(mega, pokemon, language) : t("Mega", language);
+}
+
+// Renders a Pokémon's type matchups grouped into six buckets (×4 / ×2 / ×1 /
+// ½× / ¼× / 0×) so strengths and weaknesses are readable at a glance. Only
+// buckets that have members are shown.
+function EffectivenessRows({ types, language }) {
+  const rows = getEffectiveness(types);
+  const buckets = [
+    { key: "Really Weak To", mult: "4×", color: "text-red-500", test: (m) => m === 4 },
+    { key: "Weak To", mult: "2×", color: "text-orange-500", test: (m) => m === 2 },
+    { key: "Neutral", mult: null, color: null, test: (m) => m === 1 },
+    { key: "Resistant To", mult: "½×", color: "text-green-500", test: (m) => m === 0.5 },
+    { key: "Very Resistant To", mult: "¼×", color: "text-blue-500", test: (m) => m === 0.25 },
+    { key: "Immune", mult: "0×", color: "text-black", test: (m) => m === 0 },
+  ];
+  return (
+    <div className="space-y-0">
+      {buckets
+        .map((bucket) => ({ ...bucket, members: rows.filter((e) => bucket.test(e.multiplier)) }))
+        .filter((bucket) => bucket.members.length > 0)
+        .map((bucket, i, visible) => (
+          <div
+            key={bucket.key}
+            className={`flex flex-wrap items-center gap-2 py-2 ${
+              i < visible.length - 1 ? "border-b border-slate-700" : ""
+            }`}
+          >
+            <span className="w-40 shrink-0 text-sm font-semibold text-slate-300">
+              {t(bucket.key, language)}
+              {bucket.mult && (
+                <span className={`${bucket.color} ml-1 font-mono text-base font-bold`}>{bucket.mult}</span>
+              )}
+            </span>
+            <div className="flex-1 flex flex-wrap justify-center gap-1.5">
+              {bucket.members.map((e) => (
+                <PokeTypeBadge key={e.type} type={e.type} language={language} />
+              ))}
+            </div>
+          </div>
+        ))}
+    </div>
+  );
+}
+
 export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
   const [moveData, setMoveData] = useState(null);
   const [abilityData, setAbilityData] = useState(null);
+  const [megaData, setMegaData] = useState(null);
   const [language, setLanguage] = useState(getLanguage());
   const [sortLevelUp, setSortLevelUp] = useState({ level: "asc" });
   const [sortTM, setSortTM] = useState({ alpha: "asc" });
   const [sortEgg, setSortEgg] = useState({ alpha: "asc" });
   const [sortTutor, setSortTutor] = useState({ alpha: "asc" });
   const [moveSearch, setMoveSearch] = useState("");
+
+  // Form switcher for the sprite card: null = base form, otherwise the selected
+  // mega. While spinning, the sprite plays a one-turn animation before swapping.
+  const [selectedMega, setSelectedMega] = useState(null);
+  const [spin, setSpin] = useState(false);
+  const spinTimer = useRef(null);
+
+  useEffect(() => () => clearTimeout(spinTimer.current), []);
+
+  // Swap the displayed form, spinning the sprite mid-way through the change.
+  function selectForm(mega) {
+    if (spin || selectedMega === mega) return;
+    setSpin(true);
+    clearTimeout(spinTimer.current);
+    spinTimer.current = setTimeout(() => {
+      setSelectedMega(mega);
+      setSpin(false);
+    }, 600);
+  }
 
   useEffect(() => subscribe(setLanguage), []);
 
@@ -372,7 +493,34 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
       .then(setAbilityData)
       .catch(() => {});
   }, []);
-  const effectiveness = getEffectiveness(pokemon.types);
+
+  useEffect(() => {
+    fetch("/megas.json")
+      .then((r) => r.json())
+      .then(setMegaData)
+      .catch(() => {});
+  }, []);
+
+  // Mega Evolution forms for this species, keyed by national dex id (see
+  // scripts/build-megas.js). Property access with the numeric id works because
+  // JS coerces object keys to strings.
+  const megas = megaData?.[pokemon.id] || [];
+
+  // Forms (base + megas) grouped by distinct typing, so the Type Effectiveness
+  // section renders one set of matchups per type-set (e.g. Charizard and
+  // Charizard Y both Fire/Flying share a group instead of duplicating).
+  const effectivenessGroups = [];
+  const groupByTypes = new Map();
+  const pushGroup = (label, types) => {
+    const key = JSON.stringify(types);
+    if (!groupByTypes.has(key)) {
+      groupByTypes.set(key, { labels: [], types });
+      effectivenessGroups.push(groupByTypes.get(key));
+    }
+    groupByTypes.get(key).labels.push(label);
+  };
+  pushGroup(capitalize(pokemon.names[language] || pokemon.names.en), pokemon.types);
+  for (const mega of megas) pushGroup(megaLabel(mega, pokemon, language), mega.types);
 
   const flavorTextsByText = {};
   for (const ft of pokemon.flavorTexts || []) {
@@ -474,16 +622,47 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
             #{formatDexEntryNumber(pokemon.id)}
           </span>
           <img
-            className="size-48 object-contain"
-            src={pokemon.sprite}
-            alt={pokemon.names.en}
+            className={`size-48 object-contain ${spin ? "animate-spin3d" : ""}`}
+            src={selectedMega?.sprite || pokemon.sprite}
+            alt={selectedMega?.name || pokemon.names.en}
           />
-          <h1 className="text-3xl font-bold">{capitalize(pokemon.names[language] || pokemon.names.en)}</h1>
+          <h1 className="text-3xl font-bold">
+            {selectedMega
+              ? megaLabel(selectedMega, pokemon, language)
+              : capitalize(pokemon.names[language] || pokemon.names.en)}
+          </h1>
           <div className="flex flex-wrap justify-center gap-2">
-            {pokemon.types.map((type) => (
+            {(selectedMega?.types || pokemon.types).map((type) => (
               <PokeTypeBadge key={type} type={type} language={language} />
             ))}
           </div>
+          {megas.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1.5">
+              <button
+                onClick={() => selectForm(null)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                  selectedMega === null
+                    ? "bg-yellow-600/40 text-yellow-200 ring-1 ring-yellow-500/60"
+                    : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                }`}
+              >
+                {capitalize(pokemon.names[language] || pokemon.names.en)}
+              </button>
+              {megas.map((mega) => (
+                <button
+                  key={mega.name}
+                  onClick={() => selectForm(mega)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                    selectedMega === mega
+                      ? "bg-yellow-600/40 text-yellow-200 ring-1 ring-yellow-500/60"
+                      : "bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                  }`}
+                >
+                  {megaButtonLabel(mega, pokemon, language)}
+                </button>
+              ))}
+            </div>
+          )}
           {(pokemon.legendary || pokemon.mythical) && (
             <div className="flex gap-2">
               {pokemon.legendary && (
@@ -556,6 +735,37 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
                     </Tooltip>
                   );
                 })}
+                {megas.length > 0 && (
+                  <div className="w-full mt-1 space-y-1">
+                    {megas.map((mega) => (
+                      <div key={mega.name} className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-xs font-semibold text-slate-400 shrink-0">
+                          {megaLabel(mega, pokemon, language)}:
+                        </span>
+                        {mega.abilities.map((abilityName) => {
+                          const abilityInfo = abilityData?.[abilityName];
+                          const effectEntry =
+                            abilityInfo?.effect_entries?.[language] || abilityInfo?.effect_entries?.en;
+                          const effect = effectEntry?.short_effect || effectEntry?.effect;
+                          const label = (
+                            <span className="rounded-full bg-slate-700 px-3 py-0.5 text-xs text-slate-200">
+                              {abilityInfo?.[language] || capitalize(abilityName.replace(/-/g, " "))}
+                            </span>
+                          );
+                          if (!effect) return label;
+                          return (
+                            <Tooltip key={abilityName}>
+                              <TooltipTrigger>{label}</TooltipTrigger>
+                              <TooltipContent className="max-w-xs bg-slate-700 text-slate-200 border border-slate-600 text-xs leading-relaxed p-2">
+                                {effect}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </dd>
             </div>
             {localDexEntries.length > 0 && (
@@ -640,75 +850,45 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
         </div>
       </div>
 
-      {/* Row 3: Base Stats */}
+      {/* Row 3: Base Stats (+ Mega Evolution stats) */}
       <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-        <h2 className="text-xl font-bold mb-4">{t("Base Stats", language)}</h2>
-        <div className="space-y-2">
-          {(pokemon.baseStats || []).map((stat) => {
-            const pct = Math.min((stat.value / maxStat) * 100, 100);
-            const barColor =
-              stat.value >= 120
-                ? "bg-green-500"
-                : stat.value >= 90
-                  ? "bg-lime-500"
-                  : stat.value >= 60
-                    ? "bg-yellow-500"
-                    : stat.value >= 30
-                      ? "bg-orange-500"
-                      : "bg-red-500";
-            return (
-              <div key={stat.name} className="grid grid-cols-[6rem_2.5rem_1fr_2.5rem] items-center gap-2 text-sm">
-                <span className="text-slate-300 font-medium text-right">
-                  {getStatLabel(stat.name, language)}
-                </span>
-                <span className="font-mono font-bold text-slate-200 text-right">{stat.value}</span>
-                <div className="h-2 rounded-full bg-slate-700 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${barColor}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                <span className="text-xs text-slate-500">
-                  {(stat.effort || 0) > 0 ? `+${stat.effort}` : ""}
-                </span>
-              </div>
-            );
-          })}
-          <div className="flex items-center gap-2 pt-2 border-t border-slate-700/50 text-sm font-bold">
-            <span className="text-slate-300">{t("Total", language)}</span>
-            <span className="font-mono text-slate-200">
-              {(pokemon.baseStats || []).reduce((s, st) => s + st.value, 0)}
-            </span>
-          </div>
-        </div>
+        <h2 className="text-xl font-bold mb-4">
+          {capitalize(pokemon.names[language] || pokemon.names.en)} {t("Base Stats", language)}
+        </h2>
+        <StatRows stats={pokemon.baseStats} maxStat={maxStat} language={language} />
       </div>
+
+      {megas.map((mega) => {
+        // Only call out the mega's typing when it differs from the base form,
+        // otherwise the badges are just noise.
+        const typesChanged = JSON.stringify(mega.types) !== JSON.stringify(pokemon.types);
+        return (
+          <div key={mega.name} className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2 flex-wrap">
+              {megaLabel(mega, pokemon, language)} {t("Base Stats", language)}
+              {typesChanged && mega.types.map((type) => (
+                <PokeTypeBadge key={type} type={type} language={language} />
+              ))}
+            </h2>
+            <StatRows stats={mega.baseStats} maxStat={maxStat} language={language} />
+          </div>
+        );
+      })}
 
       {/* Row 4: Type Effectiveness */}
       <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
         <h2 className="text-xl font-bold mb-4">{t("Type Effectiveness", language)}</h2>
-        <div className="flex flex-wrap gap-1.5">
-          {effectiveness.map(({ type, multiplier }) => (
-            <span
-              key={type}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                multiplier === 0
-                  ? "bg-gray-700/60 text-gray-400"
-                  : multiplier < 1
-                    ? "bg-red-900/30 text-red-300"
-                    : multiplier === 1
-                      ? "bg-slate-700/40 text-slate-400"
-                      : multiplier <= 2
-                        ? "bg-green-900/30 text-green-300"
-                        : "bg-green-700/30 text-green-200"
-              }`}
-            >
-              {getTypeName(type, language)}
-              <span className="font-mono">
-                {multiplier === 0 ? "0×" : multiplier < 1 ? "½×" : multiplier === 1 ? "" : multiplier === 2 ? "2×" : "4×"}
-              </span>
-            </span>
-          ))}
-        </div>
+        {effectivenessGroups.map((group) => (
+          <div key={JSON.stringify(group.types)} className={group === effectivenessGroups[0] ? "" : "mt-4 border-t border-slate-700/50 pt-4"}>
+            <h3 className="text-base font-bold mb-2 flex items-center gap-2 flex-wrap">
+              {group.labels.join(" · ")}
+              {group.types.map((type) => (
+                <PokeTypeBadge key={type} type={type} language={language} />
+              ))}
+            </h3>
+            <EffectivenessRows types={group.types} language={language} />
+          </div>
+        ))}
       </div>
 
       {/* Row 5: Evolution Chart */}
@@ -872,7 +1052,7 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
               </div>
               <div className="max-h-80 overflow-y-auto space-y-1 pr-1">
                 {[...moves].sort(makeMoveComparator(sortLevelUp, moveData)).map((move) => (
-                  <Tooltip key={move.name}>
+                  <Tooltip key={`${move.name}-${move.level}`}>
                     <TooltipTrigger className={`flex justify-between items-center rounded ${typeBg[moveData?.[move.name]?.type] || "bg-slate-700/30"} px-3 py-1.5 text-sm w-full text-left cursor-pointer`}>
                       <span className="flex items-center gap-1.5 text-slate-200 min-w-0">
                         <MoveIcon name={move.name} moveData={moveData} />

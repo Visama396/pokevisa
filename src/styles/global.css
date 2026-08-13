@@ -160,3 +160,13 @@
 .animate-damage-popup {
   animation: damage-popup 1.2s ease-out forwards;
 }
+
+/* 3D flip for the Pokédex sprite card form switcher (see PokemonDetails.jsx):
+   spins the sprite around the Y axis so it turns like a card being flipped. */
+@keyframes spin3d {
+  from { transform: perspective(600px) rotateY(0deg); }
+  to { transform: perspective(600px) rotateY(360deg); }
+}
+.animate-spin3d {
+  animation: spin3d 0.6s linear;
+}

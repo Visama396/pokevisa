@@ -1,0 +1,2197 @@
+{
+  "3": [
+    {
+      "name": "venusaur-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10033.png",
+      "types": [
+        "grass",
+        "poison"
+      ],
+      "abilities": [
+        "thick-fat"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 123,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 122,
+          "effort": 2
+        },
+        {
+          "name": "special-defense",
+          "value": 120,
+          "effort": 1
+        },
+        {
+          "name": "speed",
+          "value": 80,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "6": [
+    {
+      "name": "charizard-mega-x",
+      "suffix": "X",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10034.png",
+      "types": [
+        "fire",
+        "dragon"
+      ],
+      "abilities": [
+        "tough-claws"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 78,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 130,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 111,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 130,
+          "effort": 3
+        },
+        {
+          "name": "special-defense",
+          "value": 85,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 100,
+          "effort": 0
+        }
+      ]
+    },
+    {
+      "name": "charizard-mega-y",
+      "suffix": "Y",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10035.png",
+      "types": [
+        "fire",
+        "flying"
+      ],
+      "abilities": [
+        "drought"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 78,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 104,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 78,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 159,
+          "effort": 3
+        },
+        {
+          "name": "special-defense",
+          "value": 115,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 100,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "9": [
+    {
+      "name": "blastoise-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10036.png",
+      "types": [
+        "water"
+      ],
+      "abilities": [
+        "mega-launcher"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 79,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 103,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 135,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 115,
+          "effort": 3
+        },
+        {
+          "name": "speed",
+          "value": 78,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "15": [
+    {
+      "name": "beedrill-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10090.png",
+      "types": [
+        "bug",
+        "poison"
+      ],
+      "abilities": [
+        "adaptability"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 150,
+          "effort": 2
+        },
+        {
+          "name": "defense",
+          "value": 40,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 15,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 80,
+          "effort": 1
+        },
+        {
+          "name": "speed",
+          "value": 145,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "18": [
+    {
+      "name": "pidgeot-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10073.png",
+      "types": [
+        "normal",
+        "flying"
+      ],
+      "abilities": [
+        "no-guard"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 83,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 135,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 121,
+          "effort": 3
+        }
+      ]
+    }
+  ],
+  "65": [
+    {
+      "name": "alakazam-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10037.png",
+      "types": [
+        "psychic"
+      ],
+      "abilities": [
+        "trace"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 55,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 50,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 175,
+          "effort": 3
+        },
+        {
+          "name": "special-defense",
+          "value": 105,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 150,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "80": [
+    {
+      "name": "slowbro-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10071.png",
+      "types": [
+        "water",
+        "psychic"
+      ],
+      "abilities": [
+        "shell-armor"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 75,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 180,
+          "effort": 2
+        },
+        {
+          "name": "special-attack",
+          "value": 130,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 30,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "94": [
+    {
+      "name": "gengar-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10038.png",
+      "types": [
+        "ghost",
+        "poison"
+      ],
+      "abilities": [
+        "shadow-tag"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 60,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 170,
+          "effort": 3
+        },
+        {
+          "name": "special-defense",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 130,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "115": [
+    {
+      "name": "kangaskhan-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10039.png",
+      "types": [
+        "normal"
+      ],
+      "abilities": [
+        "parental-bond"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 105,
+          "effort": 2
+        },
+        {
+          "name": "attack",
+          "value": 125,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 60,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 100,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "127": [
+    {
+      "name": "pinsir-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10040.png",
+      "types": [
+        "bug",
+        "flying"
+      ],
+      "abilities": [
+        "aerilate"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 155,
+          "effort": 2
+        },
+        {
+          "name": "defense",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 90,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 105,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "130": [
+    {
+      "name": "gyarados-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10041.png",
+      "types": [
+        "water",
+        "dark"
+      ],
+      "abilities": [
+        "mold-breaker"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 155,
+          "effort": 2
+        },
+        {
+          "name": "defense",
+          "value": 109,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 130,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 81,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "142": [
+    {
+      "name": "aerodactyl-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10042.png",
+      "types": [
+        "rock",
+        "flying"
+      ],
+      "abilities": [
+        "tough-claws"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 135,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 85,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 150,
+          "effort": 2
+        }
+      ]
+    }
+  ],
+  "150": [
+    {
+      "name": "mewtwo-mega-x",
+      "suffix": "X",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10043.png",
+      "types": [
+        "psychic",
+        "fighting"
+      ],
+      "abilities": [
+        "steadfast"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 106,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 190,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 154,
+          "effort": 3
+        },
+        {
+          "name": "special-defense",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 130,
+          "effort": 0
+        }
+      ]
+    },
+    {
+      "name": "mewtwo-mega-y",
+      "suffix": "Y",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10044.png",
+      "types": [
+        "psychic"
+      ],
+      "abilities": [
+        "insomnia"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 106,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 150,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 194,
+          "effort": 3
+        },
+        {
+          "name": "special-defense",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 140,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "181": [
+    {
+      "name": "ampharos-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10045.png",
+      "types": [
+        "electric",
+        "dragon"
+      ],
+      "abilities": [
+        "mold-breaker"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 90,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 105,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 165,
+          "effort": 3
+        },
+        {
+          "name": "special-defense",
+          "value": 110,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 45,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "208": [
+    {
+      "name": "steelix-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10072.png",
+      "types": [
+        "steel",
+        "ground"
+      ],
+      "abilities": [
+        "sand-force"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 75,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 125,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 230,
+          "effort": 2
+        },
+        {
+          "name": "special-attack",
+          "value": 55,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 30,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "212": [
+    {
+      "name": "scizor-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10046.png",
+      "types": [
+        "bug",
+        "steel"
+      ],
+      "abilities": [
+        "technician"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 150,
+          "effort": 2
+        },
+        {
+          "name": "defense",
+          "value": 140,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 75,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "214": [
+    {
+      "name": "heracross-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10047.png",
+      "types": [
+        "bug",
+        "fighting"
+      ],
+      "abilities": [
+        "skill-link"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 185,
+          "effort": 2
+        },
+        {
+          "name": "defense",
+          "value": 115,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 40,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 105,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 75,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "229": [
+    {
+      "name": "houndoom-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10048.png",
+      "types": [
+        "dark",
+        "fire"
+      ],
+      "abilities": [
+        "solar-power"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 75,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 90,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 90,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 140,
+          "effort": 2
+        },
+        {
+          "name": "special-defense",
+          "value": 90,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 115,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "248": [
+    {
+      "name": "tyranitar-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10049.png",
+      "types": [
+        "rock",
+        "dark"
+      ],
+      "abilities": [
+        "sand-stream"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 164,
+          "effort": 3
+        },
+        {
+          "name": "defense",
+          "value": 150,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 71,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "254": [
+    {
+      "name": "sceptile-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10065.png",
+      "types": [
+        "grass",
+        "dragon"
+      ],
+      "abilities": [
+        "lightning-rod"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 110,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 75,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 145,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 85,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 145,
+          "effort": 3
+        }
+      ]
+    }
+  ],
+  "257": [
+    {
+      "name": "blaziken-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10050.png",
+      "types": [
+        "fire",
+        "fighting"
+      ],
+      "abilities": [
+        "speed-boost"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 160,
+          "effort": 3
+        },
+        {
+          "name": "defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 130,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 100,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "260": [
+    {
+      "name": "swampert-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10064.png",
+      "types": [
+        "water",
+        "ground"
+      ],
+      "abilities": [
+        "swift-swim"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 150,
+          "effort": 3
+        },
+        {
+          "name": "defense",
+          "value": 110,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 110,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 70,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "282": [
+    {
+      "name": "gardevoir-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10051.png",
+      "types": [
+        "psychic",
+        "fairy"
+      ],
+      "abilities": [
+        "pixilate"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 68,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 85,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 165,
+          "effort": 3
+        },
+        {
+          "name": "special-defense",
+          "value": 135,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 100,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "302": [
+    {
+      "name": "sableye-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10066.png",
+      "types": [
+        "dark",
+        "ghost"
+      ],
+      "abilities": [
+        "magic-bounce"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 50,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 85,
+          "effort": 1
+        },
+        {
+          "name": "defense",
+          "value": 125,
+          "effort": 1
+        },
+        {
+          "name": "special-attack",
+          "value": 85,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 115,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 20,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "303": [
+    {
+      "name": "mawile-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10052.png",
+      "types": [
+        "steel",
+        "fairy"
+      ],
+      "abilities": [
+        "huge-power"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 50,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 105,
+          "effort": 1
+        },
+        {
+          "name": "defense",
+          "value": 125,
+          "effort": 1
+        },
+        {
+          "name": "special-attack",
+          "value": 55,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 50,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "306": [
+    {
+      "name": "aggron-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10053.png",
+      "types": [
+        "steel"
+      ],
+      "abilities": [
+        "filter"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 140,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 230,
+          "effort": 3
+        },
+        {
+          "name": "special-attack",
+          "value": 60,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 50,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "308": [
+    {
+      "name": "medicham-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10054.png",
+      "types": [
+        "fighting",
+        "psychic"
+      ],
+      "abilities": [
+        "pure-power"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 60,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 85,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 85,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 100,
+          "effort": 2
+        }
+      ]
+    }
+  ],
+  "310": [
+    {
+      "name": "manectric-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10055.png",
+      "types": [
+        "electric"
+      ],
+      "abilities": [
+        "intimidate"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 75,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 135,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 135,
+          "effort": 2
+        }
+      ]
+    }
+  ],
+  "319": [
+    {
+      "name": "sharpedo-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10070.png",
+      "types": [
+        "water",
+        "dark"
+      ],
+      "abilities": [
+        "strong-jaw"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 140,
+          "effort": 2
+        },
+        {
+          "name": "defense",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 110,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 105,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "323": [
+    {
+      "name": "camerupt-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10087.png",
+      "types": [
+        "fire",
+        "ground"
+      ],
+      "abilities": [
+        "sheer-force"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 120,
+          "effort": 1
+        },
+        {
+          "name": "defense",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 145,
+          "effort": 1
+        },
+        {
+          "name": "special-defense",
+          "value": 105,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 20,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "334": [
+    {
+      "name": "altaria-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10067.png",
+      "types": [
+        "dragon",
+        "fairy"
+      ],
+      "abilities": [
+        "pixilate"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 75,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 110,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 110,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 110,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 105,
+          "effort": 2
+        },
+        {
+          "name": "speed",
+          "value": 80,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "354": [
+    {
+      "name": "banette-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10056.png",
+      "types": [
+        "ghost"
+      ],
+      "abilities": [
+        "prankster"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 64,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 165,
+          "effort": 2
+        },
+        {
+          "name": "defense",
+          "value": 75,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 93,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 83,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 75,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "359": [
+    {
+      "name": "absol-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10057.png",
+      "types": [
+        "dark"
+      ],
+      "abilities": [
+        "magic-bounce"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 150,
+          "effort": 2
+        },
+        {
+          "name": "defense",
+          "value": 60,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 115,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 60,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 115,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "362": [
+    {
+      "name": "glalie-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10074.png",
+      "types": [
+        "ice"
+      ],
+      "abilities": [
+        "refrigerate"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 80,
+          "effort": 2
+        },
+        {
+          "name": "attack",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 100,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "373": [
+    {
+      "name": "salamence-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10089.png",
+      "types": [
+        "dragon",
+        "flying"
+      ],
+      "abilities": [
+        "aerilate"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 145,
+          "effort": 3
+        },
+        {
+          "name": "defense",
+          "value": 130,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 90,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 120,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "376": [
+    {
+      "name": "metagross-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10076.png",
+      "types": [
+        "steel",
+        "psychic"
+      ],
+      "abilities": [
+        "tough-claws"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 145,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 150,
+          "effort": 3
+        },
+        {
+          "name": "special-attack",
+          "value": 105,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 110,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 110,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "380": [
+    {
+      "name": "latias-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10062.png",
+      "types": [
+        "dragon",
+        "psychic"
+      ],
+      "abilities": [
+        "levitate"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 140,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 150,
+          "effort": 3
+        },
+        {
+          "name": "speed",
+          "value": 110,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "381": [
+    {
+      "name": "latios-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10063.png",
+      "types": [
+        "dragon",
+        "psychic"
+      ],
+      "abilities": [
+        "levitate"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 130,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 160,
+          "effort": 3
+        },
+        {
+          "name": "special-defense",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 110,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "384": [
+    {
+      "name": "rayquaza-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10079.png",
+      "types": [
+        "dragon",
+        "flying"
+      ],
+      "abilities": [
+        "delta-stream"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 105,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 180,
+          "effort": 2
+        },
+        {
+          "name": "defense",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 180,
+          "effort": 1
+        },
+        {
+          "name": "special-defense",
+          "value": 100,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 115,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "428": [
+    {
+      "name": "lopunny-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10088.png",
+      "types": [
+        "normal",
+        "fighting"
+      ],
+      "abilities": [
+        "scrappy"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 136,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 94,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 54,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 96,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 135,
+          "effort": 2
+        }
+      ]
+    }
+  ],
+  "445": [
+    {
+      "name": "garchomp-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10058.png",
+      "types": [
+        "dragon",
+        "ground"
+      ],
+      "abilities": [
+        "sand-force"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 108,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 170,
+          "effort": 3
+        },
+        {
+          "name": "defense",
+          "value": 115,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 120,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 92,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "448": [
+    {
+      "name": "lucario-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10059.png",
+      "types": [
+        "fighting",
+        "steel"
+      ],
+      "abilities": [
+        "adaptability"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 145,
+          "effort": 1
+        },
+        {
+          "name": "defense",
+          "value": 88,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 140,
+          "effort": 1
+        },
+        {
+          "name": "special-defense",
+          "value": 70,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 112,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "460": [
+    {
+      "name": "abomasnow-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10060.png",
+      "types": [
+        "grass",
+        "ice"
+      ],
+      "abilities": [
+        "snow-warning"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 90,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 132,
+          "effort": 1
+        },
+        {
+          "name": "defense",
+          "value": 105,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 132,
+          "effort": 1
+        },
+        {
+          "name": "special-defense",
+          "value": 105,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 30,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "475": [
+    {
+      "name": "gallade-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10068.png",
+      "types": [
+        "psychic",
+        "fighting"
+      ],
+      "abilities": [
+        "inner-focus"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 68,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 165,
+          "effort": 3
+        },
+        {
+          "name": "defense",
+          "value": 95,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 65,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 115,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 110,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "531": [
+    {
+      "name": "audino-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10069.png",
+      "types": [
+        "normal",
+        "fairy"
+      ],
+      "abilities": [
+        "healer"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 103,
+          "effort": 2
+        },
+        {
+          "name": "attack",
+          "value": 60,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 126,
+          "effort": 0
+        },
+        {
+          "name": "special-attack",
+          "value": 80,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 126,
+          "effort": 0
+        },
+        {
+          "name": "speed",
+          "value": 50,
+          "effort": 0
+        }
+      ]
+    }
+  ],
+  "719": [
+    {
+      "name": "diancie-mega",
+      "suffix": "",
+      "sprite": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/10075.png",
+      "types": [
+        "rock",
+        "fairy"
+      ],
+      "abilities": [
+        "magic-bounce"
+      ],
+      "baseStats": [
+        {
+          "name": "hp",
+          "value": 50,
+          "effort": 0
+        },
+        {
+          "name": "attack",
+          "value": 160,
+          "effort": 0
+        },
+        {
+          "name": "defense",
+          "value": 110,
+          "effort": 1
+        },
+        {
+          "name": "special-attack",
+          "value": 160,
+          "effort": 0
+        },
+        {
+          "name": "special-defense",
+          "value": 110,
+          "effort": 2
+        },
+        {
+          "name": "speed",
+          "value": 110,
+          "effort": 0
+        }
+      ]
+    }
+  ]
+}

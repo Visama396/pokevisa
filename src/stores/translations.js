@@ -175,6 +175,34 @@ const ui = {
     en: "Type Effectiveness", es: "Efectividad de Tipos", fr: "Efficacité des Types", de: "Typeneffektivität", it: "Efficacia dei Tipi",
     ja: "タイプ相性", ko: "타입 상성", "zh-hans": "属性相性", "zh-hant": "屬性相性",
   },
+  "Really Weak To": {
+    en: "Really Weak To", es: "Muy débil a", fr: "Très vulnérable à", de: "Sehr schwach gegen", it: "Molto debole a",
+    ja: "とても弱点", ko: "매우 약함", "zh-hans": "非常弱", "zh-hant": "非常弱",
+  },
+  "Weak To": {
+    en: "Weak To", es: "Débil a", fr: "Vulnérable à", de: "Schwach gegen", it: "Debole a",
+    ja: "弱点", ko: "약함", "zh-hans": "较弱", "zh-hant": "較弱",
+  },
+  "Neutral": {
+    en: "Neutral", es: "Neutral", fr: "Neutre", de: "Neutral", it: "Neutrale",
+    ja: "普通", ko: "보통", "zh-hans": "普通", "zh-hant": "普通",
+  },
+  "Resistant To": {
+    en: "Resistant To", es: "Resistente a", fr: "Résistant à", de: "Resistent gegen", it: "Resistente a",
+    ja: "耐性", ko: "저항", "zh-hans": "抗性", "zh-hant": "抗性",
+  },
+  "Very Resistant To": {
+    en: "Very Resistant To", es: "Muy resistente a", fr: "Très résistant à", de: "Sehr resistent gegen", it: "Molto resistente a",
+    ja: "とても耐性", ko: "매우 저항", "zh-hans": "非常抗", "zh-hant": "非常抗",
+  },
+  "Immune": {
+    en: "Immune", es: "Inmune", fr: "Immunisé", de: "Immun", it: "Immuno",
+    ja: "無効", ko: "무효", "zh-hans": "免疫", "zh-hant": "免疫",
+  },
+  "Mega": {
+    en: "Mega", es: "Mega", fr: "Méga", de: "Mega", it: "Mega",
+    ja: "メガ", ko: "메가", "zh-hans": "超级", "zh-hant": "超級",
+  },
   "Evolution Chart": {
     en: "Evolution Chart", es: "Evoluciones", fr: "Évolutions", de: "Entwicklungen", it: "Evoluzioni",
     ja: "進化", ko: "진화", "zh-hans": "进化链", "zh-hant": "進化鏈",
