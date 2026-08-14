@@ -900,8 +900,10 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
         ))}
       </div>
 
-      {/* Row 5: Evolution Chart */}
-      {(pokemon.evolutionChart || []).length > 0 && (() => {
+      {/* Row 5: Evolution Chart. Only shown when at least one species in the
+          chart actually evolves — single-stage Pokémon (Ho-oh, Celebi, Miltank,
+          …) have a chart of just themselves and skip this section entirely. */}
+      {((pokemon.evolutionChart || []).some(e => e.evolvesTo?.length > 0)) && (() => {
         const chains = buildEvolutionChains(pokemon.evolutionChart)
           .filter(chain => chain.some(e => e.name === pokemon.slug));
         if (chains.length === 0) return null;
@@ -937,7 +939,7 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
                 instead of overflowing the section; centering is kept on desktop
                 by letting the grid span the full width when it fits. Scroll is
                 horizontal only so the chain never clips vertically. */}
-            <div className="overflow-x-auto overflow-y-hidden pb-1">
+            <div className="overflow-x-auto overflow-y-hidden py-3">
             <div className="grid justify-center items-center gap-x-4 gap-y-2 w-max min-w-full"
               style={{
                 gridTemplateColumns: gridParts.join(' '),
