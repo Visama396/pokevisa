@@ -492,7 +492,7 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
     spinTimer.current = setTimeout(() => {
       setSelectedMega(mega);
       setSpin(false);
-    }, 600);
+    }, 300);
   }
 
   useEffect(() => subscribe(setLanguage), []);
@@ -933,7 +933,12 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
         return (
           <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
             <h2 className="text-xl font-bold mb-4">{t("Evolution Chart", language)}</h2>
-            <div className="grid justify-center items-center gap-x-4 gap-y-2"
+            {/* Wide chains (branching or long evolutions) must scroll on mobile
+                instead of overflowing the section; centering is kept on desktop
+                by letting the grid span the full width when it fits. Scroll is
+                horizontal only so the chain never clips vertically. */}
+            <div className="overflow-x-auto overflow-y-hidden pb-1">
+            <div className="grid justify-center items-center gap-x-4 gap-y-2 w-max min-w-full"
               style={{
                 gridTemplateColumns: gridParts.join(' '),
                 gridTemplateRows: `repeat(${chains.length}, auto)`,
@@ -1007,6 +1012,7 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
                   );
                 })
               )}
+            </div>
             </div>
           </div>
         );

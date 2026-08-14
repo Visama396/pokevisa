@@ -162,11 +162,13 @@
 }
 
 /* 3D flip for the Pokédex sprite card form switcher (see PokemonDetails.jsx):
-   spins the sprite around the Y axis so it turns like a card being flipped. */
+   spins the sprite around the Y axis so it turns like a card being flipped.
+   Stops at 180deg (a single flip) — a full 360deg would show the sprite
+   front → back → front and look like it spun twice. */
 @keyframes spin3d {
   from { transform: perspective(600px) rotateY(0deg); }
-  to { transform: perspective(600px) rotateY(360deg); }
+  to { transform: perspective(600px) rotateY(180deg); }
 }
 .animate-spin3d {
-  animation: spin3d 0.6s linear;
+  animation: spin3d 0.3s linear;
 }
