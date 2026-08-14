@@ -33,52 +33,63 @@ async function mapLimit(array, limit, asyncFn) {
 // Cache evolution chains so we only download each once.
 const evolutionCache = new Map();
 
+// Maps a PokeAPI evolution_detail object to the flat condition shape used in
+// pokedex.json. Kept separate so both chain builders share the same mapping.
+function detailToCondition(detail) {
+  return {
+    minLevel: detail.min_level ?? null,
+    trigger: detail.trigger?.name ?? null,
+    item: detail.item?.name ?? null,
+    heldItem: detail.held_item?.name ?? null,
+    knownMove: detail.known_move?.name ?? null,
+    knownMoveType: detail.known_move_type?.name ?? null,
+    location: detail.location?.name ?? null,
+    minHappiness: detail.min_happiness ?? null,
+    minBeauty: detail.min_beauty ?? null,
+    minAffection: detail.min_affection ?? null,
+    needsOverworldRain: detail.needs_overworld_rain ?? false,
+    partySpecies: detail.party_species?.name ?? null,
+    partyType: detail.party_type?.name ?? null,
+    relativePhysicalStats: detail.relative_physical_stats ?? null,
+    timeOfDay: detail.time_of_day ?? null,
+    tradeSpecies: detail.trade_species?.name ?? null,
+    gender: detail.gender ?? null,
+    turnUpsideDown: detail.turn_upside_down ?? false,
+  };
+}
+
+// Builds the flat member list for an evolution chain. Each target keeps ALL of
+// its evolution methods under `conditions` (PokeAPI stores every way in
+// evolution_details, e.g. Leafeon's mossy-rock level-ups AND the Leaf Stone).
+function buildChainMembers(chain) {
+  const members = [];
+  function walk(node, stage) {
+    const id = Number(node.species.url.match(/\/(\d+)\/$/)[1]);
+    const evolvesTo = node.evolves_to.map(next => ({
+      name: next.species.name,
+      id: Number(next.species.url.match(/\/(\d+)\/$/)[1]),
+      conditions: (next.evolution_details || [])
+        .map(detailToCondition)
+        .filter(cond => cond.trigger != null),
+    }));
+    members.push({
+      name: node.species.name,
+      stage,
+      id,
+      evolvesTo: evolvesTo.length > 0 ? evolvesTo : undefined,
+    });
+    node.evolves_to.forEach((next) => walk(next, stage + 1));
+  }
+  walk(chain.chain, 1);
+  return members;
+}
+
 async function getEvolutionStage(species) {
   const chainUrl = species.evolution_chain.url;
 
   if (!evolutionCache.has(chainUrl)) {
     const chain = await fetchJSON(chainUrl);
-
-    const members = [];
-
-    function walk(node, stage) {
-      const id = Number(node.species.url.match(/\/(\d+)\/$/)[1]);
-      const evolvesTo = node.evolves_to.map(next => {
-        const detail = next.evolution_details?.[0] || {};
-        return {
-          name: next.species.name,
-          id: Number(next.species.url.match(/\/(\d+)\/$/)[1]),
-          minLevel: detail.min_level ?? null,
-          trigger: detail.trigger?.name ?? null,
-          item: detail.item?.name ?? null,
-          heldItem: detail.held_item?.name ?? null,
-          knownMove: detail.known_move?.name ?? null,
-          knownMoveType: detail.known_move_type?.name ?? null,
-          location: detail.location?.name ?? null,
-          minHappiness: detail.min_happiness ?? null,
-          minBeauty: detail.min_beauty ?? null,
-          minAffection: detail.min_affection ?? null,
-          needsOverworldRain: detail.needs_overworld_rain ?? false,
-          partySpecies: detail.party_species?.name ?? null,
-          partyType: detail.party_type?.name ?? null,
-          relativePhysicalStats: detail.relative_physical_stats ?? null,
-          timeOfDay: detail.time_of_day ?? null,
-          tradeSpecies: detail.trade_species?.name ?? null,
-          gender: detail.gender ?? null,
-          turnUpsideDown: detail.turn_upside_down ?? false,
-        };
-      });
-      members.push({
-        name: node.species.name,
-        stage,
-        id,
-        evolvesTo: evolvesTo.length > 0 ? evolvesTo : undefined,
-      });
-
-      node.evolves_to.forEach((next) => walk(next, stage + 1));
-    }
-
-    walk(chain.chain, 1);
+    const members = buildChainMembers(chain);
 
     const unique = members.length === 1;
 
@@ -110,43 +121,8 @@ async function getEvolutionStage(species) {
 async function getEvolutionChart(evolutionChainUrl) {
   if (!evolutionCache.has(evolutionChainUrl)) {
     const chain = await fetchJSON(evolutionChainUrl);
-    const members = [];
-    function walk(node, stage) {
-      const id = Number(node.species.url.match(/\/(\d+)\/$/)[1]);
-      const evolvesTo = node.evolves_to.map(next => {
-        const detail = next.evolution_details?.[0] || {};
-        return {
-          name: next.species.name,
-          id: Number(next.species.url.match(/\/(\d+)\/$/)[1]),
-          minLevel: detail.min_level ?? null,
-          trigger: detail.trigger?.name ?? null,
-          item: detail.item?.name ?? null,
-          heldItem: detail.held_item?.name ?? null,
-          knownMove: detail.known_move?.name ?? null,
-          knownMoveType: detail.known_move_type?.name ?? null,
-          location: detail.location?.name ?? null,
-          minHappiness: detail.min_happiness ?? null,
-          minBeauty: detail.min_beauty ?? null,
-          minAffection: detail.min_affection ?? null,
-          needsOverworldRain: detail.needs_overworld_rain ?? false,
-          partySpecies: detail.party_species?.name ?? null,
-          partyType: detail.party_type?.name ?? null,
-          relativePhysicalStats: detail.relative_physical_stats ?? null,
-          timeOfDay: detail.time_of_day ?? null,
-          tradeSpecies: detail.trade_species?.name ?? null,
-          gender: detail.gender ?? null,
-          turnUpsideDown: detail.turn_upside_down ?? false,
-        };
-      });
-      members.push({
-        name: node.species.name,
-        stage,
-        id,
-        evolvesTo: evolvesTo.length > 0 ? evolvesTo : undefined,
-      });
-      node.evolves_to.forEach((next) => walk(next, stage + 1));
-    }
-    walk(chain.chain, 1);
+    const members = buildChainMembers(chain);
+
     const unique = members.length === 1;
     evolutionCache.set(evolutionChainUrl, members.map((m) => ({ ...m, unique })));
   }

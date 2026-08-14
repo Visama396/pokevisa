@@ -100,7 +100,8 @@ export function getBaseHp(pokemonId) {
 }
 
 // Find the evolutions a species can undergo at the given level, from
-// pokedex.json's evolutionChart. Two kinds come back:
+// pokedex.json's evolutionChart. Each target lists ALL of its methods under
+// `conditions`; only these qualify:
 //   - level-up: `trigger: "level-up"` with a min level the Pokémon reached
 //     (happiness/location variants like Eevee → Espeon are excluded — they
 //     have no minLevel, so they never qualify).
@@ -116,21 +117,29 @@ export async function getEvolutionOptions(pokemonId, level) {
   const node = species.evolutionChart.find(n => n.name === species.slug)
   if (!node || !node.evolvesTo) return []
   return (node.evolvesTo || [])
-    .filter(e => {
-      if (e.trigger === 'level-up' && e.item === null) {
-        return e.minLevel && e.minLevel <= (level || 1)
-      }
-      if (e.trigger === 'use-item' && e.item) {
-        return true
-      }
-      return false
-    })
-    .map(e => ({
-      id: e.id,
-      slug: e.name,
-      minLevel: e.trigger === 'level-up' ? e.minLevel : null,
-      item: e.item || null,
-    }))
+    .flatMap(e =>
+      (e.conditions || [])
+        .filter(c => {
+          if (c.trigger === 'level-up' && c.item === null) {
+            return c.minLevel && c.minLevel <= (level || 1)
+          }
+          if (c.trigger === 'use-item' && c.item) {
+            return true
+          }
+          return false
+        })
+        .map(c => ({
+          id: e.id,
+          slug: e.name,
+          minLevel: c.trigger === 'level-up' ? c.minLevel : null,
+          item: c.item || null,
+        }))
+    )
+    // PokeAPI sometimes lists the same method twice (e.g. Pikachu → Raichu
+    // has two identical Thunder Stone details) — collapse those.
+    .filter((opt, i, arr) =>
+      i === arr.findIndex(o => JSON.stringify(o) === JSON.stringify(opt))
+    )
 }
 
 // Computes all 6 stats for a Pokémon at a given level with a specific nature.

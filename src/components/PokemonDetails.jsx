@@ -279,17 +279,24 @@ function buildEvolutionChains(chart) {
     nodeMap[entry.name] = { ...entry };
   }
 
-  function walk(name, condition) {
+  function walk(name, conditions) {
     const entry = nodeMap[name];
     if (!entry) return [];
-    const current = { name: entry.name, id: entry.id, stage: entry.stage, condition };
+    // `condition` carries every method of reaching this species (a conditions
+    // array), so the chart can show all ways (e.g. Leafeon via mossy rocks
+    // or a Leaf Stone).
+    const current = { name: entry.name, id: entry.id, stage: entry.stage, condition: conditions };
     if (!entry.evolvesTo || entry.evolvesTo.length === 0) {
       return [[current]];
     }
     const chains = [];
     for (const evo of entry.evolvesTo) {
-      const evoCondition = { trigger: evo.trigger, minLevel: evo.minLevel, item: evo.item, heldItem: evo.heldItem, knownMove: evo.knownMove, knownMoveType: evo.knownMoveType, location: evo.location, minHappiness: evo.minHappiness, minAffection: evo.minAffection, needsOverworldRain: evo.needsOverworldRain, partySpecies: evo.partySpecies, partyType: evo.partyType, relativePhysicalStats: evo.relativePhysicalStats, timeOfDay: evo.timeOfDay, tradeSpecies: evo.tradeSpecies, gender: evo.gender, turnUpsideDown: evo.turnUpsideDown, minBeauty: evo.minBeauty };
-      const subChains = walk(evo.name, evoCondition);
+      // Keep every distinct method but drop exact duplicates (e.g. Feebas →
+      // Milotic lists the same Beauty level-up twice).
+      const evoConditions = (evo.conditions || []).filter((c, i, arr) =>
+        i === arr.findIndex(o => formatCondition(o) === formatCondition(c))
+      );
+      const subChains = walk(evo.name, evoConditions);
       for (const sub of subChains) {
         chains.push([current, ...sub]);
       }
@@ -345,6 +352,16 @@ function formatCondition(cond) {
   }
 
   return trigger || '';
+}
+
+// Returns the item slug an evolution condition requires, when evolution is
+// triggered by using an item or trading while holding/giving one. Used to show
+// the item's sprite above the condition label in the evolution chart.
+function conditionItem(cond) {
+  if (!cond) return null;
+  if (cond.trigger === 'use-item' && cond.item) return cond.item;
+  if (cond.trigger === 'trade' && (cond.heldItem || cond.item)) return cond.heldItem || cond.item;
+  return null;
 }
 
 // Renders a list of base stats as labelled bars plus a total row. Shared by
@@ -858,22 +875,14 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
         <StatRows stats={pokemon.baseStats} maxStat={maxStat} language={language} />
       </div>
 
-      {megas.map((mega) => {
-        // Only call out the mega's typing when it differs from the base form,
-        // otherwise the badges are just noise.
-        const typesChanged = JSON.stringify(mega.types) !== JSON.stringify(pokemon.types);
-        return (
-          <div key={mega.name} className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2 flex-wrap">
-              {megaLabel(mega, pokemon, language)} {t("Base Stats", language)}
-              {typesChanged && mega.types.map((type) => (
-                <PokeTypeBadge key={type} type={type} language={language} />
-              ))}
-            </h2>
-            <StatRows stats={mega.baseStats} maxStat={maxStat} language={language} />
-          </div>
-        );
-      })}
+      {megas.map((mega) => (
+        <div key={mega.name} className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
+          <h2 className="text-xl font-bold mb-4">
+            {megaLabel(mega, pokemon, language)} {t("Base Stats", language)}
+          </h2>
+          <StatRows stats={mega.baseStats} maxStat={maxStat} language={language} />
+        </div>
+      ))}
 
       {/* Row 4: Type Effectiveness */}
       <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
@@ -943,14 +952,31 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
                   if (isArrow) {
                     const nextEntry = chain[Math.ceil(col / 2)];
                     if (!nextEntry) return <div key={key} style={style} />;
+                    const conditions = nextEntry.condition || [];
                     return (
                       <div key={key} style={style} className={`flex flex-col items-center justify-center gap-0.5 ${merge.length > 1 ? 'self-center' : ''}`}>
                         <svg className="size-5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
-                        <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap leading-tight">
-                          {formatCondition(nextEntry.condition)}
-                        </span>
+                        {conditions.map((cond, ci) => {
+                          const item = conditionItem(cond);
+                          return (
+                            <div key={ci} className="flex flex-col items-center gap-0.5">
+                              {item && (
+                                <img
+                                  src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${item}.png`}
+                                  alt={item.replace(/-/g, ' ')}
+                                  className="size-5 object-contain"
+                                  loading="lazy"
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              )}
+                              <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap leading-tight">
+                                {formatCondition(cond)}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   }

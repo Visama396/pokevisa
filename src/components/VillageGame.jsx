@@ -2148,7 +2148,7 @@ export default function VillageGame({
                       <div className="flex flex-wrap gap-1.5">
                         {item.options.map((opt) => (
                           <button
-                            key={opt.id}
+                            key={`${opt.id}-${opt.item ?? 'lvl'}-${opt.minLevel ?? ''}`}
                             onClick={() => handleEvolve(item, opt)}
                             className="flex-1 min-w-[8rem] rounded-lg bg-purple-800 px-2 py-1.5 text-xs text-purple-200 hover:bg-purple-700 transition-colors"
                           >

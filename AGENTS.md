@@ -59,6 +59,16 @@ sessions. When a phase is finished, mark it `[x]` here.
   keeping the ratio; default nickname updates to the new species, custom
   nicknames are kept. Helpers live in `src/lib/pokedex.js`
   (`getEvolutionOptions`, `getBaseHp`).
+- **Evolution data now stores ALL methods per evolution**: each `evolvesTo`
+  entry in `pokedex.json` carries a `conditions` array (one object per method)
+  instead of a single flat condition — PokeAPI's `evolution_details` lists
+  every way (e.g. Eevee → Leafeon: 5 mossy-rock locations + Leaf Stone).
+  `scripts/build-pokedex.js` `detailToCondition`/`buildChainMembers` produce
+  the shape. Consumers read `conditions`: the details page evolution chart
+  shows every method (item sprite above the label, exact dupes collapsed via
+  `formatCondition`), `getEvolutionOptions` returns one option per qualifying
+  condition, and Pokeroguelite's `isPokemonAvailable`/`buildEvolutionData`
+  reinterpret level-up conditions accordingly.
 - Klefki (password NPC) at `village.js` position (21,5); Xatu relabeled to
   "Account Reset"; Move Changer tutor is now Hypno (sprite 97); all village UI
   strings translated (9 languages).
@@ -145,6 +155,7 @@ Where to find each feature when you need to read or modify it.
 
 **Shared libs (`src/lib/`)**
 - `pokedex.js` — pokedex.json loading, stat formulas (`calcStat`, `computeStats`), natures, type lookup, evolution helpers (`getEvolutionOptions`, `getBaseHp`)
+- `public/abilities.json` — ability data with `effect_entries` in 9 languages (en/es/fr/de/it/ja/ko/zh-hans/zh-hant); gen 7-9 `de` entries were hand-translated in batches of 5 (source EN + official German terminology, e.g. Dondozo=Heerashai, Pecharunt=Infamomo, Booster Energy=Energiekapsel)
 - `moves.js` — move data, type effectiveness (`getEffectiveness`), damage formula (`calcDamage`), STAB, EXP/level-up, wild Pokémon selection, moves at level
 - `dungeon.js` — dungeon map generation (BSP), tile types, enemy movement AI, fog-of-war visibility
 - `village.js` — village spawn, `NPC_POSITIONS` (mart, move changer/Hypno, Sage/Whiscash evolver, bank, storage, club, account reset, Klefki password, adventure), shop items
