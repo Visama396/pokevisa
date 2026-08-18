@@ -1064,7 +1064,7 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
                     </a>
                   );
                 })
-              )}
+              })}
             </div>
             </div>
           </div>
