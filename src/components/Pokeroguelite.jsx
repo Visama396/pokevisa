@@ -83,7 +83,9 @@ function isPokemonAvailable(dexEntry, teamLevel) {
   if (preEntry && preEntry.evolvesTo) {
     const myEvo = preEntry.evolvesTo.find(e => e.id === dexEntry.id || e.name === dexEntry.slug);
     if (myEvo) {
-      const levelUpConds = (myEvo.conditions || []).filter(c => c.trigger === "level-up" && c.minLevel !== null);
+      const levelUpConds = (myEvo.conditions || []).filter(c =>
+        c.trigger === "level-up" && c.minLevel !== null
+      );
       if (levelUpConds.length > 0) {
         return Math.min(...levelUpConds.map(c => c.minLevel)) <= teamLevel;
       }
@@ -114,14 +116,18 @@ function buildEvolutionData() {
     const myEntry = chart.find(m => m.name === d.slug);
     if (!myEntry || !myEntry.evolvesTo) continue;
     const withLevelUp = myEntry.evolvesTo.filter(e =>
-      (e.conditions || []).some(c => c.trigger === "level-up" && c.minLevel !== null)
+      (e.conditions || []).some(c =>
+        c.trigger === "level-up" && c.minLevel !== null
+      )
     );
     if (withLevelUp.length === 1) {
       const target = getDexEntry(withLevelUp[0].name);
       if (target) {
         const minLevel = Math.min(
           ...(withLevelUp[0].conditions || [])
-            .filter(c => c.trigger === "level-up" && c.minLevel !== null)
+            .filter(c =>
+              c.trigger === "level-up" && c.minLevel !== null
+            )
             .map(c => c.minLevel)
         );
         levelEvo[d.slug] = { ...target, minLevel };

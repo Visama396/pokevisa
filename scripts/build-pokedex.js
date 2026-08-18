@@ -61,17 +61,53 @@ function detailToCondition(detail) {
 // Builds the flat member list for an evolution chain. Each target keeps ALL of
 // its evolution methods under `conditions` (PokeAPI stores every way in
 // evolution_details, e.g. Leafeon's mossy-rock level-ups AND the Leaf Stone).
+// Returns { members, regionalForms } where regionalForms is a Set of form
+// slugs (e.g. "sandshrew-alola") discovered via base_form/evolved_form fields.
 function buildChainMembers(chain) {
   const members = [];
+  const regionalForms = new Set();
+
   function walk(node, stage) {
     const id = Number(node.species.url.match(/\/(\d+)\/$/)[1]);
-    const evolvesTo = node.evolves_to.map(next => ({
-      name: next.species.name,
-      id: Number(next.species.url.match(/\/(\d+)\/$/)[1]),
-      conditions: (next.evolution_details || [])
+    const evolvesTo = node.evolves_to.map(next => {
+      const details = next.evolution_details || [];
+      // A detail is regional-variant-only if its base_form or evolved_form
+      // points to an actual regional form (contains a regional suffix).
+      // PokeAPI sets base_form on ALL details in a chain (e.g. Eevee→Vaporeon
+      // has base_form=eevee), so we must check for the suffix.
+      const isRegionalDetail = (d) =>
+        formFromSlug(d.base_form?.name) != null || formFromSlug(d.evolved_form?.name) != null;
+
+      // Collect base detail keys (non-regional) to avoid stripping
+      // conditions that also have a base-form variant
+      const baseKeys = new Set(
+        details
+          .filter(d => d.trigger && !isRegionalDetail(d))
+          .map(d => `${d.trigger?.name}|${d.item?.name ?? null}|${d.min_level ?? null}|${d.time_of_day ?? ""}`)
+      );
+      const conditions = details
+        .filter(d => {
+          if (!d.trigger) return false;
+          if (!isRegionalDetail(d)) return true;
+          // Regional-only detail — keep only if no base detail matches
+          const key = `${d.trigger?.name}|${d.item?.name ?? null}|${d.min_level ?? null}|${d.time_of_day ?? ""}`;
+          return baseKeys.has(key);
+        })
         .map(detailToCondition)
-        .filter(cond => cond.trigger != null),
-    }));
+        .filter(cond => cond.trigger != null);
+
+      // Collect regional form slugs from base_form/evolved_form fields
+      for (const detail of details) {
+        if (detail.base_form?.name) regionalForms.add(detail.base_form.name);
+        if (detail.evolved_form?.name) regionalForms.add(detail.evolved_form.name);
+      }
+
+      return {
+        name: next.species.name,
+        id: Number(next.species.url.match(/\/(\d+)\/$/)[1]),
+        conditions,
+      };
+    });
     members.push({
       name: node.species.name,
       stage,
@@ -81,7 +117,7 @@ function buildChainMembers(chain) {
     node.evolves_to.forEach((next) => walk(next, stage + 1));
   }
   walk(chain.chain, 1);
-  return members;
+  return { members, regionalForms };
 }
 
 async function getEvolutionStage(species) {
@@ -89,23 +125,23 @@ async function getEvolutionStage(species) {
 
   if (!evolutionCache.has(chainUrl)) {
     const chain = await fetchJSON(chainUrl);
-    const members = buildChainMembers(chain);
+    const { members, regionalForms } = buildChainMembers(chain);
 
     const unique = members.length === 1;
 
-    evolutionCache.set(
-      chainUrl,
-      members.map((m) => ({
+    evolutionCache.set(chainUrl, {
+      members: members.map((m) => ({
         name: m.name,
         stage: m.stage,
         id: m.id,
         evolvesTo: m.evolvesTo,
         unique,
       })),
-    );
+      regionalForms,
+    });
   }
 
-  const members = evolutionCache.get(chainUrl);
+  const { members } = evolutionCache.get(chainUrl);
 
   const current = members.find((m) => m.name === species.name);
 
@@ -121,12 +157,170 @@ async function getEvolutionStage(species) {
 async function getEvolutionChart(evolutionChainUrl) {
   if (!evolutionCache.has(evolutionChainUrl)) {
     const chain = await fetchJSON(evolutionChainUrl);
-    const members = buildChainMembers(chain);
+    const { members, regionalForms } = buildChainMembers(chain);
 
     const unique = members.length === 1;
-    evolutionCache.set(evolutionChainUrl, members.map((m) => ({ ...m, unique })));
+    evolutionCache.set(evolutionChainUrl, {
+      members: members.map((m) => ({ ...m, unique })),
+      regionalForms,
+    });
   }
-  return evolutionCache.get(evolutionChainUrl);
+  const cached = evolutionCache.get(evolutionChainUrl);
+  return { chart: cached.members, regionalForms: cached.regionalForms };
+}
+
+// Extract the regional form suffix from a form slug. Checks if any known
+// regional suffix appears as a segment in the slug (e.g. "sandshrew-alola"
+// → "alola", "darmanitan-galar-standard" → "galar").
+const REGIONAL_SUFFIXES = ["alola", "galar", "hisui", "paldea"];
+
+function formFromSlug(slug) {
+  const parts = (slug || "").split("-");
+  for (const suffix of REGIONAL_SUFFIXES) {
+    if (parts.includes(suffix)) return suffix;
+  }
+  return null;
+}
+
+// Cache for species varieties: speciesName → Map<formSlug, pokemonId>
+const varietiesCache = new Map();
+
+// Fetch the varieties for a species and return a Map of non-default form
+// slugs to their Pokemon IDs.
+async function getVarieties(speciesName) {
+  if (varietiesCache.has(speciesName)) {
+    return varietiesCache.get(speciesName);
+  }
+  const res = await fetchJSON(`https://pokeapi.co/api/v2/pokemon-species/${speciesName}`);
+  const forms = new Map();
+  for (const v of res.varieties || []) {
+    if (!v.is_default) {
+      const name = v.pokemon.name;
+      const pokemonId = Number(v.pokemon.url.match(/\/(\d+)\/$/)[1]);
+      forms.set(name, pokemonId);
+    }
+  }
+  varietiesCache.set(speciesName, forms);
+  return forms;
+}
+
+// Extract the base species name from a regional form slug by stripping the
+// regional suffix and everything after it.
+// "sandshrew-alola" → "sandshrew", "darmanitan-galar-standard" → "darmanitan",
+// "mr-mime-galar" → "mr-mime".
+function baseSpeciesFromSlug(slug) {
+  const parts = slug.split("-");
+  for (const suffix of REGIONAL_SUFFIXES) {
+    const idx = parts.indexOf(suffix);
+    if (idx !== -1) return parts.slice(0, idx).join("-");
+  }
+  return slug;
+}
+
+// Build a parallel evolution chain for a specific regional form suffix
+// (e.g. "alola", "galar"). Walks the raw PokeAPI chain and extracts only
+// the evolution steps that involve this regional form, using actual form
+// slugs and Pokemon IDs from the chain data (not constructed names, since
+// some regional evolutions lack a suffix — e.g. Obstagoon).
+function buildRegionalChain(chain, formSuffix, pokemonIdMap) {
+  const result = [];
+  const stageMap = new Map(); // formSlug → member entry
+
+  function walk(node, stage) {
+    for (const next of node.evolves_to || []) {
+      // Check if any evolution detail for this step involves our form suffix
+      const details = next.evolution_details || [];
+      const relevantDetails = details.filter(d => {
+        const bf = d.base_form?.name;
+        const ef = d.evolved_form?.name;
+        return (bf && bf.endsWith(`-${formSuffix}`)) ||
+               (ef && ef.endsWith(`-${formSuffix}`));
+      });
+      if (relevantDetails.length === 0) {
+        // No regional form involvement — recurse to check deeper
+        walk(next, stage + 1);
+        continue;
+      }
+
+      // Determine source and target form slugs
+      const sourceDetail = relevantDetails.find(d => d.base_form?.name?.endsWith(`-${formSuffix}`));
+      const targetDetail = relevantDetails.find(d => d.evolved_form?.name?.endsWith(`-${formSuffix}`));
+      // Also check for details where evolved_form is null but base_form matches
+      // (e.g. linoone-galar → obstagoon, where obstagoon has no suffix)
+      const defaultTargetDetail = relevantDetails.find(d =>
+        d.base_form?.name?.endsWith(`-${formSuffix}`) && !d.evolved_form?.name
+      );
+
+      const sourceSlug = sourceDetail?.base_form?.name || node.species.name;
+      const targetSlug = targetDetail?.evolved_form?.name ||
+                         defaultTargetDetail?.evolved_form?.name ||
+                         next.species.name;
+
+      const sourceId = pokemonIdMap.get(sourceSlug);
+      const targetId = pokemonIdMap.get(targetSlug);
+      if (sourceId == null || targetId == null) {
+        walk(next, stage + 1);
+        continue;
+      }
+
+      // Get or create source entry
+      const srcForm = sourceSlug.endsWith(`-${formSuffix}`) ? formSuffix : null;
+      const tgtForm = targetSlug.endsWith(`-${formSuffix}`) ? formSuffix : null;
+
+      let sourceEntry = stageMap.get(sourceSlug);
+      if (!sourceEntry) {
+        sourceEntry = {
+          name: sourceSlug,
+          stage,
+          id: sourceId,
+          ...(srcForm ? { form: srcForm } : {}),
+          evolvesTo: [],
+        };
+        stageMap.set(sourceSlug, sourceEntry);
+        result.push(sourceEntry);
+      }
+      if (!sourceEntry.evolvesTo) sourceEntry.evolvesTo = [];
+
+      // Filter conditions: keep only those whose raw detail matches a
+      // relevantDetail (same trigger, item, level)
+      const conditions = details
+        .map(detailToCondition)
+        .filter(cond => {
+          if (cond.trigger == null) return false;
+          return relevantDetails.some(rd =>
+            rd.trigger?.name === cond.trigger &&
+            (rd.item?.name ?? null) === cond.item &&
+            (rd.min_level ?? null) === cond.minLevel &&
+            (rd.time_of_day ?? "") === (cond.timeOfDay ?? "")
+          );
+        });
+
+      sourceEntry.evolvesTo.push({
+        name: targetSlug,
+        id: targetId,
+        ...(tgtForm ? { form: tgtForm } : {}),
+        conditions,
+      });
+
+      // Create or find target entry
+      if (!stageMap.has(targetSlug)) {
+        const targetEntry = {
+          name: targetSlug,
+          stage: stage + 1,
+          id: targetId,
+          ...(tgtForm ? { form: tgtForm } : {}),
+        };
+        stageMap.set(targetSlug, targetEntry);
+        result.push(targetEntry);
+      }
+
+      // Recurse from the next node
+      walk(next, stage + 1);
+    }
+  }
+
+  walk(chain.chain, 1);
+  return result;
 }
 
 const versionPriority = [
@@ -220,6 +414,7 @@ async function main() {
 
   const abilityNames = new Set();
 
+  // Phase 1: Build the base data for all species.
   const data = await mapLimit(
     pokedex.pokemon_entries.slice(0, POKEMON_LIMIT),
     20,
@@ -234,8 +429,8 @@ async function main() {
       ]);
 
       const evolution = await getEvolutionStage(species);
-      const evolutionChart = await getEvolutionChart(species.evolution_chain.url);
-
+      const { chart: evolutionChart, regionalForms } =
+        await getEvolutionChart(species.evolution_chain.url);
 
       const genus = species.genera?.find((g) => g.language.name === "en")?.genus ?? null;
 
@@ -300,6 +495,9 @@ async function main() {
           evolvesTo: m.evolvesTo,
         })),
 
+        // Store regional form slugs so we can build their chains later
+        _regionalForms: regionalForms.size > 0 ? [...regionalForms] : undefined,
+
         evYield: pokemonRes.stats
           .filter((s) => s.effort > 0)
           .map((s) => ({ name: s.stat.name, value: s.effort })),
@@ -332,6 +530,101 @@ async function main() {
       };
     },
   );
+
+  // Phase 2: Build regional form chains.  For every species whose evolution
+  // chain contains regional form conditions, we re-walk the raw PokeAPI chain
+  // and build parallel entries with the correct Pokemon IDs and form labels.
+  const chainUrlToRaw = new Map();
+  const speciesWithRegionals = data.filter(d => d._regionalForms);
+  console.log(`\nBuilding regional chains for ${speciesWithRegionals.length} species...`);
+
+  for (const species of speciesWithRegionals) {
+    const speciesRes = await fetchJSON(
+      `https://pokeapi.co/api/v2/pokemon-species/${species.id}`
+    );
+    const chainUrl = speciesRes.evolution_chain.url;
+
+    if (!chainUrlToRaw.has(chainUrl)) {
+      chainUrlToRaw.set(chainUrl, await fetchJSON(chainUrl));
+    }
+    const rawChain = chainUrlToRaw.get(chainUrl);
+
+    // Collect all form slugs from the chain and group by suffix
+    const formsBySuffix = new Map();
+    function collectFormSlugs(node) {
+      for (const next of node.evolves_to || []) {
+        for (const detail of next.evolution_details || []) {
+          const bf = detail.base_form?.name;
+          const ef = detail.evolved_form?.name;
+          if (bf) {
+            const suffix = formFromSlug(bf);
+            if (suffix) {
+              if (!formsBySuffix.has(suffix)) formsBySuffix.set(suffix, new Set());
+              formsBySuffix.get(suffix).add(bf);
+            }
+          }
+          if (ef) {
+            const suffix = formFromSlug(ef);
+            if (suffix) {
+              if (!formsBySuffix.has(suffix)) formsBySuffix.set(suffix, new Set());
+              formsBySuffix.get(suffix).add(ef);
+            }
+          }
+        }
+        collectFormSlugs(next);
+      }
+    }
+    collectFormSlugs(rawChain.chain);
+
+    // For each suffix, build a Pokemon ID map and the parallel chain
+    for (const [suffix, formSlugs] of formsBySuffix) {
+      const pokemonIdMap = new Map();
+
+      // First, collect ALL species names in this chain (including defaults)
+      // by walking the chain and noting species names + IDs
+      function collectDefaultSpecies(node) {
+        const name = node.species.name;
+        const id = Number(node.species.url.match(/\/(\d+)\/$/)[1]);
+        pokemonIdMap.set(name, id);
+        for (const next of node.evolves_to || []) {
+          collectDefaultSpecies(next);
+        }
+      }
+      collectDefaultSpecies(rawChain.chain);
+
+      // Then, fetch varieties for each species that has a regional form
+      // to get the regional form's Pokemon ID
+      const baseSpecies = new Set();
+      for (const formSlug of formSlugs) {
+        baseSpecies.add(baseSpeciesFromSlug(formSlug));
+      }
+      for (const baseName of baseSpecies) {
+        const varieties = await getVarieties(baseName);
+        for (const [formName, pokemonId] of varieties) {
+          pokemonIdMap.set(formName, pokemonId);
+        }
+      }
+
+      const regionalMembers = buildRegionalChain(rawChain, suffix, pokemonIdMap);
+      if (regionalMembers.length > 0) {
+        species.evolutionChart.push(...regionalMembers.map(m => ({
+          name: m.name,
+          stage: m.stage,
+          id: m.id,
+          form: m.form,
+          evolvesTo: m.evolvesTo,
+        })));
+      }
+    }
+
+    // Clean up internal field
+    delete species._regionalForms;
+  }
+
+  // Clean up _regionalForms from all data entries
+  for (const species of data) {
+    delete species._regionalForms;
+  }
 
   await fs.mkdir("public", { recursive: true });
 

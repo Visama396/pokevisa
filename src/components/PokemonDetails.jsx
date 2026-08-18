@@ -292,10 +292,12 @@ function buildEvolutionChains(chart) {
     const chains = [];
     for (const evo of entry.evolvesTo) {
       // Keep every distinct method but drop exact duplicates (e.g. Feebas →
-      // Milotic lists the same Beauty level-up twice).
-      const evoConditions = (evo.conditions || []).filter((c, i, arr) =>
-        i === arr.findIndex(o => formatCondition(o) === formatCondition(c))
-      );
+      // Milotic lists the same Beauty level-up twice, Growlithe → Arcanine
+      // has duplicate Fire Stone entries).
+      const evoConditions = (evo.conditions || [])
+        .filter((c, i, arr) =>
+          i === arr.findIndex(o => formatCondition(o) === formatCondition(c))
+        );
       const subChains = walk(evo.name, evoConditions);
       for (const sub of subChains) {
         chains.push([current, ...sub]);
@@ -904,26 +906,68 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
           chart actually evolves — single-stage Pokémon (Ho-oh, Celebi, Miltank,
           …) have a chart of just themselves and skip this section entirely. */}
       {((pokemon.evolutionChart || []).some(e => e.evolvesTo?.length > 0)) && (() => {
-        const chains = buildEvolutionChains(pokemon.evolutionChart)
-          .filter(chain => chain.some(e => e.name === pokemon.slug));
-        if (chains.length === 0) return null;
-        const maxStage = Math.max(...chains.flat().map(e => e.stage));
+        const allChains = buildEvolutionChains(pokemon.evolutionChart);
+        const baseSlug = pokemon.slug;
+        const matchingChains = allChains
+          .filter(chain => chain.some(e =>
+            e.name === baseSlug || e.name.startsWith(baseSlug + "-")
+          ));
+        if (matchingChains.length === 0) return null;
+
+        const formLabels = { alola: "Alolan Form", galar: "Galarian Form", hisui: "Hisuian Form", paldea: "Paldean Form" };
+        const chartMap = {};
+        for (const node of pokemon.evolutionChart) {
+          if (node.name) chartMap[node.name] = node;
+        }
+        function chainForm(chain) {
+          for (const e of chain) {
+            const cn = chartMap[e.name];
+            if (cn?.form) return cn.form;
+          }
+          return null;
+        }
+
+        // Separate base vs regional
+        const baseChains = [];
+        const regionalGroups = {};
+        for (const chain of matchingChains) {
+          const form = chainForm(chain);
+          if (!form) baseChains.push(chain);
+          else (regionalGroups[form] ??= []).push(chain);
+        }
+
+        // Build row list: [{type:'chain',chain}] or [{type:'label',form}]
+        const rows = [];
+        for (const c of baseChains) rows.push({ type: 'chain', chain: c });
+        for (const [form, group] of Object.entries(regionalGroups)) {
+          rows.push({ type: 'label', form });
+          for (const c of group) rows.push({ type: 'chain', chain: c });
+        }
+        if (rows.length === 0) return null;
+
+        const chainRows = rows.filter(r => r.type === 'chain');
+        const maxStage = Math.max(...chainRows.flatMap(r => r.chain.map(e => e.stage)));
         const numCols = maxStage * 2 - 1;
         const gridParts = Array.from({ length: numCols }, () => 'auto');
 
+        // Map chainRow index → grid row index (accounting for label rows)
+        const chainToGrid = chainRows.map(r => rows.indexOf(r));
+
         const colMerges = gridParts.map((_, col) => {
           const isArrow = col % 2 === 1;
-          const getVal = (c) => {
-            const e = c[isArrow ? Math.ceil(col / 2) : Math.floor(col / 2)];
+          const getVal = (chain) => {
+            const e = chain[isArrow ? Math.ceil(col / 2) : Math.floor(col / 2)];
             return isArrow ? e?.condition : e?.name;
           };
           const merges = [];
           let i = 0;
-          while (i < chains.length) {
-            const cur = getVal(chains[i]);
+          while (i < chainRows.length) {
+            const cur = getVal(chainRows[i].chain);
             let j = i + 1;
-            while (j < chains.length) {
-              if (isArrow ? JSON.stringify(cur) !== JSON.stringify(getVal(chains[j])) : cur !== getVal(chains[j])) break;
+            while (j < chainRows.length) {
+              if (isArrow ? JSON.stringify(cur) !== JSON.stringify(getVal(chainRows[j].chain)) : cur !== getVal(chainRows[j].chain)) break;
+              // Stop merging if there's a label row between chain rows
+              if (chainToGrid[j] - chainToGrid[j - 1] !== 1) break;
               j++;
             }
             merges.push({ start: i, length: j - i });
@@ -935,29 +979,36 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
         return (
           <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-6">
             <h2 className="text-xl font-bold mb-4">{t("Evolution Chart", language)}</h2>
-            {/* Wide chains (branching or long evolutions) must scroll on mobile
-                instead of overflowing the section; centering is kept on desktop
-                by letting the grid span the full width when it fits. Scroll is
-                horizontal only so the chain never clips vertically. */}
             <div className="overflow-x-auto overflow-y-hidden py-3">
             <div className="grid justify-center items-center gap-x-4 gap-y-2 w-max min-w-full"
               style={{
                 gridTemplateColumns: gridParts.join(' '),
-                gridTemplateRows: `repeat(${chains.length}, auto)`,
+                gridTemplateRows: rows.map(() => 'auto').join(' '),
               }}
             >
-              {chains.flatMap((chain, ci) =>
-                gridParts.map((_, col) => {
+              {rows.flatMap((row, ri) => {
+                if (row.type === 'label') {
+                  const label = formLabels[row.form] || row.form;
+                  return (
+                    <div key={`label-${ri}`} style={{ gridColumn: `1 / span ${numCols}`, gridRow: ri + 1 }}
+                      className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-1 pl-1">
+                      {label}
+                    </div>
+                  );
+                }
+                // chain row
+                const ci = chainRows.indexOf(row);
+                return gridParts.map((_, col) => {
                   const isArrow = col % 2 === 1;
-                  const entry = chain[Math.floor(col / 2)];
+                  const entry = row.chain[Math.floor(col / 2)];
                   const merge = colMerges[col].find(m => ci >= m.start && ci < m.start + m.length);
                   if (!merge || ci !== merge.start) return null;
 
-                  const key = `${ci}-${col}`;
-                  const style = { gridColumn: col + 1, gridRow: `${ci + 1} / span ${merge.length}` };
+                  const key = `${ri}-${col}`;
+                  const style = { gridColumn: col + 1, gridRow: `${ri + 1} / span ${merge.length}` };
 
                   if (isArrow) {
-                    const nextEntry = chain[Math.ceil(col / 2)];
+                    const nextEntry = row.chain[Math.ceil(col / 2)];
                     if (!nextEntry) return <div key={key} style={style} />;
                     const conditions = nextEntry.condition || [];
                     return (
