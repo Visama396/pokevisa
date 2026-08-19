@@ -102,12 +102,17 @@ function buildChainMembers(chain) {
         if (detail.evolved_form?.name) regionalForms.add(detail.evolved_form.name);
       }
 
+      // Skip regional-only evolutions that don't apply to this base form
+      // (e.g. base Linoone → Obstagoon: all conditions are Galarian-only
+      // and get filtered out, leaving an empty array).
+      if (conditions.length === 0) return null;
+
       return {
         name: next.species.name,
         id: Number(next.species.url.match(/\/(\d+)\/$/)[1]),
         conditions,
       };
-    });
+    }).filter(Boolean);
     members.push({
       name: node.species.name,
       stage,

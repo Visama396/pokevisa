@@ -291,6 +291,9 @@ function buildEvolutionChains(chart) {
     }
     const chains = [];
     for (const evo of entry.evolvesTo) {
+      // Skip regional-only evolutions with no conditions (e.g. base Linoone
+      // → Obstagoon leaked from the Galarian chain in older pokedex.json data).
+      if (!evo.conditions || evo.conditions.length === 0) continue;
       // Keep every distinct method but drop exact duplicates (e.g. Feebas →
       // Milotic lists the same Beauty level-up twice, Growlithe → Arcanine
       // has duplicate Fire Stone entries).
@@ -303,6 +306,9 @@ function buildEvolutionChains(chart) {
         chains.push([current, ...sub]);
       }
     }
+    // If all evolvesTo entries were filtered out (regional-only leaks),
+    // treat this node as terminal so its chain isn't lost.
+    if (chains.length === 0) return [[current]];
     return chains;
   }
 
@@ -991,7 +997,7 @@ export default function PokemonDetails({ pokemon, prevPokemon, nextPokemon }) {
                   const label = formLabels[row.form] || row.form;
                   return (
                     <div key={`label-${ri}`} style={{ gridColumn: `1 / span ${numCols}`, gridRow: ri + 1 }}
-                      className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-1 pl-1">
+                      className="text-xs font-semibold text-slate-500 uppercase tracking-wider pt-2 pb-0 pl-1">
                       {label}
                     </div>
                   );
