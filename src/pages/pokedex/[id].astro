@@ -10,7 +10,7 @@ export async function getStaticPaths() {
     return name
       .normalize("NFC")
       .toLowerCase()
-      .replace(/[''’]/g, "")
+      .replace(/[''']/g, "")
       .replace(/[^\p{L}\p{N}\s-]/gu, "")
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
@@ -37,6 +37,146 @@ export async function getStaticPaths() {
     }
 
     allRoutes.push(...routes);
+  }
+
+  // --- Regional form pages ---
+  // Collect unique regional form entries from all evolution charts.
+  // These are species like zigzagoon-galar (id=10174) that aren't top-level
+  // pokedex.json entries but appear in evolutionChart arrays.
+  const REGIONAL_SUFFIXES = ["alola", "galar", "hisui", "paldea"];
+  const formFromSlug = (slug) => {
+    const parts = (slug || "").split("-");
+    for (const s of REGIONAL_SUFFIXES) { if (parts.includes(s)) return s; }
+    return null;
+  };
+
+  const regionalForms = new Map(); // id → { name, form, baseSlug }
+  const mainIds = new Set(pokedex.map(p => p.id));
+  for (const pokemon of pokedex) {
+    for (const node of pokemon.evolutionChart || []) {
+      if (node.form && !mainIds.has(node.id) && !regionalForms.has(node.id)) {
+        const baseSlug = pokemon.slug;
+        regionalForms.set(node.id, { name: node.name, form: node.form, baseSlug });
+      }
+    }
+  }
+
+  const versionPriority = [
+    "scarlet-violet", "legends-arceus", "brilliant-diamond-and-shining-pearl",
+    "sword-shield", "ultra-sun-ultra-moon", "sun-moon",
+    "omega-ruby-alpha-sapphire", "x-y", "black-2-white-2", "black-white",
+    "heartgold-soulsilver", "platinum", "diamond-pearl",
+    "fire-red-leaf-green", "ruby-sapphire", "crystal", "gold-silver",
+    "yellow", "red-blue",
+  ];
+  const pickLatestVersion = (details) => {
+    for (const vg of versionPriority) {
+      const found = details.find((d) => d.version_group.name === vg);
+      if (found) return found;
+    }
+    return details[0];
+  };
+  const organizeMoves = (moves) => {
+    const levelUp = [], tm = [], egg = [], tutor = [];
+    for (const m of moves) {
+      const detail = pickLatestVersion(m.version_group_details);
+      if (!detail) continue;
+      const method = detail.move_learn_method.name;
+      const moveName = m.move.name;
+      if (method === "level-up") levelUp.push({ name: moveName, level: detail.level_learned_at });
+      else if (method === "machine") tm.push(moveName);
+      else if (method === "egg") egg.push(moveName);
+      else if (method === "tutor") tutor.push(moveName);
+    }
+    levelUp.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+    return { levelUp, tm, egg, tutor };
+  };
+
+  // Fetch PokeAPI data for each regional form (rate-limited)
+  const FORM_IDS = [...regionalForms.keys()];
+  if (FORM_IDS.length > 0) {
+    console.log(`Fetching ${FORM_IDS.length} regional form pages...`);
+    let idx = 0;
+    async function worker() {
+      while (idx < FORM_IDS.length) {
+        const fid = FORM_IDS[idx++];
+        const info = regionalForms.get(fid);
+        try {
+          const baseSpeciesName = info.baseSlug;
+          const [pokemonRes, speciesRes] = await Promise.all([
+            fetch(`https://pokeapi.co/api/v2/pokemon/${fid}`).then(r => r.json()),
+            fetch(`https://pokeapi.co/api/v2/pokemon-species/${baseSpeciesName}`).then(r => r.json()),
+          ]);
+
+          const genus = speciesRes.genera?.find(g => g.language.name === "en")?.genus ?? null;
+          const genderRate = speciesRes.gender_rate;
+          let gender = null;
+          if (genderRate === -1) gender = "Genderless";
+          else if (genderRate === 0) gender = "100% Male / 0% Female";
+          else if (genderRate === 8) gender = "0% Male / 100% Female";
+          else { const f = (genderRate / 8) * 100; gender = `${100 - f}% Male / ${f}% Female`; }
+
+          const names = {};
+          for (const n of speciesRes.names || []) names[n.language.name] = n.name;
+
+          // Find the base species in pokedex to reuse its evolutionChart
+          const baseEntry = pokedex.find(p => p.slug === info.baseSlug);
+          const evolutionChart = baseEntry?.evolutionChart || [];
+
+          const regionalPokemon = {
+            id: fid,
+            slug: info.name,
+            names,
+            sprite: pokemonRes.sprites.other?.home?.front_default || pokemonRes.sprites.front_default,
+            types: pokemonRes.types.map(t => t.type.name),
+            height: pokemonRes.height,
+            weight: pokemonRes.weight,
+            abilities: pokemonRes.abilities.map(a => ({ name: a.ability.name, hidden: a.is_hidden })),
+            baseStats: pokemonRes.stats.map(s => ({ name: s.stat.name, value: s.base_stat, effort: s.effort })),
+            baseExperience: pokemonRes.base_experience,
+            genus,
+            generation: speciesRes.generation?.name ?? null,
+            color: speciesRes.color?.name ?? null,
+            habitat: speciesRes.habitat?.name ?? null,
+            legendary: speciesRes.is_legendary,
+            mythical: speciesRes.is_mythical,
+            evolution: { chainId: Number((speciesRes.evolution_chain?.url || "").match(/\/evolution-chain\/(\d+)\//)?.[1] ?? 0), stage: "unique" },
+            evolutionChart,
+            _regionalForms: undefined,
+            evYield: pokemonRes.stats.filter(s => s.effort > 0).map(s => ({ name: s.stat.name, value: s.effort })),
+            catchRate: speciesRes.capture_rate,
+            baseFriendship: speciesRes.base_happiness,
+            growthRate: speciesRes.growth_rate?.name ?? null,
+            eggGroups: speciesRes.egg_groups?.map(g => g.name) ?? [],
+            gender,
+            eggCycles: speciesRes.hatch_counter,
+            pokedexNumbers: speciesRes.pokedex_numbers?.map(n => ({ entry: n.entry_number, pokedex: n.pokedex.name })) ?? [],
+            flavorTexts: (speciesRes.flavor_text_entries || [])
+              .filter(e => e.language.name === "en")
+              .map(e => ({ text: e.flavor_text.replace(/[\n\r\f]+/g, " "), version: e.version.name })),
+            moves: organizeMoves(pokemonRes.moves || []),
+          };
+
+          // Insert into pokedex for prev/next linking
+          regionalForms.set(fid, { ...info, pokemon: regionalPokemon });
+        } catch (err) {
+          console.warn(`Failed to fetch regional form ${info.name} (#${fid}):`, err.message);
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: 5 }, () => worker()));
+
+    // Generate routes for regional forms
+    for (const [fid, info] of regionalForms) {
+      if (!info.pokemon) continue;
+      const rp = info.pokemon;
+      allRoutes.push({ params: { id: rp.slug }, props: { pokemon: rp, prevPokemon: null, nextPokemon: null } });
+      allRoutes.push({ params: { id: fid.toString() }, props: { pokemon: rp, prevPokemon: null, nextPokemon: null } });
+      for (const name of Object.values(rp.names || {})) {
+        const slug = toSlug(name);
+        if (slug) allRoutes.push({ params: { id: slug }, props: { pokemon: rp, prevPokemon: null, nextPokemon: null } });
+      }
+    }
   }
 
   const seen = new Set();

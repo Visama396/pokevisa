@@ -301,6 +301,23 @@ function buildEvolutionChains(chart) {
         .filter((c, i, arr) =>
           i === arr.findIndex(o => formatCondition(o) === formatCondition(c))
         );
+      // Collapse conditions that differ only by min_level (PokeAPI sometimes
+      // lumps base and regional form conditions together, e.g. Cyndaquil→Quilava
+      // level 14 vs level 17 for Hisuian).
+      if (evoConditions.length > 1) {
+        const keyOf = (c) => [c.trigger, c.item, c.heldItem, c.knownMove, c.knownMoveType, c.location, c.minHappiness, c.minAffection, c.timeOfDay, c.needsOverworldRain, c.partySpecies, c.partyType, c.relativePhysicalStats, c.tradeSpecies, c.gender, c.turnUpsideDown, c.minBeauty].join('|');
+        const groups = new Map();
+        for (const c of evoConditions) {
+          const k = keyOf(c);
+          if (!groups.has(k)) groups.set(k, []);
+          groups.get(k).push(c);
+        }
+        evoConditions.length = 0;
+        for (const group of groups.values()) {
+          if (group.length > 1) group.sort((a, b) => (a.minLevel ?? Infinity) - (b.minLevel ?? Infinity));
+          evoConditions.push(group[0]);
+        }
+      }
       const subChains = walk(evo.name, evoConditions);
       for (const sub of subChains) {
         chains.push([current, ...sub]);

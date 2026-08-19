@@ -96,6 +96,25 @@ function buildChainMembers(chain) {
         .map(detailToCondition)
         .filter(cond => cond.trigger != null);
 
+      // When multiple conditions share the same trigger/item/etc but differ
+      // only by minLevel, keep only the lowest (base form). The higher level
+      // belongs to an untagged regional variant (e.g. Hisuian Cyndaquil→Quilava
+      // at level 17 vs base level 14 — PokeAPI doesn't tag the detail).
+      if (conditions.length > 1) {
+        const keyOf = (c) => [c.trigger, c.item, c.heldItem, c.knownMove, c.knownMoveType, c.location, c.minHappiness, c.minAffection, c.timeOfDay, c.needsOverworldRain, c.partySpecies, c.partyType, c.relativePhysicalStats, c.tradeSpecies, c.gender, c.turnUpsideDown, c.minBeauty].join('|');
+        const groups = new Map();
+        for (const c of conditions) {
+          const k = keyOf(c);
+          if (!groups.has(k)) groups.set(k, []);
+          groups.get(k).push(c);
+        }
+        conditions.length = 0;
+        for (const group of groups.values()) {
+          if (group.length > 1) group.sort((a, b) => (a.minLevel ?? Infinity) - (b.minLevel ?? Infinity));
+          conditions.push(group[0]);
+        }
+      }
+
       // Collect regional form slugs from base_form/evolved_form fields
       for (const detail of details) {
         if (detail.base_form?.name) regionalForms.add(detail.base_form.name);
