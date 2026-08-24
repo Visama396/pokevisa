@@ -173,7 +173,7 @@ export function createRunState() {
   return {
     coins: START_COINS,
     debt: START_DEBT,
-    tickets: 0,
+    tickets: START_TICKETS,
     round: 1, // round WITHIN the current quota (1..ROUNDS_PER_QUOTA), resets each cycle
     // Total rounds played across all quotas — not shown directly, but charms
     // can key effects off it (e.g. "every N rounds").
@@ -187,6 +187,12 @@ export function createRunState() {
     // accumulate here (and shrink the debt) until the quota is crossed, so a
     // quota can be cleared with several smaller deposits — reset each cycle.
     quotaPaid: 0,
+    // Lifetime deposit total across ALL quotas — never resets. It is the base
+    // for the 7% interest paid after every round (see depositInterest).
+    deposited: 0,
+    // How many debts were fully paid off this run — drives the escalated next
+    // debt (nextDebt) and the +1 charm slot per debt (charmSlots).
+    debtsCleared: 0,
     lastMode: null, // 3 | 7 — set when the current round's pulls are picked
     awaitingChoice: true,
     // Pending Luck for the next spin (Amulet Coin / Spell Tag). Consumed by
@@ -215,8 +221,20 @@ export function createRunState() {
 
 export const START_COINS = 70;
 export const START_DEBT = 50000;
-export const INTEREST_RATE = 0.08;
-export const MAX_CHARMS = 8;
+// Runs begin with enough tickets to buy a cheap charm or an upgrade.
+export const START_TICKETS = 4;
+// Clearing a debt doesn't end the run: the loan is replaced by a bigger one
+// (×DEBT_GROWTH each time) and the charm tray gains +1 slot per debt paid,
+// so runs become endless escalations instead of a single win.
+export const DEBT_GROWTH = 2;
+export function nextDebt(debtsCleared) {
+  return Math.ceil(START_DEBT * Math.pow(DEBT_GROWTH, debtsCleared));
+}
+// Charm tray capacity: base slots, plus one per cleared debt.
+export const CHARM_SLOTS_BASE = 8;
+export function charmSlots(state) {
+  return CHARM_SLOTS_BASE + (state.debtsCleared || 0);
+}
 
 // Rerolling the Rotom Phone's offers costs COINS (not tickets) and the price
 // doubles with every reroll inside the current quota cycle — it resets back to
@@ -315,11 +333,6 @@ export function atmMaxDeposit(state) {
     .sort((a, b) => b - a);
   const reserve = costs.find((cost) => cost < coins) || 0;
   return coins - reserve;
-}
-
-// Interest charged on whatever debt remains after a deadline payment.
-export function interestForDebt(debt) {
-  return Math.ceil(debt * INTEREST_RATE);
 }
 
 // ---------------------------------------------------------------------------
@@ -444,11 +457,13 @@ export const AMULET_COIN_LUCK = 4;
 // Spell Tag: Luck granted to the last pull of a round.
 export const SPELL_TAG_LUCK = 7;
 
-// Interest the ATM pays on the CURRENT deposit (quotaPaid) after every round;
-// Pokédoll pays out the same amount whenever 3+ patterns hit in one pull.
+// Interest the ATM pays on the LIFETIME deposit total (deposited) after every
+// round — unlike quotaPaid that total never resets, so interest keeps growing
+// with everything deposited across the whole run. Pokédoll pays out the same
+// amount whenever 3+ patterns hit in one pull.
 export const DEPOSIT_INTEREST_RATE = 0.07;
 export function depositInterest(state) {
-  return Math.floor((state.quotaPaid || 0) * DEPOSIT_INTEREST_RATE);
+  return Math.floor((state.deposited || 0) * DEPOSIT_INTEREST_RATE);
 }
 
 export const CHARM_IDS = Object.keys(CHARMS);

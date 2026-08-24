@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
+import { getSlotsProgress, saveSlotsProgress } from "../lib/auth";
 import HomeButton from "./HomeButton";
 import LanguageSelector from "./LanguageSelector";
+import AuthScreen from "./AuthScreen";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import {
   GRID_COLS,
@@ -24,14 +26,14 @@ import {
   roundCost,
   quotaClearBonus,
   atmMaxDeposit,
-  interestForDebt,
   ROUND_MODES,
   ROUND_TICKET_COSTS,
   ROUNDS_PER_QUOTA,
   generateShopOffers,
   rerollShop,
   charmCost,
-  MAX_CHARMS,
+  charmSlots,
+  nextDebt,
   rerollCost,
   AMULET_COIN_CHANCE,
   AMULET_COIN_LUCK,
@@ -138,20 +140,16 @@ function SymbolFace({ symId, spinning, won, small, golden, chain }) {
   const sym = SYMBOL_BY_ID[symId];
   const cls = small
     ? "flex items-center justify-center w-full h-full"
-    : `relative flex items-center justify-center rounded-lg border-2 bg-slate-900 overflow-hidden transition-all duration-150 ${
-        won
-          ? "border-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.7)] scale-[1.04] z-10"
-          : golden
-            ? "border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.5)]"
-            : chain
-              ? "border-violet-400 shadow-[0_0_12px_rgba(167,139,250,0.5)]"
-              : "border-slate-700"
+    : // Modifier cells keep their normal border — only the ✨/🔗 corner badges
+      // mark them, so they don't compete with the win highlight.
+      `relative flex items-center justify-center rounded-lg border-2 bg-slate-900 overflow-hidden transition-all duration-150 ${
+        won ? "border-yellow-400 shadow-[0_0_16px_rgba(250,204,21,0.7)] scale-[1.04] z-10" : "border-slate-700"
       }`;
   if (!sym) return <div className={cls} />;
   const badges = (
     <>
-      {golden && <span className="absolute top-0 right-0.5 text-[10px] leading-none">✨</span>}
-      {chain && <span className="absolute bottom-0 right-0.5 text-[10px] leading-none">🔗</span>}
+      {golden && <span className="absolute top-0.5 right-1 text-[10px] leading-none">✨</span>}
+      {chain && <span className="absolute bottom-0.5 right-1 text-[10px] leading-none">🔗</span>}
     </>
   );
   if (failed) return <div className={cls}>{badges}<span className={small ? "text-lg" : "text-2xl sm:text-3xl"}>{sym.emoji}</span></div>;
@@ -301,6 +299,113 @@ export default function PokeSlots() {
     } catch {}
   };
 
+  // ------------------------------------------------------------------
+  // Cloud saves. Logged-in accounts (same "pokevisa_account" session the
+  // Dungeon flow uses) get their run persisted to pokeslots_progress so the
+  // run resumes after closing the tab; guests play unsaved. One row per
+  // account: `state` = live run JSON (null between runs), `records` = bests.
+  // ------------------------------------------------------------------
+  const accountIdRef = useRef(null);
+  const [accountId, setAccountId] = useState(null);
+  const [accountName, setAccountName] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  // Load (or reload) an account's saved run + records and hydrate the UI.
+  const loadProgress = useCallback(async (id) => {
+    setReady(false);
+    try {
+      const row = await getSlotsProgress(id);
+      // Merge remote records with local ones (better value wins) so bests
+      // follow the account across browsers.
+      if (row?.records && Object.keys(row.records).length) {
+        const local = loadRecords();
+        const remote = row.records;
+        const merged = {
+          wins: Math.max(local.wins || 0, remote.wins || 0),
+          bestWinRound:
+            local.bestWinRound == null
+              ? remote.bestWinRound ?? null
+              : remote.bestWinRound == null
+                ? local.bestWinRound
+                : Math.min(local.bestWinRound, remote.bestWinRound),
+          bestPayout: Math.max(local.bestPayout || 0, remote.bestPayout || 0),
+        };
+        saveRecord(merged);
+        setRecords(merged);
+      }
+      if (row?.state && typeof row.state === "object") {
+        const saved = { ...createRunState(), ...row.state };
+        // Edge case: tab closed between the last pull and the round-end
+        // timer — avoid a stuck "no pulls, no picker" state.
+        if (!saved.awaitingChoice && (saved.pullsLeft || 0) === 0 && (saved.roundsLeft || 0) === 0) {
+          saved.awaitingChoice = true;
+        }
+        setRun(saved);
+        runRef.current = saved;
+        setOffers(generateShopOffers(saved));
+        setDisplayGrid(saved.grid);
+      }
+    } catch (err) {
+      console.error("Failed to load PokéSlots progress:", err);
+    } finally {
+      setReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    let acc = null;
+    try {
+      acc = JSON.parse(localStorage.getItem("pokevisa_account"));
+    } catch {}
+    if (!acc?.id) {
+      setReady(true);
+      return;
+    }
+    accountIdRef.current = acc.id;
+    setAccountId(acc.id);
+    setAccountName(acc.display_name);
+    loadProgress(acc.id);
+  }, [loadProgress]);
+
+  // Login from the header: store the session under the same localStorage key
+  // the Dungeon flow uses, then hydrate the account's saved run.
+  const handleAuth = (acc) => {
+    try {
+      localStorage.setItem("pokevisa_account", JSON.stringify(acc));
+    } catch {}
+    accountIdRef.current = acc.id;
+    setAccountId(acc.id);
+    setAccountName(acc.display_name);
+    setShowAuth(false);
+    loadProgress(acc.id);
+  };
+
+  // Logout: the cloud copy stays on the account; the local session continues
+  // as a fresh guest run that isn't saved.
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("pokevisa_account");
+    } catch {}
+    accountIdRef.current = null;
+    setAccountId(null);
+    setAccountName(null);
+    restart(); // persistRun is a no-op for guests, so this only resets the UI
+  };
+
+  // Persist the live run (called on every committed state change).
+  const persistRun = (next) => {
+    const id = accountIdRef.current;
+    if (!id) return;
+    saveSlotsProgress(id, next, loadRecords()).catch(() => {});
+  };
+  // Run over (win/lose/restart): keep the records, clear the saved run.
+  const persistRecords = (rec) => {
+    const id = accountIdRef.current;
+    if (!id) return;
+    saveSlotsProgress(id, null, rec).catch(() => {});
+  };
+
   const addPopup = (popup) => {
     const id = Math.random().toString(36).slice(2);
     setPopups((p) => [...p, { id, ...popup }]);
@@ -332,6 +437,8 @@ export default function PokeSlots() {
     const { golden, chain } = rollModifiers(cur, finalGrid);
     setRun((r) => ({ ...r, pullsLeft, luck: 0, goldenCells: golden, chainCells: chain }));
     runRef.current = { ...cur, pullsLeft, luck: 0, goldenCells: golden, chainCells: chain };
+    // Persist immediately so a tab closed mid-spin can't replay a free pull.
+    persistRun(runRef.current);
     setPhase("spinning");
     setStoppedCols(0);
     setWinCells(new Set());
@@ -448,10 +555,15 @@ export default function PokeSlots() {
         const now = runRef.current;
         if (now.awaitingChoice) return; // quota was cleared via ATM meanwhile
         // Deposit interest: the ATM pays 7% on the current deposit after
-        // EVERY played round — one that ends at the deadline included.
+        // EVERY played round — one that ends at the deadline included. It is
+        // committed to the run immediately, otherwise the deadline payment
+        // below would be checked against a wallet that doesn't include it.
         const interest = depositInterest(now);
         const base = interest > 0 ? { ...now, coins: now.coins + interest } : now;
-        if (interest > 0) addPopup({ x: 50, y: 30, text: `🏦 +${fmt(interest)} ₽`, kind: "coins" });
+        if (interest > 0) {
+          addPopup({ x: 50, y: 30, text: `🏦 +${fmt(interest)} ₽`, kind: "coins" });
+          commit(base);
+        }
         if (base.roundsLeft > 0) {
           // Mid-cycle: move to the next round of this quota. totalRounds
           // counts every played round across all quotas (charm hook).
@@ -479,6 +591,9 @@ export default function PokeSlots() {
   // ------------------------------------------------------------------
   const openAtm = () => {
     if (phase !== "idle" || modal) return;
+    // Mid-round spending is locked: quota payments and shop buys wait until
+    // all purchased pulls are used (see canSpend).
+    if ((runRef.current.pullsLeft || 0) > 0) return;
     // Default the slider to the clamped MAX (quota-capped, round-fee aware).
     setPayAmount(atmMaxDeposit(runRef.current));
     setModal("atm");
@@ -535,8 +650,11 @@ export default function PokeSlots() {
     const quota = currentQuota(cur);
     const paid = Math.max(0, Math.min(amount, cur.coins, cur.debt));
     // Payments accumulate toward the CURRENT quota (quotaPaid): several small
-    // deposits clear a quota exactly like one big payment.
+    // deposits clear a quota exactly like one big payment. They also grow the
+    // lifetime deposit total (deposited), which never resets — it is the base
+    // for the 7% interest paid after every round.
     const quotaPaid = (cur.quotaPaid || 0) + paid;
+    const deposited = (cur.deposited || 0) + paid;
     let charms = cur.charms;
     // Focus Band auto-triggers once when a deadline can't be covered: it wipes
     // the remaining quota, empties the wallet and grants a free 7-pull round.
@@ -551,12 +669,37 @@ export default function PokeSlots() {
     }
     let debt = cur.debt - paid;
     // A save zeroes the wallet instead of subtracting the payment.
-    let next = { ...cur, coins: focusSave ? 0 : cur.coins - paid, debt, charms, quotaPaid };
+    let next = { ...cur, coins: focusSave ? 0 : cur.coins - paid, debt, charms, quotaPaid, deposited };
 
+    // Debt paid in full — the run does NOT end: Team Rocket instantly grants
+    // a bigger loan (nextDebt, ×DEBT_GROWTH per debt) and the charm tray
+    // gains +1 slot (charmSlots reads debtsCleared). A fresh quota cycle
+    // starts so the run keeps flowing endlessly.
     if (debt <= 0) {
-      next.debt = 0;
+      next.debtsCleared = (cur.debtsCleared || 0) + 1;
+      next.debt = nextDebt(next.debtsCleared);
+      next.cycle = cur.cycle + 1;
+      next.quotaPaid = 0;
+      next.rerolls = 0;
+      next.roundsLeft = ROUNDS_PER_QUOTA;
+      next.round = 1;
+      if (!cur.awaitingChoice) next.totalRounds = (cur.totalRounds || 0) + 1;
+      next.pullsLeft = 0;
+      next.awaitingChoice = true;
+      // Deposit interest for rounds that end through this path (mirrors the
+      // early-clear sweep below); deadline payments were already swept by the
+      // round-end timer before this modal opened.
+      if (!cur.awaitingChoice && !deadline) {
+        const interest = depositInterest(cur);
+        if (interest > 0) {
+          next.coins += interest;
+          addPopup({ x: 50, y: 30, text: `🏦 +${fmt(interest)} ₽`, kind: "coins" });
+        }
+      }
+      addPopup({ x: 50, y: 40, text: "🏆", kind: "pattern" });
+      pushMsg(tr("Debt cleared! One more charm slot — and a much bigger debt."));
+      setOffers(generateShopOffers(next));
       commit(next);
-      endRun(true);
       return;
     }
 
@@ -564,8 +707,7 @@ export default function PokeSlots() {
     // validated above) or when the cycle's accumulated payments cross it —
     // mid-cycle ATM deposits included. Clearing early pays out the
     // quotaClearBonus (7% of the quota + 4 tickets + 1 per round left) and
-    // starts a fresh cycle; only the forced deadline charges interest on
-    // what remains.
+    // starts a fresh cycle.
     const cleared = deadline || quotaPaid >= quota;
     if (focusSave) {
       // The Focus Band's sacrifice: quota gone, wallet gone, but the run
@@ -620,10 +762,6 @@ export default function PokeSlots() {
       if (!cur.awaitingChoice) next.totalRounds = (cur.totalRounds || 0) + 1;
       next.pullsLeft = 0;
       next.awaitingChoice = true; // back to the pull picker for the new quota
-      if (deadline) {
-        // Interest is charged on whatever debt remains after the payment...
-        next.debt = debt + interestForDebt(debt);
-      }
       setOffers(generateShopOffers(next));
       pushMsg(tr(PHONE_ROUND_MSGS[next.cycle % PHONE_ROUND_MSGS.length]));
     }
@@ -638,6 +776,7 @@ export default function PokeSlots() {
     setRun(next);
     runRef.current = next;
     setModal(null);
+    persistRun(next);
   };
 
   const endRun = (won) => {
@@ -646,16 +785,18 @@ export default function PokeSlots() {
     setModal(won ? "won" : "over");
     const rec = loadRecords();
     if (won) {
-      setRecords(
-        saveRecord({
-          wins: rec.wins + 1,
-          bestWinRound: rec.bestWinRound == null ? cur.totalRounds : Math.min(rec.bestWinRound, cur.totalRounds),
-          bestPayout: Math.max(rec.bestPayout, cur.stats.biggestWin),
-        })
-      );
+      const updated = saveRecord({
+        wins: rec.wins + 1,
+        bestWinRound: rec.bestWinRound == null ? cur.totalRounds : Math.min(rec.bestWinRound, cur.totalRounds),
+        bestPayout: Math.max(rec.bestPayout, cur.stats.biggestWin),
+      });
+      setRecords(updated);
+      persistRecords(updated); // the run is over: keep records, drop the state
       pushMsg(tr("You're free... for now."));
     } else {
-      setRecords(saveRecord({ bestPayout: Math.max(rec.bestPayout, cur.stats.biggestWin) }));
+      const updated = saveRecord({ bestPayout: Math.max(rec.bestPayout, cur.stats.biggestWin) });
+      setRecords(updated);
+      persistRecords(updated);
       pushMsg(tr("Team Rocket blasted off with YOUR wallet!"));
     }
   };
@@ -676,6 +817,7 @@ export default function PokeSlots() {
     setPhase("idle");
     setModal(null);
     setPhoneMsg(tr(PHONE_ROUND_MSGS[0]));
+    persistRun(fresh); // a fresh run replaces whatever was saved
   };
 
   // ------------------------------------------------------------------
@@ -687,7 +829,9 @@ export default function PokeSlots() {
     playSfx("cash-register-purchase.mp3");
     const next = { ...cur, tickets: cur.tickets - offer.cost };
     if (offer.kind === "charm") {
-      if (next.charms.length >= MAX_CHARMS) return;
+      // Tray capacity grows with cleared debts (charmSlots) — a full tray
+      // blocks buying, selling first.
+      if (!CHARMS[offer.id] || next.charms.length >= charmSlots(next)) return;
       next.charms = [...next.charms, offer.id];
       // Cleanse Tag's on-purchase bonus: every symbol is worth +1 from now on.
       if (offer.id === "cleanse-tag") next.cleanseStacks = (next.cleanseStacks || 0) + 1;
@@ -740,11 +884,40 @@ export default function PokeSlots() {
   const remainingQuota = Math.max(0, quota - (run.quotaPaid || 0));
   const canAct = phase === "idle" && !modal;
   const canPull = canAct && run.pullsLeft > 0;
+  // Mid-round spending lock: once a round is bought (pullsLeft > 0), quota
+  // payments (ATM) and Rotom Phone purchases are unavailable until every
+  // pull has been used.
+  const canSpend = canAct && run.pullsLeft === 0;
   const hasFocusBand = run.charms.includes("focus-band");
   // Modifier flags of the current grid, rendered as cell badges/rings.
   const goldenCells = new Set(run.goldenCells || []);
   const chainCells = new Set(run.chainCells || []);
   const spinning = phase === "spinning";
+
+  // Login/register replaces the board while open; "Play as guest" returns.
+  if (showAuth) {
+    return (
+      <div className="relative">
+        <AuthScreen onAuth={handleAuth} subtitle="PokéSlots" />
+        <button
+          onClick={() => setShowAuth(false)}
+          className="absolute top-4 left-4 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+        >
+          ← {tr("Play as guest")}
+        </button>
+      </div>
+    );
+  }
+
+  // While a saved run is being fetched the board would flash a fresh run for
+  // a moment — show a splash instead, same as the Dungeon page does.
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <p className="text-sm text-slate-400">...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 px-3 py-5 sm:px-6">
@@ -757,7 +930,24 @@ export default function PokeSlots() {
           </h1>
           <p className="text-xs text-slate-500">{tr("Pay your debt to Team Rocket or fall into the pit")}</p>
         </div>
-        <LanguageSelector />
+        <div className="flex flex-col items-end gap-1.5">
+          {accountId ? (
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="font-semibold text-slate-300">{accountName}</span>
+              <button onClick={handleLogout} className="text-slate-500 hover:text-red-400 transition-colors">
+                {tr("Logout")}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="rounded-lg bg-yellow-600 hover:bg-yellow-500 px-3 py-1 text-[11px] font-bold text-white transition-colors"
+            >
+              {tr("Login")}
+            </button>
+          )}
+          <LanguageSelector />
+        </div>
       </div>
 
       {/* Status bar */}
@@ -770,12 +960,12 @@ export default function PokeSlots() {
         <Tooltip>
           <TooltipTrigger
             render={
-              <button onClick={openAtm} disabled={!canAct} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-left transition-colors enabled:hover:border-red-500 disabled:opacity-90">
+              <button onClick={openAtm} disabled={!canSpend} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-left transition-colors enabled:hover:border-red-500 disabled:opacity-90">
                 <div className="text-[10px] uppercase tracking-wide text-slate-500">{tr("Quota")}</div>
                 <div className="font-bold text-red-400">{fmt(remainingQuota)} ₽</div>
                 <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] leading-none">
                   <span className="text-slate-500">
-                    {tr("Deposit")} {fmt(run.quotaPaid || 0)} ₽
+                    {tr("Deposit")} {fmt(run.deposited || 0)} ₽
                   </span>
                   <span className={`font-semibold ${depositInterest(run) > 0 ? "text-emerald-400" : "text-slate-600"}`}>
                     +{fmt(depositInterest(run))} ₽
@@ -970,15 +1160,15 @@ export default function PokeSlots() {
               </TooltipContent>
             </Tooltip>
             <button
-              onClick={() => canAct && setModal("shop")}
-              disabled={!canAct}
+              onClick={() => canSpend && setModal("shop")}
+              disabled={!canSpend}
               className="shrink-0 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 disabled:text-slate-500 px-3 py-1.5 text-xs font-bold transition-colors"
             >
               {tr("Shop")}
             </button>
             <button
               onClick={openAtm}
-              disabled={!canAct}
+              disabled={!canSpend}
               className="shrink-0 rounded-lg bg-red-600 hover:bg-red-500 disabled:bg-slate-800 disabled:text-slate-500 px-3 py-1.5 text-xs font-bold transition-colors"
             >
               ATM
@@ -1155,7 +1345,7 @@ export default function PokeSlots() {
           {run.charms.length > 0 && (
             <>
               <h4 className="mt-4 mb-2 text-xs uppercase tracking-wide text-slate-500">
-                {tr("Your charms")} ({run.charms.length}/{MAX_CHARMS})
+                {tr("Your charms")} ({run.charms.length}/{charmSlots(run)})
               </h4>
               <div className="flex flex-wrap gap-2">
                 {run.charms.map((c) => {
@@ -1197,14 +1387,13 @@ export default function PokeSlots() {
           </p>
           <div className="space-y-1 text-sm mb-4">
             <Row label={tr("Quota due")} value={`${fmt(remainingQuota)} ₽`} color="text-red-400" />
-            {/* Current deposit and the interest it pays out after each round. */}
-            <Row label={tr("Deposit")} value={`${fmt(run.quotaPaid || 0)} ₽`} color="text-emerald-300" />
+            {/* Lifetime deposit (never resets) and the interest it pays out
+                after each round. Quota progress itself is visible via the
+                shrinking "Quota due" row above. */}
+            <Row label={tr("Deposit")} value={`${fmt(run.deposited || 0)} ₽`} color="text-emerald-300" />
             <Row label={tr("Interest (7%)")} value={`+${fmt(depositInterest(run))} ₽`} color="text-emerald-400" small />
             <Row label={tr("Your coins")} value={`${fmt(run.coins)} ₽`} color="text-yellow-300" />
             <Row label={tr("Remaining debt")} value={`${fmt(run.debt)} ₽`} />
-            {modal === "deadline" && run.debt - payAmount > 0 && (
-              <Row label={tr("Interest after payment")} value={`+${fmt(interestForDebt(run.debt - payAmount))} ₽`} color="text-red-300" small />
-            )}
           </div>
           {/* The MAX ceiling is clamped by atmMaxDeposit(): enough to finish
               the quota when possible, otherwise everything except one more
@@ -1263,8 +1452,8 @@ export default function PokeSlots() {
             <li>{tr("Each round, buy 3 pulls (5% of the quota) or 7 (10%) — paying with coins earns 4 tickets (3-pull) or 2 (7-pull). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead. No coins and no tickets? You lose.")}</li>
             <li>{tr("Clear a quota early for a bonus: 7% of the quota + 4 tickets, plus 1 extra ticket per round still left. Paying right on the deadline earns no bonus.")}</li>
             <li>{tr("Patterns pay coins only. Tickets come from clearing quotas — spend them on charms and permanent upgrades.")}</li>
-            <li>{tr("Unpaid debt grows 8% interest at every deadline — but deposits earn 7% interest, paid by the ATM after every round.")}</li>
-            <li>{tr("Clear the whole debt to escape. That's the win.")}</li>
+            <li>{tr("Deposits earn 7% interest, paid by the ATM after every round.")}</li>
+            <li>{tr("Pay off a debt completely and a bigger one takes its place — plus one extra charm slot. How far can you go?")}</li>
             <li>{tr("Smaller patterns are swallowed by bigger ones that contain them — chase the big shapes!")}</li>
           </ul>
         </Overlay>

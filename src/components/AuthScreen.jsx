@@ -4,7 +4,7 @@ import { t } from "../stores/translations";
 import { register, login } from "../lib/auth";
 import LanguageSelector from "./LanguageSelector";
 
-export default function AuthScreen({ onAuth }) {
+export default function AuthScreen({ onAuth, subtitle = "Mystery Dungeon" }) {
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -49,7 +49,7 @@ export default function AuthScreen({ onAuth }) {
 
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-slate-200">PokéVisa</h1>
-        <p className="text-sm text-slate-400 mt-2">Mystery Dungeon</p>
+        <p className="text-sm text-slate-400 mt-2">{subtitle}</p>
       </div>
 
       <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-800/60 p-6 space-y-5">

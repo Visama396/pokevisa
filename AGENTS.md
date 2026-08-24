@@ -159,6 +159,15 @@ sessions. When a phase is finished, mark it `[x]` here.
   (`sym-<id>.png` / `sym-shiny-<id>.png` = HOME renders used by the reel
   symbols and Golden charms; `items/<name>.png` = charm icons), so a run
   makes zero external requests.
+- Debt is endless: paying it off escalates it ×2 (`nextDebt`) and grants +1
+  charm slot per debt (`charmSlots = 8 + debtsCleared`); the old 8% deadline
+  surcharge is gone. While purchased pulls remain (`pullsLeft > 0`) the ATM
+  and Rotom Phone shop are locked (`canSpend`).
+- Cloud saves (migration `017`, table `pokeslots_progress`): logged-in
+  accounts (the `pokevisa_account` localStorage session) get the live run
+  upserted on every commit (`persistRun`) and records kept after the run ends
+  (`persistRecords`); guests play unsaved. Helpers `getSlotsProgress` /
+  `saveSlotsProgress` in `src/lib/auth.js`.
 
 ## Ongoing conventions
 - Dev server: **never start, stop, or query it** — no `astro dev` commands

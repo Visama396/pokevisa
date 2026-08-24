@@ -160,6 +160,26 @@ export async function deleteSavedDungeon(accountId) {
   return error;
 }
 
+// ─── PokéSlots progress ───
+// One row per account (pokeslots_progress): `state` holds the live run as
+// JSON (null between runs), `records` the personal bests. Mirrors the
+// saved_dungeons helpers above.
+export async function getSlotsProgress(accountId) {
+  const { data } = await supabase
+    .from("pokeslots_progress")
+    .select("*")
+    .eq("account_id", accountId)
+    .maybeSingle();
+  return data;
+}
+
+export async function saveSlotsProgress(accountId, state, records) {
+  const { error } = await supabase
+    .from("pokeslots_progress")
+    .upsert({ account_id: accountId, state: state ?? null, records: records ?? {} });
+  return error;
+}
+
 // ─── Friends (social system) ───
 // Rows live in the `friends` table: account_id = requester, friend_id =
 // recipient. A request is 'pending'; once accepted the row is a friendship.
