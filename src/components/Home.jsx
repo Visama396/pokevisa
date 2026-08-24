@@ -76,6 +76,15 @@ const COLOR_MAP = {
 const CHANGELOG = [
   {
     date: "2026-08-24",
+    title: "PokéSlots ATM & round costs",
+    items: [
+      "Round entries now cost coins: 3 pulls = 10% of the quota, 7 pulls = 20% (shortfall goes to debt)",
+      "Partial ATM payments count toward the current quota — the quota card shows what's still owed",
+      "ATM MAX deposits just enough to finish the quota, or everything except one more round's fee",
+    ],
+  },
+  {
+    date: "2026-08-24",
     title: "PokéSlots rework",
     items: [
       "Every round starts with a choice: buy 3 pulls (cheap, fatter tickets) or 7 pulls",

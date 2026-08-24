@@ -1012,10 +1012,6 @@ const ui = {
     "zh-hans": "不能攻击你的盟友！",
     "zh-hant": "不能攻擊你的盟友！",
   },
-  "How to play": {
-    en: "How to play", es: "Cómo jugar", fr: "Comment jouer", de: "So geht's", it: "Come giocare",
-    ja: "遊び方", ko: "플레이 방법", "zh-hans": "游戏玩法", "zh-hant": "遊戲玩法",
-  },
   "Loading...": {
     en: "Loading...", es: "Cargando...", fr: "Chargement...", de: "Laden...", it: "Caricamento...",
     ja: "読み込み中...", ko: "로딩 중...", "zh-hans": "加载中...", "zh-hant": "載入中...",
@@ -2070,25 +2066,53 @@ const ui = {
     en: "Focus Band will halve the quota for you — once", es: "La Banda Focus reducirá la cuota a la mitad — una sola vez", fr: "Le Bandeau Focus divisera la quote-part par deux — une seule fois", de: "Das Focus-Band halbiert die Rate — genau einmal", it: "La Fascia Concentrazione dimezzerà la rata — una sola volta",
     ja: "がんばリバンドが一度だけ分割払いを半減する", ko: "승부밴드가 단 한 번 분할금을 반으로 줄여준다", "zh-hans": "气势绑带会为你把配额减半——仅一次", "zh-hant": "氣勢綁帶會為你把配額減半——僅一次",
   },
+  "Each round, buy 3 pulls (10% of the quota) or 7 (20%) — a quota gives you 3 rounds to pay it at the ATM. Can't afford a round? The shortfall is added to your debt.": {
+    en: "Each round, buy 3 pulls (10% of the quota) or 7 (20%) — a quota gives you 3 rounds to pay it at the ATM. Can't afford a round? The shortfall is added to your debt.",
+    es: "Cada ronda, compra 3 tiradas (10% de la cuota) o 7 (20%): tienes 3 rondas para pagarla en el cajero. ¿No te llega? La diferencia se añade a tu deuda.",
+    fr: "À chaque manche, achète 3 tirages (10 % de la quote-part) ou 7 (20 %) — tu as 3 manches pour la payer au distributeur. Pas assez d'argent ? La différence s'ajoute à ta dette.",
+    de: "Kaufe jede Runde 3 Züge (10 % der Rate) oder 7 (20 %) — für die Rate hast du 3 Runden Zeit, sie am Automaten zu zahlen. Reicht das Geld nicht? Der Fehlbetrag kommt auf deine Schulden.",
+    it: "A ogni turno compra 3 slate (10% della rata) o 7 (20%) — hai 3 turni per pagarla all'ATM. Non ti bastano? La differenza si aggiunge al tuo debito.",
+    ja: "毎ラウンド、レバー回数を購入する：3回（分割払いの10%）か7回（20%）。分割払いはATMで支払うまで3ラウンドある。金が足りないときは、不足分が借金に加算される。",
+    ko: "매 라운드 레버 횟수를 구매한다: 3회(분할금의 10%) 또는 7회(20%). 분할금은 ATM으로 지불할 때까지 3라운드가 주어진다. 돈이 부족하면 부족분이 빚에 더해진다.",
+    "zh-hans": "每回合购买拉杆次数：3次（配额的10%）或7次（20%）——你有3回合时间在ATM支付配额。钱不够？差额会记入你的债务。",
+    "zh-hant": "每回合購買拉桿次數：3次（配額的10%）或7次（20%）——你有3回合時間在ATM支付配額。錢不夠？差額會記入你的債務。",
+  },
   "How to play": {
     en: "How to play", es: "Cómo jugar", fr: "Comment jouer", de: "Spielanleitung", it: "Come si gioca",
     ja: "遊び方", ko: "플레이 방법", "zh-hans": "玩法说明", "zh-hant": "玩法說明",
   },
-  "You get 7 pulls per round. Matching symbols in patterns pays coins.": {
-    en: "Every round you buy pulls: 3 (half price, 10 tickets + 2 per spare pull at the end) or 7 (5 tickets + 1 per spare pull).", es: "Cada ronda compras tiradas: 3 (mitad de precio, 10 tickets + 2 por tirada sobrante al final) o 7 (5 tickets + 1 por tirada sobrante).", fr: "Chaque manche, tu achètes des tirages : 3 (moitié prix, 10 tickets + 2 par tirage restant à la fin) ou 7 (5 tickets + 1 par tirage restant).", de: "Jede Runde kaufst du Züge: 3 (halber Preis, 10 Tickets + 2 pro übrigem Zug am Ende) oder 7 (5 Tickets + 1 pro übrigem Zug).", it: "A ogni turno compri le slate: 3 (metà prezzo, 10 biglietti + 2 per slata avanzata alla fine) o 7 (5 biglietti + 1 per slata avanzata).",
-    ja: "毎ラウンド、レバー回数を購入する：3回（半額、終了時にチケット10枚+残り1回につき2枚）か7回（チケット5枚+残り1回につき1枚）。", ko: "매 라운드 레버 횟수를 구매한다: 3회(반값, 종료 시 티켓 10장 + 남은 1회당 2장) 또는 7회(티켓 5장 + 남은 1회당 1장).", "zh-hans": "每回合购买拉杆次数：3次（半价，结束时10券+每剩余1次加2券）或7次（5券+每剩余1次加1券）。", "zh-hant": "每回合購買拉桿次數：3次（半價，結束時10券+每剩餘1次加2券）或7次（5券+每剩餘1次加1券）。",
+  "Clear a quota early for a bonus: +20% and 15 tickets with 3 rounds left, +10% and 10 with 2, +5% and 5 with 1 — on the last round you only get 3 tickets.": {
+    en: "Clear a quota early for a bonus: +20% and 15 tickets with 3 rounds left, +10% and 10 with 2, +5% and 5 with 1 — on the last round you only get 3 tickets.",
+    es: "Liquida una cuota antes de tiempo para una bonificación: +20% y 15 tickets con 3 rondas restantes, +10% y 10 con 2, +5% y 5 con 1; en la última ronda solo obtienes 3 tickets.",
+    fr: "Solde une quote-part en avance pour un bonus : +20 % et 15 tickets avec 3 manches restantes, +10 % et 10 avec 2, +5 % et 5 avec 1 — à la dernière manche, tu n'obtiens que 3 tickets.",
+    de: "Zahle eine Rate vorzeitig für einen Bonus: +20 % und 15 Tickets mit 3 Runden übrig, +10 % und 10 mit 2, +5 % und 5 mit 1 — in der letzten Runde gibt es nur 3 Tickets.",
+    it: "Salda una rata in anticipo per un bonus: +20% e 15 biglietti con 3 turni rimasti, +10% e 10 con 2, +5% e 5 con 1 — all'ultimo turno ottieni solo 3 biglietti.",
+    ja: "分割払いを早めに払い切るとボーナス：残り3ラウンドで+20%とチケット15枚、残り2で+10%と10枚、残り1で+5%と5枚。最終ラウンドではチケット3枚だけだ。",
+    ko: "분할금을 미리 갚으면 보너스: 남은 라운드가 3일 때 +20%와 티켓 15장, 2일 때 +10%와 10장, 1일 때 +5%와 5장. 마지막 라운드에는 티켓 3장뿐이다.",
+    "zh-hans": "提前清空配额可获得奖励：剩3回合时+20%和15券，剩2回合时+10%和10券，剩1回合时+5%和5券——最后一回合只能得到3券。",
+    "zh-hant": "提前清空配額可獲得獎勵：剩3回合時+20%和15券，剩2回合時+10%和10券，剩1回合時+5%和5券——最後一回合只能得到3券。",
   },
-  "Each round ends with a quota you must pay at the ATM — or it's over.": {
-    en: "Each round ends with a quota you must pay at the ATM — or it's over.", es: "Cada ronda acaba con una cuota que debes pagar en el cajero, o se acabó.", fr: "Chaque manche se termine par une quote-part à payer au distributeur — sinon c'est fini.", de: "Jede Runde endet mit einer Rate am Automaten — sonst ist alles vorbei.", it: "Ogni turno finisce con una rata da pagare all'ATM — o è finita.",
-    ja: "各ラウンドの終わりにATMで分割払いを支払う。できなければ終わりだ。", ko: "각 라운드 끝에 ATM에서 분할금을 지불해야 한다. 못 하면 끝이다.", "zh-hans": "每回合结束时必须在ATM支付配额——否则游戏结束。", "zh-hant": "每回合結束時必須在ATM支付配額——否則遊戲結束。",
+  "Patterns pay coins only. Tickets come from clearing quotas — spend them on charms and permanent upgrades.": {
+    en: "Patterns pay coins only. Tickets come from clearing quotas — spend them on charms and permanent upgrades.",
+    es: "Los patrones pagan solo monedas. Los tickets se consiguen liquidando cuotas: gástalos en amuletos y mejoras permanentes.",
+    fr: "Les motifs ne paient qu'en pièces. Les tickets viennent des quote-parts soldées — dépense-les en grigris et améliorations permanentes.",
+    de: "Muster zahlen nur Münzen. Tickets gibt es für bezahlte Raten — gib sie für Glücksbringer und permanente Upgrades aus.",
+    it: "Le combinazioni pagano solo monete. I biglietti arrivano saldando le rate — spendili per amuleti e potenziamenti permanenti.",
+    ja: "パターンが払うのはコインのみ。チケットは分割払いの清算でもらえる——おまもりや永久アップグレードに使おう。",
+    ko: "패턴은 코인만 지급한다. 티켓은 분할금을 갚으면 얻는다——부적과 영구 업그레이드에 써라.",
+    "zh-hans": "牌型只支付金币。清空配额可获得券——把券花在护符和永久升级上。",
+    "zh-hant": "牌型只支付金幣。清空配額可獲得券——把券花在護符和永久升級上。",
   },
-  "Unpaid debt grows 8% interest every round. Overpay early to dodge it.": {
-    en: "Unpaid debt grows 8% interest every round. Overpay early to dodge it.", es: "La deuda sin pagar crece un 8% cada ronda. Paga de más pronto para evitarla.", fr: "La dette impayée grossit de 8% par manche. Paie plus tôt pour l'éviter.", de: "Unbezahlte Schulden wachsen jede Runde um 8%. Zahle früh extra, um sie zu vermeiden.", it: "Il debito non pagato cresce dell'8% ogni turno. Paga in anticipo per evitarlo.",
-    ja: "未払いの借金は毎ラウンド8%の利息で増える。早めに多く払って回避しよう。", ko: "미납 빚은 매 라운드 8%씩 늘어난다. 미리 갚아서 피해라.", "zh-hans": "未还债务每回合增长8%利息。尽早多还可避免。", "zh-hant": "未還債務每回合增長8%利息。儘早多還可避免。",
-  },
-  "Pulls earn tickets. Tickets buy charms and permanent upgrades in the shop.": {
-    en: "Pulls earn tickets. Tickets buy charms and permanent upgrades in the shop.", es: "Las tiradas dan tickets. Los tickets compran amuletos y mejoras permanentes en la tienda.", fr: "Les tirages donnent des tickets. Les tickets achètent grigris et améliorations permanentes.", de: "Züge bringen Tickets. Tickets kaufen Glücksbringer und permanente Upgrades.", it: "Le slate fanno biglietti. I biglietti comprano amuleti e potenziamenti permanenti.",
-    ja: "レバーを回すとチケットがもらえる。チケットでおまもりや永久アップグレードを買おう。", ko: "레버를 돌리면 티켓을 얻는다. 티켓으로 부적과 영구 업그레이드를 구매해라.", "zh-hans": "拉杆赚券。用券购买护符和永久升级。", "zh-hant": "拉桿賺券。用券購買護符和永久升級。",
+  "Unpaid debt grows 8% interest at every deadline. Overpay early to dodge it.": {
+    en: "Unpaid debt grows 8% interest at every deadline. Overpay early to dodge it.",
+    es: "La deuda sin pagar crece un 8% de interés en cada fecha límite. Paga de más pronto para evitarla.",
+    fr: "La dette impayée grossit de 8 % d'intérêts à chaque date limite. Paie plus tôt pour l'éviter.",
+    de: "Unbezahlte Schulden wachsen bei jeder Fälligkeit um 8 % Zinsen. Zahle früh extra, um sie zu vermeiden.",
+    it: "Il debito non pagato cresce dell'8% di interessi a ogni scadenza. Paga in anticipo per evitarlo.",
+    ja: "未払いの借金は期限ごとに8%の利息で増える。早めに多く払って回避しよう。",
+    ko: "미납 빚은 기한마다 8%의 이자가 붙는다. 미리 갚아서 피해라.",
+    "zh-hans": "未还债务在每个截止日增长8%利息。尽早多还可避免。",
+    "zh-hant": "未還債務在每個截止日增長8%利息。儘早多還可避免。",
   },
   "Clear the whole debt to escape. That's the win.": {
     en: "Clear the whole debt to escape. That's the win.", es: "Liquidar toda la deuda para escapar. Esa es la victoria.", fr: "Solde toute la dette pour t'échapper. C'est ça, la victoire.", de: "Zahl den ganzen Schulden ab, um zu entkommen. Das ist der Sieg.", it: "Estingui tutto il debito per fuggire. Questa è la vittoria.",
@@ -2153,6 +2177,14 @@ const ui = {
   "Fastest escape": {
     en: "Fastest escape", es: "Escape más rápido", fr: "Évasion la plus rapide", de: "Schnellster Ausbruch", it: "Fuga più veloce",
     ja: "最速脱出", ko: "최고 속도 탈출", "zh-hans": "最快逃脱", "zh-hant": "最快逃脫",
+  },
+  "round": {
+    en: "round", es: "ronda", fr: "manche", de: "Runde", it: "turno",
+    ja: "ラウンド", ko: "라운드", "zh-hans": "回合", "zh-hant": "回合",
+  },
+  "ATM": {
+    en: "ATM", es: "Cajero", fr: "Distributeur", de: "Automat", it: "ATM",
+    ja: "ATM", ko: "ATM", "zh-hans": "ATM", "zh-hant": "ATM",
   },
   "No one has ever escaped this basement... probably": {
     en: "No one has ever escaped this basement... probably", es: "Nadie ha escapado jamás de este sótano... probablemente", fr: "Personne n'est jamais sorti de ce sous-sol... probablement", de: "Niemand hat diesen Keller je verlassen... wahrscheinlich", it: "Nessuno è mai scappato da questo seminterrato... probabilmente",

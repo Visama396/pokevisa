@@ -136,8 +136,8 @@ sessions. When a phase is finished, mark it `[x]` here.
 - Symbols ARE the Pokémon (official localized names embedded in `SYMBOLS`,
   extracted from pokedex.json — `symbolName(id, lang)`), values 18–63 ₽.
 - Round entry (rework): every round starts at a mandatory "choose your pulls"
-  screen — 3 pulls cost 25% of the quota (10 tickets + 2/spare pull at the
-  end) or 7 pulls cost 50% (5 tickets + 1/spare); shortfall is added to debt.
+  screen — 3 pulls cost 10% of the quota (10 tickets + 2/spare pull at the
+  end) or 7 pulls cost 20% (5 tickets + 1/spare); shortfall is added to debt.
   Clearing the quota early via ATM banks spare pulls as tickets and skips the
   interest charge. Quota card shows only the current quota; total debt lives
   in the ATM.
@@ -148,20 +148,22 @@ sessions. When a phase is finished, mark it `[x]` here.
   rerolls, charm selling. Focus Band halves one unpayable quota.
 - Balance calibrated via Monte Carlo sims (/tmp/opencode/slots-tune2.mjs):
   naive play loses ~round 5, engaged play wins ~50% around round 10.
+- Round entry costs are real (matching the description above): `roundCost()`
+  charges 10%/20% of the current quota on the 3/7-pull pick (shortfall →
+  debt), and payments accumulate in run state `quotaPaid` so partial ATM
+  deposits count toward clearing a quota. `atmMaxDeposit()` clamps the ATM's
+  MAX/default to just cover the remaining quota, or when short, everything
+  except one more round's entry fee (priciest mode that still leaves coins).
 - All UI strings translated (9 languages); home card + changelog entry added.
 
 ## Ongoing conventions
-- Dev server: `astro dev --background`; never run `astro build` during development.
+- Dev server: **never start, stop, or query it** — no `astro dev` commands
+  (`--background`/`stop`/`status`/`logs`) and no curling `localhost:4321`.
+  The user runs the dev server themselves and checks pages in their browser;
+  when asked to verify, just describe what to test. Never run `astro build`
+  during development.
 - Migrations are applied manually in the Supabase SQL editor.
 - Reuse existing components/libs before creating new ones; comment new features.
-
-When starting the dev server, use background mode:
-
-```
-astro dev --background
-```
-
-Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
 
 **Do not run `astro build` during development.** The user runs `bun run dev` and `astro build` (or `npx astro build`) breaks the running dev server and adds unnecessary files. Test changes by visiting `localhost:4321` instead.
 

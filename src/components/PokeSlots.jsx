@@ -20,6 +20,8 @@ import {
   patternMult,
   rollWeights,
   currentQuota,
+  roundCost,
+  atmMaxDeposit,
   interestForDebt,
   ROUND_MODES,
   QUOTA_CLEAR_REWARDS,
@@ -295,9 +297,11 @@ export default function PokeSlots() {
         if (now.roundsLeft > 0) {
           commit({ ...now, round: now.round + 1, pullsLeft: 0, awaitingChoice: true });
         } else {
-          const q = currentQuota(now);
-          if (now.coins >= q || now.charms.includes("focus-band")) {
-            setPayAmount(Math.min(now.coins, q));
+          // Deadline comes due against the WHOLE cycle: deposits already made
+          // (quotaPaid) plus whatever is left in hand must cover the quota.
+          const rem = Math.max(0, currentQuota(now) - (now.quotaPaid || 0));
+          if (now.coins >= rem || now.charms.includes("focus-band")) {
+            setPayAmount(Math.min(now.coins, rem));
             setModal("deadline");
           } else {
             endRun(false); // cannot cover the quota and no Focus Band left
@@ -312,17 +316,23 @@ export default function PokeSlots() {
   // ------------------------------------------------------------------
   const openAtm = () => {
     if (phase !== "idle" || modal) return;
-    setPayAmount(Math.min(runRef.current.coins, runRef.current.debt));
+    // Default the slider to the clamped MAX (quota-capped, round-fee aware).
+    setPayAmount(atmMaxDeposit(runRef.current));
     setModal("atm");
   };
 
-  // Round start: pick 3 or 7 pulls for free. Playing a round consumes one of
+  // Round start: buy 3 or 7 pulls. Entering a round costs a share of the
+  // current quota (roundCost); whatever the balance can't cover is added to
+  // the debt instead of blocking the pick. Playing a round consumes one of
   // the quota's ROUNDS_PER_QUOTA rounds, so the pick is also a pacing choice.
   const chooseRoundMode = (mode) => {
     if (phase !== "idle" || !runRef.current.awaitingChoice) return;
     const cur = runRef.current;
+    const cost = roundCost(cur, mode);
     commit({
       ...cur,
+      coins: Math.max(0, cur.coins - cost),
+      debt: cur.debt + Math.max(0, cost - cur.coins), // shortfall → debt
       pullsLeft: ROUND_MODES[mode].pulls,
       lastMode: Number(mode),
       awaitingChoice: false,
@@ -334,20 +344,23 @@ export default function PokeSlots() {
   const makePayment = (amount, { deadline } = {}) => {
     const cur = runRef.current;
     const quota = currentQuota(cur);
+    const paid = Math.max(0, Math.min(amount, cur.coins, cur.debt));
+    // Payments accumulate toward the CURRENT quota (quotaPaid): several small
+    // deposits clear a quota exactly like one big payment.
+    const quotaPaid = (cur.quotaPaid || 0) + paid;
     let charms = cur.charms;
     let effectiveQuota = quota;
-    // Focus Band auto-triggers once when you can't otherwise cover a quota.
-    if (deadline && amount < quota && charms.includes("focus-band")) {
+    // Focus Band auto-triggers once when the cycle's payments can't cover a quota.
+    if (deadline && quotaPaid < quota && charms.includes("focus-band")) {
       charms = charms.filter((c) => c !== "focus-band");
       effectiveQuota = Math.ceil(quota / 2);
     }
-    if (deadline && amount < effectiveQuota) {
+    if (deadline && quotaPaid < effectiveQuota) {
       endRun(false);
       return;
     }
-    const paid = Math.max(0, Math.min(amount, cur.coins, cur.debt));
     let debt = cur.debt - paid;
-    let next = { ...cur, coins: cur.coins - paid, debt, charms };
+    let next = { ...cur, coins: cur.coins - paid, debt, charms, quotaPaid };
 
     if (debt <= 0) {
       next.debt = 0;
@@ -357,10 +370,11 @@ export default function PokeSlots() {
     }
 
     // A payment clears the quota when it's the forced deadline (already
-    // validated above) or when an ATM payment covers it in one go. Clearing
-    // early pays out the QUOTA_CLEAR_REWARDS bonus and starts a fresh cycle;
-    // only the forced deadline charges interest on what remains.
-    const cleared = deadline || paid >= effectiveQuota;
+    // validated above) or when the cycle's accumulated payments cross it —
+    // mid-cycle ATM deposits included. Clearing early pays out the
+    // QUOTA_CLEAR_REWARDS bonus and starts a fresh cycle; only the forced
+    // deadline charges interest on what remains.
+    const cleared = deadline || quotaPaid >= effectiveQuota;
     if (cleared) {
       const reward = QUOTA_CLEAR_REWARDS[cur.roundsLeft] || QUOTA_CLEAR_REWARDS[0];
       const eggMult = charms.includes("lucky-egg") ? CHARMS["lucky-egg"].ticketMult : 1;
@@ -375,6 +389,7 @@ export default function PokeSlots() {
         addPopup({ x: 50, y: 58, text: `+${fmt(bonusTickets)} 🎫`, kind: "tickets" });
       }
       next.cycle = cur.cycle + 1;
+      next.quotaPaid = 0; // the new cycle's quota starts unpaid
       next.roundsLeft = ROUNDS_PER_QUOTA;
       next.round = cur.round + 1;
       next.pullsLeft = 0;
@@ -474,6 +489,8 @@ export default function PokeSlots() {
   const weights = rollWeights(run);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const quota = currentQuota(run);
+  // What's still owed of the CURRENT quota after partial ATM deposits.
+  const remainingQuota = Math.max(0, quota - (run.quotaPaid || 0));
   const canAct = phase === "idle" && !modal;
   const canPull = canAct && run.pullsLeft > 0;
   const hasFocusBand = run.charms.includes("focus-band");
@@ -495,19 +512,21 @@ export default function PokeSlots() {
       {/* Status bar */}
       <div className="mx-auto max-w-6xl grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
         <StatusChip label={tr("Coins")} value={`${fmt(run.coins)} ₽`} color="text-yellow-300" />
-        {/* Only the current quota is shown up here — the full remaining debt
-            lives in the ATM screen so the bar stays readable at a glance. */}
+        {/* Only the quota still owed is shown up here (deposits shrink it) —
+            the full remaining debt lives in the ATM screen so the bar stays
+            readable at a glance. */}
         <button onClick={openAtm} disabled={!canAct} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-left transition-colors enabled:hover:border-red-500 disabled:opacity-90">
           <div className="text-[10px] uppercase tracking-wide text-slate-500">{tr("Quota")}</div>
-          <div className="font-bold text-red-400">{fmt(quota)} ₽</div>
+          <div className="font-bold text-red-400">{fmt(remainingQuota)} ₽</div>
           <div className="text-[10px] text-red-300/70">
             {run.roundsLeft} {tr("rounds")}
           </div>
         </button>
         <StatusChip label={tr("Tickets")} value={`${fmt(run.tickets)} 🎫`} color="text-sky-300" />
         <StatusChip label={tr("Round")} value={run.round} color="text-purple-300" />
-        {/* The pull picker lives right in this card: each round pick 3 fast
-            pulls or 7 slower ones — free either way. */}
+        {/* The pull picker lives right in this card: each round buy 3 fast
+            pulls (10% of the quota) or 7 slower ones (20%) — the price shows
+            under each pick. */}
         <div className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2">
           <div className="text-[10px] uppercase tracking-wide text-slate-500">{tr("Pulls left")}</div>
           {run.awaitingChoice ? (
@@ -517,14 +536,15 @@ export default function PokeSlots() {
                   key={m}
                   onClick={() => chooseRoundMode(m)}
                   disabled={!canAct}
-                  title={`${m} ${tr("pulls")}`}
+                  title={`${m} ${tr("pulls")} — ${fmt(roundCost(run, m))} ₽`}
                   className={`flex-1 rounded-md border py-1 text-xs font-black transition-colors disabled:opacity-40 ${
                     m === 3
                       ? "border-emerald-600/60 bg-emerald-500/10 text-emerald-300 hover:border-emerald-400"
                       : "border-yellow-600/60 bg-yellow-500/10 text-yellow-300 hover:border-yellow-400"
                   }`}
                 >
-                  {m}
+                  <span className="leading-none">{m}</span>
+                  <span className="mt-0.5 block text-[9px] font-bold leading-none opacity-80">{fmt(roundCost(run, m))} ₽</span>
                 </button>
               ))}
             </div>
@@ -756,30 +776,37 @@ export default function PokeSlots() {
         >
           <p className="mb-3 text-sm text-red-300 font-bold">
             {tr("Giovanni")}: “
-            {run.coins >= quota ? tr("Pay up, and maybe I'll let you keep pulling.") : tr("You're short, trainer.")}”
+            {run.coins >= remainingQuota ? tr("Pay up, and maybe I'll let you keep pulling.") : tr("You're short, trainer.")}”
           </p>
           <div className="space-y-1 text-sm mb-4">
-            <Row label={tr("Quota due")} value={`${fmt(quota)} ₽`} color="text-red-400" />
+            <Row label={tr("Quota due")} value={`${fmt(remainingQuota)} ₽`} color="text-red-400" />
             <Row label={tr("Your coins")} value={`${fmt(run.coins)} ₽`} color="text-yellow-300" />
             <Row label={tr("Remaining debt")} value={`${fmt(run.debt)} ₽`} />
             {modal === "deadline" && run.debt - payAmount > 0 && (
               <Row label={tr("Interest after payment")} value={`+${fmt(interestForDebt(run.debt - payAmount))} ₽`} color="text-red-300" small />
             )}
           </div>
+          {/* The MAX ceiling is clamped by atmMaxDeposit(): enough to finish
+              the quota when possible, otherwise everything except one more
+              round's entry fee. At the deadline there is no next round to
+              save for, so the ceiling is just the remaining quota. */}
           <input
             type="range"
-            min={Math.min(run.coins, modal === "deadline" ? quota : 0)}
-            max={Math.min(run.coins, run.debt)}
+            min={modal === "deadline" ? Math.min(run.coins, remainingQuota) : 0}
+            max={modal === "deadline" ? Math.min(run.coins, remainingQuota) : atmMaxDeposit(run)}
             value={payAmount}
             onChange={(e) => setPayAmount(Number(e.target.value))}
             className="w-full accent-red-500"
           />
           <div className="flex items-center justify-between text-xs text-slate-400 mt-1 mb-4">
-            <button onClick={() => setPayAmount(Math.min(run.coins, quota))} className="hover:text-slate-200">
+            <button onClick={() => setPayAmount(Math.min(run.coins, remainingQuota))} className="hover:text-slate-200">
               {tr("MIN")}
             </button>
             <span className="text-base font-black text-yellow-300">{fmt(payAmount)} ₽</span>
-            <button onClick={() => setPayAmount(Math.min(run.coins, run.debt))} className="hover:text-slate-200">
+            <button
+              onClick={() => setPayAmount(modal === "deadline" ? Math.min(run.coins, remainingQuota) : atmMaxDeposit(run))}
+              className="hover:text-slate-200"
+            >
               {tr("MAX")}
             </button>
           </div>
@@ -788,7 +815,7 @@ export default function PokeSlots() {
               onClick={() => makePayment(payAmount, { deadline: modal === "deadline" })}
               disabled={
                 modal === "deadline"
-                  ? run.coins <= 0 || !(payAmount >= quota || hasFocusBand)
+                  ? run.coins <= 0 || !((run.quotaPaid || 0) + payAmount >= quota || hasFocusBand)
                   : payAmount <= 0
               }
               className="flex-1 rounded-lg bg-green-600 hover:bg-green-500 disabled:bg-slate-800 disabled:text-slate-500 px-4 py-2 font-bold transition-colors"
@@ -813,7 +840,7 @@ export default function PokeSlots() {
       {modal === "help" && (
         <Overlay title={tr("How to play")} onClose={() => setModal(null)}>
           <ul className="list-disc pl-4 space-y-2 text-sm text-slate-300">
-            <li>{tr("Pick 3 or 7 free pulls each round — a quota gives you 3 rounds to pay it at the ATM.")}</li>
+            <li>{tr("Each round, buy 3 pulls (10% of the quota) or 7 (20%) — a quota gives you 3 rounds to pay it at the ATM. Can't afford a round? The shortfall is added to your debt.")}</li>
             <li>{tr("Clear a quota early for a bonus: +20% and 15 tickets with 3 rounds left, +10% and 10 with 2, +5% and 5 with 1 — on the last round you only get 3 tickets.")}</li>
             <li>{tr("Patterns pay coins only. Tickets come from clearing quotas — spend them on charms and permanent upgrades.")}</li>
             <li>{tr("Unpaid debt grows 8% interest at every deadline. Overpay early to dodge it.")}</li>

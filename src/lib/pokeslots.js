@@ -170,9 +170,13 @@ export function createRunState() {
     round: 1, // display counter, increments with every played round
     cycle: 1, // which quota you're on (quota grows per cycle)
     roundsLeft: ROUNDS_PER_QUOTA, // rounds remaining to clear the current quota
-    // Every round starts at the pull-choice state (awaitingChoice): pick 3 or
-    // 7 free pulls from the "Pulls left" status card before touching the lever.
+    // Every round starts at the pull-choice state (awaitingChoice): buy 3 or
+    // 7 pulls from the "Pulls left" status card before touching the lever.
     pullsLeft: 0,
+    // Coins already deposited toward the CURRENT quota. Partial ATM payments
+    // accumulate here (and shrink the debt) until the quota is crossed, so a
+    // quota can be cleared with several smaller deposits — reset each cycle.
+    quotaPaid: 0,
     lastMode: null, // 3 | 7 — set when the current round's pulls are picked
     awaitingChoice: true,
     grid: [...STARTER_GRID],
@@ -192,10 +196,10 @@ export const REROLL_COST = 2;
 // ---------------------------------------------------------------------------
 // Rounds & quotas
 // ---------------------------------------------------------------------------
-// A QUOTA spans ROUNDS_PER_QUOTA rounds. Each round the player freely picks
-// 3 or 7 pulls (no cost either way — the tradeoff is pure pace vs. spin
-// count). Patterns pay coins only; tickets come exclusively from clearing a
-// quota before its last round:
+// A QUOTA spans ROUNDS_PER_QUOTA rounds. Each round the player buys 3 or 7
+// pulls — entry costs a share of the CURRENT quota (3 pulls = 10%, 7 = 20%;
+// see roundCost). Patterns pay coins only; tickets come exclusively from
+// clearing a quota before its last round:
 //   cleared with 3 rounds left → +20% of the quota and 15 tickets
 //   cleared with 2 rounds left → +10% of the quota and 10 tickets
 //   cleared with 1 round left  →  +5% of the quota and  5 tickets
@@ -203,9 +207,12 @@ export const REROLL_COST = 2;
 // Missing the last round's deadline is game over (Focus Band halves once).
 export const ROUNDS_PER_QUOTA = 3;
 
+// Entry costs are part of the mode: 3 pulls cost 10% of the quota, 7 pulls
+// cost 20% (a fat-spin premium). A pick the player can't afford is still
+// allowed — chooseRoundMode adds the shortfall to the debt on round start.
 export const ROUND_MODES = {
-  3: { pulls: 3 },
-  7: { pulls: 7 },
+  3: { pulls: 3, costPct: 0.1 },
+  7: { pulls: 7, costPct: 0.2 },
 };
 
 // Reward table for clearing a quota, indexed by rounds left when it happens.
@@ -235,6 +242,34 @@ export function quotaForCycle(cycle) {
 
 export function currentQuota(state) {
   return quotaForCycle(state.cycle);
+}
+
+// Entry price of a round mode: a share of the CURRENT quota (3 pulls = 10%,
+// 7 = 50%), so the fee scales with the debt you're chipping away at.
+// Used by the pull picker (PokeSlots.jsx chooseRoundMode), the ATM's MAX
+// clamp and the help text.
+export function roundCost(state, mode) {
+  const pct = ROUND_MODES[mode]?.costPct ?? 0;
+  return Math.max(1, Math.ceil(currentQuota(state) * pct));
+}
+
+// Coin ceiling for the ATM's MAX shortcut (and its default slider value):
+//   - with enough coins, exactly enough to finish the CURRENT quota —
+//     dumping the whole balance would just sit there past the quota;
+//   - otherwise everything EXCEPT one more round's entry fee, keeping the
+//     priciest mode that still leaves some coins in hand (7-pull if it
+//     fits strictly, else 3-pull, else nothing to reserve). Depositing
+//     your last coin would lock you out of spinning until the deadline.
+export function atmMaxDeposit(state) {
+  const coins = state.coins;
+  const remaining = Math.max(0, currentQuota(state) - (state.quotaPaid || 0));
+  if (coins >= remaining) return Math.min(remaining, state.debt);
+  const costs = Object.keys(ROUND_MODES)
+    .map(Number)
+    .map((mode) => roundCost(state, mode))
+    .sort((a, b) => b - a);
+  const reserve = costs.find((cost) => cost < coins) || 0;
+  return coins - reserve;
 }
 
 // Interest charged on whatever debt remains after a deadline payment.
