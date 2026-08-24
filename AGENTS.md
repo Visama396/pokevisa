@@ -155,6 +155,10 @@ sessions. When a phase is finished, mark it `[x]` here.
   MAX/default to just cover the remaining quota, or when short, everything
   except one more round's entry fee (priciest mode that still leaves coins).
 - All UI strings translated (9 languages); home card + changelog entry added.
+- Sprites are self-hosted copies of PokeAPI assets in `public/slots/`
+  (`sym-<id>.png` / `sym-shiny-<id>.png` = HOME renders used by the reel
+  symbols and Golden charms; `items/<name>.png` = charm icons), so a run
+  makes zero external requests.
 
 ## Ongoing conventions
 - Dev server: **never start, stop, or query it** — no `astro dev` commands
@@ -164,6 +168,10 @@ sessions. When a phase is finished, mark it `[x]` here.
   during development.
 - Migrations are applied manually in the Supabase SQL editor.
 - Reuse existing components/libs before creating new ones; comment new features.
+- When adding or changing a PokéSlots charm, download its icon into the app
+  (`public/slots/items/<name>.png`, from raw.githubusercontent.com/PokeAPI/
+  sprites) and set it as the charm's `file` — never hotlink PokeAPI/GitHub
+  URLs. Watch for slug mismatches (e.g. Poké Doll is `poke-doll.png`).
 
 **Do not run `astro build` during development.** The user runs `bun run dev` and `astro build` (or `npx astro build`) breaks the running dev server and adds unnecessary files. Test changes by visiting `localhost:4321` instead.
 

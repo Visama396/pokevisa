@@ -16,7 +16,9 @@ export const GRID_COLS = 5;
 export const GRID_ROWS = 3;
 export const GRID_CELLS = GRID_COLS * GRID_ROWS;
 
-const SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites";
+// Slot sprites are self-hosted copies of the PokeAPI sprites (public/slots/)
+// so pulls never hit the network — see symbolSprite/shinySymbolSprite below.
+const SLOT_SPRITES = "/slots";
 
 // ---------------------------------------------------------------------------
 // Symbols board
@@ -66,12 +68,12 @@ export const SYMBOLS = [
 export const SYMBOL_BY_ID = Object.fromEntries(SYMBOLS.map((s) => [s.id, s]));
 
 export function symbolSprite(id) {
-  return `${SPRITES}/pokemon/other/home/${SYMBOL_BY_ID[id].pokemonId}.png`;
+  return `${SLOT_SPRITES}/sym-${SYMBOL_BY_ID[id].pokemonId}.png`;
 }
 
 // Shiny variant of the HOME render — the Golden charms' icons.
 export function shinySymbolSprite(id) {
-  return `${SPRITES}/pokemon/other/home/shiny/${SYMBOL_BY_ID[id].pokemonId}.png`;
+  return `${SLOT_SPRITES}/sym-shiny-${SYMBOL_BY_ID[id].pokemonId}.png`;
 }
 
 // Localized reel-symbol name (falls back to English like t() does).
@@ -383,7 +385,7 @@ export const CHARMS = {
     symbolWeightMult: { lemon: 1.5, cherry: 1.5, clover: 1.5 },
   },
   "pokedoll": {
-    cost: 4, file: "pokedoll.png", emoji: "🧸",
+    cost: 4, file: "poke-doll.png", emoji: "🧸",
     pokedoll: true, // 3+ patterns in one pull pays out the current interest
   },
   "cleanse-tag": {

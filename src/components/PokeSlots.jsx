@@ -49,7 +49,9 @@ import {
 // effects, keeping behaviour identical under StrictMode.
 
 const fmt = (n) => Math.floor(n).toLocaleString("en-US");
-const ITEM_SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items";
+// Charm item sprites are self-hosted copies of the PokeAPI item sprites
+// (public/slots/items/) — no third-party requests during a run.
+const ITEM_SPRITES = "/slots/items";
 const GLOBAL_MULT_STEP = 1.5;
 // The pulls-left strip always shows this many slots; slots beyond the bought
 // round mode stay switched off.
