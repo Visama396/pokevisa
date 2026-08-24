@@ -34,31 +34,31 @@ const SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprite
 // upgrades over multiple rounds. Weights ≈ CloverPit probabilities x10.
 export const SYMBOLS = [
   {
-    id: "lemon", pokemonId: 102, baseValue: 4, weight: 194, emoji: "🍋",
+    id: "lemon", pokemonId: 102, baseValue: 2, weight: 194, emoji: "🍋",
     names: { en: "Exeggcute", es: "Exeggcute", fr: "Noeunoeuf", de: "Owei", it: "Exeggcute", ja: "タマタマ", ko: "아라리", "zh-hans": "蛋蛋", "zh-hant": "蛋蛋" },
   },
   {
-    id: "cherry", pokemonId: 420, baseValue: 5, weight: 194, emoji: "🍒",
+    id: "cherry", pokemonId: 420, baseValue: 2, weight: 194, emoji: "🍒",
     names: { en: "Cherubi", es: "Cherubi", fr: "Ceribou", de: "Kikugi", it: "Cherubi", ja: "チェリンボ", ko: "체리버", "zh-hans": "樱花宝", "zh-hant": "櫻花寶" },
   },
   {
-    id: "clover", pokemonId: 906, baseValue: 6, weight: 149, emoji: "🍀",
+    id: "clover", pokemonId: 906, baseValue: 3, weight: 149, emoji: "🍀",
     names: { en: "Sprigatito", es: "Sprigatito", fr: "Poussacha", de: "Felori", it: "Sprigatito", ja: "ニャオハ", ko: "나오하", "zh-hans": "新叶喵", "zh-hant": "新葉喵" },
   },
   {
-    id: "bell", pokemonId: 358, baseValue: 7, weight: 149, emoji: "🔔",
+    id: "bell", pokemonId: 358, baseValue: 3, weight: 149, emoji: "🔔",
     names: { en: "Chimecho", es: "Chimecho", fr: "Éoko", de: "Palimpalim", it: "Chimecho", ja: "チリーン", ko: "치렁", "zh-hans": "风铃铃", "zh-hant": "風鈴鈴" },
   },
   {
-    id: "diamond", pokemonId: 703, baseValue: 8, weight: 119, emoji: "💎",
+    id: "diamond", pokemonId: 703, baseValue: 5, weight: 119, emoji: "💎",
     names: { en: "Carbink", es: "Carbink", fr: "Strassie", de: "Rocara", it: "Carbink", ja: "メレシー", ko: "멜리시", "zh-hans": "小碎钻", "zh-hant": "小碎鑽" },
   },
   {
-    id: "treasure", pokemonId: 1000, baseValue: 9, weight: 119, emoji: "💰",
+    id: "treasure", pokemonId: 1000, baseValue: 5, weight: 119, emoji: "💰",
     names: { en: "Gholdengo", es: "Gholdengo", fr: "Gromago", de: "Monetigo", it: "Gholdengo", ja: "サーフゴー", ko: "타부자고", "zh-hans": "赛富豪", "zh-hant": "賽富豪" },
   },
   {
-    id: "seven", pokemonId: 336, baseValue: 10, weight: 75, emoji: "7",
+    id: "seven", pokemonId: 336, baseValue: 7, weight: 75, emoji: "7",
     names: { en: "Seviper", es: "Seviper", fr: "Séviper", de: "Vipitis", it: "Seviper", ja: "ハブネーク", ko: "세비퍼", "zh-hans": "饭匙蛇", "zh-hant": "飯匙蛇" },
   },
 ];
@@ -67,6 +67,11 @@ export const SYMBOL_BY_ID = Object.fromEntries(SYMBOLS.map((s) => [s.id, s]));
 
 export function symbolSprite(id) {
   return `${SPRITES}/pokemon/other/home/${SYMBOL_BY_ID[id].pokemonId}.png`;
+}
+
+// Shiny variant of the HOME render — the Golden charms' icons.
+export function shinySymbolSprite(id) {
+  return `${SPRITES}/pokemon/other/home/shiny/${SYMBOL_BY_ID[id].pokemonId}.png`;
 }
 
 // Localized reel-symbol name (falls back to English like t() does).
@@ -182,6 +187,20 @@ export function createRunState() {
     quotaPaid: 0,
     lastMode: null, // 3 | 7 — set when the current round's pulls are picked
     awaitingChoice: true,
+    // Pending Luck for the next spin (Amulet Coin / Spell Tag). Consumed by
+    // rollGrid() and reset after every pull — an invisible board modifier.
+    luck: 0,
+    // Cleanse Tag stacks: every symbol's coin value rises by this amount
+    // (one stack on purchase, one more per pull that lands 5+ patterns).
+    cleanseStacks: 0,
+    // Golden charm / Griseous Orb growth: permanent per-run bumps to symbol
+    // values and pattern multipliers earned by scoring modified cells.
+    goldenLevels: {},
+    chainLevels: {},
+    // Cell indices carrying the Golden/Chain modifiers on the CURRENT grid
+    // (re-rolled every pull by rollModifiers; used for scoring and rendering).
+    goldenCells: [],
+    chainCells: [],
     // Shop rerolls bought this cycle; drives the escalating rerollCost().
     rerolls: 0,
     grid: [...STARTER_GRID],
@@ -192,15 +211,15 @@ export function createRunState() {
   };
 }
 
-export const START_COINS = 50;
-export const START_DEBT = 5000;
+export const START_COINS = 70;
+export const START_DEBT = 50000;
 export const INTEREST_RATE = 0.08;
-export const MAX_CHARMS = 6;
+export const MAX_CHARMS = 8;
 
 // Rerolling the Rotom Phone's offers costs COINS (not tickets) and the price
 // doubles with every reroll inside the current quota cycle — it resets back to
 // the base cost when a quota is cleared, together with the shop itself.
-export const REROLL_BASE_COST = 40;
+export const REROLL_BASE_COST = 3;
 export const REROLL_COST_GROWTH = 2;
 export function rerollCost(state) {
   return REROLL_BASE_COST * Math.pow(REROLL_COST_GROWTH, state.rerolls || 0);
@@ -223,8 +242,8 @@ export const ROUNDS_PER_QUOTA = 3;
 // who can't pay either loses the run on the spot (checked by PokeSlots.jsx
 // whenever the pull picker opens).
 export const ROUND_MODES = {
-  3: { pulls: 3, costPct: 0.05, tickets: 4 },
-  7: { pulls: 7, costPct: 0.1, tickets: 2 },
+  3: { pulls: 3, costPct: 0.03, tickets: 8 },
+  7: { pulls: 7, costPct: 0.065, tickets: 3 },
 };
 
 // Ticket price of a round when the player can't (or won't) pay its coin fee.
@@ -304,67 +323,138 @@ export function interestForDebt(debt) {
 // ---------------------------------------------------------------------------
 // Charms — Pokémon held items standing in for CloverPit's lucky charms
 // ---------------------------------------------------------------------------
-// Passive effects read by symbolValue/patternMult/rollWeights/quota rewards.
+// Passive effects read by symbolValue/patternMult/rollWeights/resolvePull.
 // focus-band is the exception: it is consumed to survive one missed deadline.
-// `file` is a PokeAPI item sprite; `emoji` is the fallback if it 404s.
+// `cost` is the FIXED ticket price in the Rotom Phone shop; `file` is a
+// PokeAPI item sprite; `emoji` is the fallback if it 404s.
 export const CHARMS = {
   "silk-scarf": {
-    tier: 6, file: "silk-scarf.png", emoji: "🧣",
+    cost: 2, file: "silk-scarf.png", emoji: "🧣",
     bonusValues: { lemon: 1, cherry: 1 },
   },
   "lucky-egg": {
-    tier: 8, file: "lucky-egg.png", emoji: "🥚",
+    cost: 5, file: "lucky-egg.png", emoji: "🥚",
     ticketMult: 2, // doubles the tickets from clearing a quota
   },
   "choice-specs": {
-    tier: 10, file: "choice-specs.png", emoji: "🕶️",
+    cost: 6, file: "choice-specs.png", emoji: "🕶️",
     patternBonus: { DIAG: 2, ZIG: 2, ZAG: 2 },
   },
   "muscle-band": {
-    tier: 10, file: "muscle-band.png", emoji: "💪",
+    cost: 6, file: "muscle-band.png", emoji: "💪",
     patternBonus: { HOR: 2, HOR_L: 2, HOR_XL: 2 },
   },
   "focus-band": {
-    tier: 10, file: "focus-band.png", emoji: "🎗️",
+    cost: 7, file: "focus-band.png", emoji: "🎗️",
     focusBand: true,
   },
   "luck-incense": {
-    tier: 12, file: "luck-incense.png", emoji: "🪔",
+    cost: 5, file: "luck-incense.png", emoji: "🪔",
     payoutMult: 1.3,
   },
   "wide-lens": {
-    tier: 12, file: "wide-lens.png", emoji: "🔍",
-    rareWeightMult: 1.6, // boosts diamond/treasure/seven drop weight
+    cost: 7, file: "wide-lens.png", emoji: "🔍",
+    // Carbink / Gholdengo / Seviper drop ~60% more often
+    symbolWeightMult: { diamond: 1.6, treasure: 1.6, seven: 1.6 },
   },
   "metal-coat": {
-    tier: 12, file: "metal-coat.png", emoji: "🧲",
+    cost: 6, file: "metal-coat.png", emoji: "🧲",
     bonusValues: { bell: 2, diamond: 2 },
   },
   "amulet-coin": {
-    tier: 16, file: "amulet-coin.png", emoji: "🪙",
-    payoutMult: 1.5,
+    cost: 1, file: "amulet-coin.png", emoji: "🪙",
+    amuletCoin: true, // 10% chance per pull: refund the pull + Luck for it
   },
   "super-repel": {
-    tier: 18, file: "super-repel.png", emoji: "🚫",
-    removeSymbols: ["lemon"], // lemons stop appearing entirely
+    cost: 6, file: "super-repel.png", emoji: "🚫",
+    removeSymbols: ["lemon"], // Exeggcute stops appearing entirely
   },
   "magnet": {
-    tier: 22, file: "magnet.png", emoji: "🧲",
+    cost: 2, file: "magnet.png", emoji: "🧲",
     magnet: true, // nudges one cell toward the grid's majority symbol
   },
   "gold-bottle-cap": {
-    tier: 14, file: "gold-bottle-cap.png", emoji: "🧴",
+    cost: 8, file: "gold-bottle-cap.png", emoji: "🧴",
     bonusValues: { seven: 4 },
+  },
+  "big-mushroom": {
+    cost: 4, file: "big-mushroom.png", emoji: "🍄",
+    // Exeggcute / Cherubi / Sprigatito drop ~50% more often
+    symbolWeightMult: { lemon: 1.5, cherry: 1.5, clover: 1.5 },
+  },
+  "pokedoll": {
+    cost: 4, file: "pokedoll.png", emoji: "🧸",
+    pokedoll: true, // 3+ patterns in one pull pays out the current interest
+  },
+  "cleanse-tag": {
+    cost: 3, file: "cleanse-tag.png", emoji: "🏷️",
+    cleanseTag: true, // every symbol is worth +1; +1 more per 5-pattern pull
+  },
+  "spell-tag": {
+    cost: 3, file: "spell-tag.png", emoji: "👻",
+    spellTag: true, // +7 Luck on the last pull of each round
+  },
+  // Golden charms: each spin, cells of their symbol may turn GOLDEN. Scoring
+  // a pattern with a golden cell permanently raises that symbol's base value.
+  // Their icon is the symbol's shiny Pokémon HOME render (`sprite` field).
+  "golden-lemon": { cost: 1, sprite: shinySymbolSprite("lemon"), emoji: "✨🍋", goldenSymbol: "lemon" },
+  "golden-cherry": { cost: 1, sprite: shinySymbolSprite("cherry"), emoji: "✨🍒", goldenSymbol: "cherry" },
+  "golden-clover": { cost: 2, sprite: shinySymbolSprite("clover"), emoji: "✨🍀", goldenSymbol: "clover" },
+  "golden-bell": { cost: 2, sprite: shinySymbolSprite("bell"), emoji: "✨🔔", goldenSymbol: "bell" },
+  "golden-diamond": { cost: 3, sprite: shinySymbolSprite("diamond"), emoji: "✨💎", goldenSymbol: "diamond" },
+  "golden-treasure": { cost: 3, sprite: shinySymbolSprite("treasure"), emoji: "✨💰", goldenSymbol: "treasure" },
+  "golden-seven": { cost: 4, sprite: shinySymbolSprite("seven"), emoji: "✨7️⃣", goldenSymbol: "seven" },
+  // Griseous Orb: rares may turn CHAINED; scoring a pattern with a chained
+  // cell permanently raises that pattern type's multiplier.
+  "griseous-orb": {
+    cost: 4, file: "griseous-orb.png", emoji: "🔮",
+    chainSymbols: ["diamond", "treasure", "seven"],
   },
 };
 
+// Modifier chances per cell, rolled every spin (see rollModifiers).
+export const GOLDEN_CHANCE = 0.2;
+export const CHAIN_CHANCE = 0.12;
+
+// Roll the Golden/Chain modifiers for a freshly landed grid: returns the
+// indices of the cells carrying each modifier (stored on the run state so
+// both scoring and rendering read the same flags).
+export function rollModifiers(state, grid) {
+  const goldenOf = {};
+  for (const c of state.charms) {
+    const sym = CHARMS[c].goldenSymbol;
+    if (sym) goldenOf[sym] = true;
+  }
+  const chainSyms = new Set();
+  for (const c of state.charms) for (const s of CHARMS[c].chainSymbols || []) chainSyms.add(s);
+  const golden = [];
+  const chain = [];
+  for (let i = 0; i < grid.length; i++) {
+    if (goldenOf[grid[i]] && Math.random() < GOLDEN_CHANCE) golden.push(i);
+    if (chainSyms.has(grid[i]) && Math.random() < CHAIN_CHANCE) chain.push(i);
+  }
+  return { golden, chain };
+}
+
+// Amulet Coin trigger: chance and Luck granted to that spin when it fires.
+export const AMULET_COIN_CHANCE = 0.1;
+export const AMULET_COIN_LUCK = 4;
+// Spell Tag: Luck granted to the last pull of a round.
+export const SPELL_TAG_LUCK = 7;
+
+// Interest the ATM pays on the CURRENT deposit (quotaPaid) after every round;
+// Pokédoll pays out the same amount whenever 3+ patterns hit in one pull.
+export const DEPOSIT_INTEREST_RATE = 0.07;
+export function depositInterest(state) {
+  return Math.floor((state.quotaPaid || 0) * DEPOSIT_INTEREST_RATE);
+}
+
 export const CHARM_IDS = Object.keys(CHARMS);
 
-const RARE_SYMBOLS = new Set(["diamond", "treasure", "seven"]);
-
-// Current coin value of a symbol, including upgrades and charm bonuses.
+// Current coin value of a symbol, including upgrades, charm bonuses, the
+// Cleanse Tag's all-symbol bonus and Golden charm growth.
 export function symbolValue(state, symId) {
-  let value = SYMBOL_BY_ID[symId].baseValue + (state.upgrades.symbol[symId] || 0);
+  let value = SYMBOL_BY_ID[symId].baseValue + (state.upgrades.symbol[symId] || 0) + (state.cleanseStacks || 0) + (state.goldenLevels?.[symId] || 0);
   for (const charmId of state.charms) {
     const bonus = CHARMS[charmId].bonusValues?.[symId];
     if (bonus) value += bonus;
@@ -372,9 +462,10 @@ export function symbolValue(state, symId) {
   return value;
 }
 
-// Current multiplier of a pattern type, including upgrades and charm bonuses.
+// Current multiplier of a pattern type, including upgrades, charm bonuses and
+// Griseous Orb chain growth.
 export function patternMult(state, type) {
-  let mult = BASE_PATTERN_MULT[type] + (state.upgrades.pattern[type] || 0);
+  let mult = BASE_PATTERN_MULT[type] + (state.upgrades.pattern[type] || 0) + (state.chainLevels?.[type] || 0);
   for (const charmId of state.charms) {
     const bonus = CHARMS[charmId].patternBonus?.[type];
     if (bonus) mult += bonus;
@@ -382,14 +473,18 @@ export function patternMult(state, type) {
   return mult;
 }
 
-// Drop weights for a spin, after Repel (removal) and Wide Lens (rare boost).
+// Drop weights for a spin, after Repel (removal) and the charms' per-symbol
+// weight multipliers (Wide Lens boosts the rares, Big Mushroom the commons).
 export function rollWeights(state) {
-  const rareBoost = state.charms.some((c) => CHARMS[c].rareWeightMult);
   const removed = new Set(state.charms.flatMap((c) => CHARMS[c].removeSymbols || []));
   return SYMBOLS.map((s) => {
     if (removed.has(s.id)) return 0;
-    if (rareBoost && RARE_SYMBOLS.has(s.id)) return s.weight * 1.6;
-    return s.weight;
+    let weight = s.weight;
+    for (const c of state.charms) {
+      const mult = CHARMS[c].symbolWeightMult?.[s.id];
+      if (mult) weight *= mult;
+    }
+    return weight;
   });
 }
 
@@ -406,6 +501,19 @@ function weightedPick(weights) {
 export function rollGrid(state) {
   const weights = rollWeights(state);
   const grid = Array.from({ length: GRID_CELLS }, () => weightedPick(weights));
+  // Luck (Amulet Coin / Spell Tag): guarantees that many cells show ONE
+  // randomly chosen symbol. Positions stay random, so high Luck stacks the
+  // board without promising an aligned pattern.
+  const luck = Math.min(Math.floor(state.luck || 0), GRID_CELLS);
+  if (luck > 0) {
+    const symId = weightedPick(weights);
+    const idxs = grid.map((_, i) => i);
+    for (let i = idxs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+    }
+    for (const i of idxs.slice(0, luck)) grid[i] = symId;
+  }
   // Magnet charm: convert one off-symbol cell to the grid's majority symbol,
   // nudging half-finished patterns toward completion.
   if (state.charms.some((c) => CHARMS[c].magnet)) {
@@ -462,7 +570,7 @@ export function evaluateGrid(state, grid) {
     raw += symbolValue(state, m.symbol) * m.cells.length * patternMult(state, m.type);
   }
   // Global Symbols Multiplier (repeatable shop upgrade, x1.5 each level)
-  // stacked with Amulet Coin / Luck Incense.
+  // stacked with Luck Incense.
   let payoutMult = Math.pow(1.5, state.upgrades.global || 0);
   for (const charmId of state.charms) {
     if (CHARMS[charmId].payoutMult) payoutMult *= CHARMS[charmId].payoutMult;
@@ -486,8 +594,8 @@ export function upgradeCost(kind, count) {
   return Math.ceil(base * Math.pow(growth, count));
 }
 
-export function charmCost(charmId, round) {
-  return Math.ceil(CHARMS[charmId].tier * (1 + 0.25 * (round - 1)));
+export function charmCost(charmId) {
+  return CHARMS[charmId].cost;
 }
 
 function pickRandom(arr, n) {
@@ -506,7 +614,7 @@ export function generateShopOffers(state) {
   const charmOffers = pickRandom(unowned, 1).map((id) => ({
     kind: "charm",
     id,
-    cost: charmCost(id, state.cycle),
+    cost: charmCost(id),
   }));
   // The Symbols Multiplier is the machine's core dial, so it is ALWAYS in
   // stock next to two rotating upgrades.

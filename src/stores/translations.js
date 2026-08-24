@@ -2034,6 +2034,18 @@ const ui = {
     en: "Quota due", es: "Cuota a pagar", fr: "Quote-part due", de: "Fällige Rate", it: "Rata dovuta",
     ja: "支払期限", ko: "지불 기한", "zh-hans": "应付配额", "zh-hant": "應付配額",
   },
+  "Deposit": {
+    en: "Deposit", es: "Depósito", fr: "Dépôt", de: "Einzahlung", it: "Deposito",
+    ja: "預け入れ額", ko: "예치금", "zh-hans": "存款", "zh-hant": "存款",
+  },
+  "Interest (7%)": {
+    en: "Interest (7%)", es: "Interés (7%)", fr: "Intérêts (7 %)", de: "Zinsen (7 %)", it: "Interessi (7%)",
+    ja: "利息（7%）", ko: "이자 (7%)", "zh-hans": "利息（7%）", "zh-hant": "利息（7%）",
+  },
+  "Deposits earn 7% interest, paid out after every round.": {
+    en: "Deposits earn 7% interest, paid out after every round.", es: "Los depósitos ganan un 7% de interés, pagado tras cada ronda.", fr: "Les dépôts rapportent 7 % d'intérêts, versés après chaque manche.", de: "Einzahlungen bringen 7 % Zinsen, ausgezahlt nach jeder Runde.", it: "I depositi fruttano il 7% di interessi, pagati dopo ogni turno.",
+    ja: "預け入れは毎ラウンドの後に7%の利息として払い戻される。", ko: "예치금은 매 라운드 후 7%의 이자로 지급된다.", "zh-hans": "存款每回合后支付7%利息。", "zh-hant": "存款每回合後支付7%利息。",
+  },
   "Your coins": {
     en: "Your coins", es: "Tus monedas", fr: "Tes pièces", de: "Deine Münzen", it: "Le tue monete",
     ja: "所持コイン", ko: "보유 코인", "zh-hans": "你的金币", "zh-hant": "你的金幣",
@@ -2062,9 +2074,9 @@ const ui = {
     en: "Keep", es: "Cerrar", fr: "Fermer", de: "Behalten", it: "Chiudi",
     ja: "閉じる", ko: "닫기", "zh-hans": "关闭", "zh-hant": "關閉",
   },
-  "Focus Band will halve the quota for you — once": {
-    en: "Focus Band will halve the quota for you — once", es: "La Banda Focus reducirá la cuota a la mitad — una sola vez", fr: "Le Bandeau Focus divisera la quote-part par deux — une seule fois", de: "Das Focus-Band halbiert die Rate — genau einmal", it: "La Fascia Concentrazione dimezzerà la rata — una sola volta",
-    ja: "がんばリバンドが一度だけ分割払いを半減する", ko: "승부밴드가 단 한 번 분할금을 반으로 줄여준다", "zh-hans": "气势绑带会为你把配额减半——仅一次", "zh-hant": "氣勢綁帶會為你把配額減半——僅一次",
+  "Focus Band: wipes the quota for free — your wallet is emptied, but you get 7 pulls": {
+    en: "Focus Band: wipes the quota for free — your wallet is emptied, but you get 7 pulls", es: "Banda Focus: borra la cuota gratis; tu monedero se vacía, pero recibes 7 tiradas", fr: "Bandeau Focus : efface la quote-part gratuitement ; ta bourse est vidée, mais tu obtiens 7 tirages", de: "Focus-Band: löscht die Rate kostenlos — dein Beutel wird geleert, aber du erhältst 7 Züge", it: "Fascia Concentrazione: cancella la rata gratis; il portamonete viene svuotato, ma ottieni 7 slate",
+    ja: "がんばリバンド：分割払いを無料で消滅。コインは空になるが、レバー7回をもらえる。", ko: "승부밴드: 분할금을 무료로 지워준다. 코인은 모두 사라지지만 레버 7회를 얻는다.", "zh-hans": "气势绑带：免费清除配额——钱包会被清空，但你会获得7次拉杆。", "zh-hant": "氣勢綁帶：免費清除配額——錢包會被清空，但你會獲得7次拉桿。",
   },
   "Each round, buy 3 pulls (5% of the quota) or 7 (10%) — paying with coins earns 4 tickets (3-pull) or 2 (7-pull). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead. No coins and no tickets? You lose.": {
     en: "Each round, buy 3 pulls (5% of the quota) or 7 (10%) — paying with coins earns 4 tickets (3-pull) or 2 (7-pull). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead. No coins and no tickets? You lose.",
@@ -2111,16 +2123,16 @@ const ui = {
     "zh-hans": "牌型只支付金币。清空配额可获得券——把券花在护符和永久升级上。",
     "zh-hant": "牌型只支付金幣。清空配額可獲得券——把券花在護符和永久升級上。",
   },
-  "Unpaid debt grows 8% interest at every deadline. Overpay early to dodge it.": {
-    en: "Unpaid debt grows 8% interest at every deadline. Overpay early to dodge it.",
-    es: "La deuda sin pagar crece un 8% de interés en cada fecha límite. Paga de más pronto para evitarla.",
-    fr: "La dette impayée grossit de 8 % d'intérêts à chaque date limite. Paie plus tôt pour l'éviter.",
-    de: "Unbezahlte Schulden wachsen bei jeder Fälligkeit um 8 % Zinsen. Zahle früh extra, um sie zu vermeiden.",
-    it: "Il debito non pagato cresce dell'8% di interessi a ogni scadenza. Paga in anticipo per evitarlo.",
-    ja: "未払いの借金は期限ごとに8%の利息で増える。早めに多く払って回避しよう。",
-    ko: "미납 빚은 기한마다 8%의 이자가 붙는다. 미리 갚아서 피해라.",
-    "zh-hans": "未还债务在每个截止日增长8%利息。尽早多还可避免。",
-    "zh-hant": "未還債務在每個截止日增長8%利息。儘早多還可避免。",
+  "Unpaid debt grows 8% interest at every deadline — but deposits earn 7% interest, paid by the ATM after every round.": {
+    en: "Unpaid debt grows 8% interest at every deadline — but deposits earn 7% interest, paid by the ATM after every round.",
+    es: "La deuda sin pagar crece un 8% de interés en cada fecha límite, pero los depósitos ganan un 7% que el cajero paga tras cada ronda.",
+    fr: "La dette impayée grossit de 8 % d'intérêts à chaque date limite — mais les dépôts rapportent 7 % d'intérêts, versés par le distributeur après chaque manche.",
+    de: "Unbezahlte Schulden wachsen bei jeder Fälligkeit um 8 % Zinsen — dafür bringen Einlagen 7 % Zinsen, ausgezahlt nach jeder Runde.",
+    it: "Il debito non pagato cresce dell'8% di interessi a ogni scadenza — ma i depositi fruttano il 7%, pagati dal bancomat dopo ogni turno.",
+    ja: "未払いの借金は期限ごとに8%の利息で増える。ただし預け入れは毎ラウンドの後に7%の利息としてATMから払い戻される。",
+    ko: "미납 빚은 기한마다 8%의 이자가 붙는다. 대신 예치금은 매 라운드 후 ATM이 7% 이자로 지급한다.",
+    "zh-hans": "未还债务在每个截止日增长8%利息——但存款每回合后可获得ATM支付的7%利息。",
+    "zh-hant": "未還債務在每個截止日增長8%利息——但存款每回合後可獲得ATM支付的7%利息。",
   },
   "Clear the whole debt to escape. That's the win.": {
     en: "Clear the whole debt to escape. That's the win.", es: "Liquidar toda la deuda para escapar. Esa es la victoria.", fr: "Solde toute la dette pour t'échapper. C'est ça, la victoire.", de: "Zahl den ganzen Schulden ab, um zu entkommen. Das ist der Sieg.", it: "Estingui tutto il debito per fuggire. Questa è la vittoria.",
@@ -2309,8 +2321,8 @@ const ui = {
   },
   "charm-focus-band": { en: "Focus Band" },
   "focus-band-desc": {
-    en: "Once per run, halves a quota you can't afford (consumed).", es: "Una vez por partida, reduce a la mitad una cuota que no puedas pagar (se consume).", fr: "Une fois par partie, divise par deux une quote-part impayable (consommé).", de: "Einmal pro Run halbiert er eine unbezahlbare Rate (wird verbraucht).", it: "Una volta per partita, dimezza una rata che non puoi pagare (consumata).",
-    ja: "1回限り、払えない分割払いを半減する（消費）。", ko: "1회 한정, 낼 수 없는 분할금을 반으로 줄인다(소모).", "zh-hans": "每局一次，将付不起的配额减半（消耗）。", "zh-hant": "每局一次，將付不起的配額減半（消耗）。",
+    en: "When you can't pay a quota, wipes it, empties your coins and grants a free 7-pull round (consumed).", es: "Cuando no puedas pagar una cuota, la borra, vacía tus monedas y otorga una ronda gratis de 7 tiradas (se consume).", fr: "Quand une quote-part est impayable, l'efface, vide tes pièces et offre une manche gratuite de 7 tirages (consommé).", de: "Wenn du eine Rate nicht zahlen kannst, löscht er sie, leert deine Münzen und gewährt eine kostenlose Runde mit 7 Zügen (wird verbraucht).", it: "Quando non puoi pagare una rata, la cancella, svuota le tue monete e concede un turno gratuito da 7 slate (consumata).",
+    ja: "分割払いを払えないとき、それを消してコインを空にし、レバー7回の無料ラウンドをくれる（消費）。", ko: "분할금을 낼 수 없을 때 이를 지우고 코인을 비운 뒤 레버 7회 무료 라운드를 준다(소모).", "zh-hans": "当你付不起配额时，将其清除、清空你的金币，并赠送一次免费的7次拉杆回合（消耗）。", "zh-hant": "當你付不起配額時，將其清除、清空你的金幣，並贈送一次免費的7次拉桿回合（消耗）。",
   },
   "charm-luck-incense": { en: "Luck Incense" },
   "luck-incense-desc": {
@@ -2329,8 +2341,8 @@ const ui = {
   },
   "charm-amulet-coin": { en: "Amulet Coin" },
   "amulet-coin-desc": {
-    en: "All payouts ×1.5.", es: "Todos los premios ×1,5.", fr: "Tous les gains ×1,5.", de: "Alle Auszahlungen ×1,5.", it: "Tutti i premi ×1,5.",
-    ja: "すべての配当×1.5。", ko: "모든 배당 ×1.5.", "zh-hans": "所有派彩×1.5。", "zh-hant": "所有派彩×1.5。",
+    en: "10% chance per spin: refunds the pull and adds +4 Luck to it.", es: "10% de probabilidad por tirada: devuelve la tirada y le añade +4 de suerte.", fr: "10 % de chance par tirage : rembourse le tirage et lui ajoute +4 de Chance.", de: "10% Chance pro Zug: erstattet den Zug und verleiht ihm +4 Glück.", it: "10% di probabilità per tirata: rimborsa la tirata e le aggiunge +4 Fortuna.",
+    ja: "スピンごとに10%：その回のレバーを返上し、運+4を与える。", ko: "스핀마다 10% 확률: 해당 레버를 환불하고 행운 +4를 더한다.", "zh-hans": "每次旋转有10%概率：返还该次拉杆，并为它增加+4幸运。", "zh-hant": "每次旋轉有10%機率：返還該次拉桿，並為它增加+4幸運。",
   },
   "charm-super-repel": { en: "Super Repel" },
   "super-repel-desc": {
@@ -2346,6 +2358,78 @@ const ui = {
   "gold-bottle-cap-desc": {
     en: "Seviper is worth +5.", es: "Seviper vale +5.", fr: "Séviper vaut +5.", de: "Vipitis ist +5 wert.", it: "Seviper vale +5.",
     ja: "ハブネークの価値+5。", ko: "세비퍼의 가치 +5.", "zh-hans": "饭匙蛇价值+5。", "zh-hant": "飯匙蛇價值+5。",
+  },
+  "charm-big-mushroom": { en: "Big Mushroom" },
+  "big-mushroom-desc": {
+    en: "Exeggcute, Cherubi and Sprigatito appear ~50% more often.", es: "Exeggcute, Cherubi y Sprigatito aparecen ~50% más seguido.", fr: "Noeunoeuf, Ceribou et Poussacha apparaissent ~50% plus souvent.", de: "Owei, Kikugi und Felori erscheinen ~50% häufiger.", it: "Exeggcute, Cherubi e Sprigatito appaiono ~50% più spesso.",
+    ja: "タマタマ・チェリンボ・ニャオハの出現率が約5割増。", ko: "아라리·체리버·나오하 등장률 약 50% 증가.", "zh-hans": "蛋蛋、樱花宝、新叶喵出现率提高约50%。", "zh-hant": "蛋蛋、櫻花寶、新葉喵出現率提高約50%。",
+  },
+  "charm-pokedoll": { en: "Poké Doll" },
+  "pokedoll-desc": {
+    en: "When 3+ patterns hit in one pull, earn coins equal to your current interest.", es: "Cuando 3 o más patrones aciertan en una tirada, ganas monedas iguales a tu interés actual.", fr: "Quand 3 motifs ou plus tombent sur un tirage, gagne des pièces égales à tes intérêts actuels.", de: "Treffen bei einem Zug 3 oder mehr Muster, verdienst du Münzen in Höhe deiner aktuellen Zinsen.", it: "Quando 3 o più combinazioni escono in una tirata, guadagni monete pari ai tuoi interessi attuali.",
+    ja: "スピンでパターンが3つ以上成立すると、現在の利息分のコインを得る。", ko: "한 번의 레버에서 패턴이 3개 이상 당첨되면 현재 이자만큼의 코인을 얻는다.", "zh-hans": "一次拉杆命中3个以上牌型时，获得等于当前利息的金币。", "zh-hant": "一次拉桿命中3個以上牌型時，獲得等於當前利息的金幣。",
+  },
+  "charm-cleanse-tag": { en: "Cleanse Tag" },
+  "cleanse-tag-desc": {
+    en: "All symbols are worth +1, and +1 more whenever 5+ patterns hit in one pull.", es: "Todos los símbolos valen +1, y +1 más cuando 5 o más patrones aciertan en una tirada.", fr: "Tous les symboles valent +1, et encore +1 quand 5 motifs ou plus tombent sur un tirage.", de: "Alle Symbole sind +1 wert, und nochmals +1, wenn bei einem Zug 5 oder mehr Muster treffen.", it: "Tutti i simboli valgono +1, e altri +1 quando 5 o più combinazioni escono in una tirata.",
+    ja: "すべてのシンボルの価値+1。さらにスピンで5つ以上成立するたびに+1。", ko: "모든 심볼의 가치 +1. 한 번의 레버에서 패턴이 5개 이상 당첨될 때마다 추가로 +1.", "zh-hans": "所有图案价值+1，且每当一次拉杆命中5个以上牌型时再+1。", "zh-hant": "所有圖案價值+1，且每當一次拉桿命中5個以上牌型時再+1。",
+  },
+  "charm-spell-tag": { en: "Spell Tag" },
+  "spell-tag-desc": {
+    en: "The last pull of each round gets +7 Luck.", es: "La última tirada de cada ronda recibe +7 de suerte.", fr: "Le dernier tirage de chaque manche reçoit +7 de Chance.", de: "Der letzte Zug jeder Runde erhält +7 Glück.", it: "L'ultima tirata di ogni turno riceve +7 Fortuna.",
+    ja: "各ラウンドの最後のレバーに運+7。", ko: "각 라운드의 마지막 레버에 행운 +7.", "zh-hans": "每回合的最后一次拉杆获得+7幸运。", "zh-hant": "每回合的最後一次拉桿獲得+7幸運。",
+  },
+  "charm-golden-lemon": { en: "Golden Exeggcute" },
+  "golden-lemon-desc": {
+    en: "Each Exeggcute has a 20% chance to be Golden — scoring it permanently raises Exeggcute's base value.", es: "Cada Exeggcute tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Noeunoeuf a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Owei ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Exeggcute ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
+    ja: "タマタマは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "아라리는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "蛋蛋有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "蛋蛋有20%機率變為黃金——命中它時其基礎價值永久提升。",
+  },
+  "charm-golden-cherry": { en: "Golden Cherubi" },
+  "golden-cherry-desc": {
+    en: "Each Cherubi has a 20% chance to be Golden — scoring it permanently raises Cherubi's base value.", es: "Cada Cherubi tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Ceribou a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Kikugi ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Cherubi ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
+    ja: "チェリンボは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "체리버는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "樱花宝有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "櫻花寶有20%機率變為黃金——命中它時其基礎價值永久提升。",
+  },
+  "charm-golden-clover": { en: "Golden Sprigatito" },
+  "golden-clover-desc": {
+    en: "Each Sprigatito has a 20% chance to be Golden — scoring it permanently raises Sprigatito's base value.", es: "Cada Sprigatito tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Poussacha a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Felori ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Sprigatito ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
+    ja: "ニャオハは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "나오하는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "新叶喵有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "新葉喵有20%機率變為黃金——命中它時其基礎價值永久提升。",
+  },
+  "charm-golden-bell": { en: "Golden Chimecho" },
+  "golden-bell-desc": {
+    en: "Each Chimecho has a 20% chance to be Golden — scoring it permanently raises Chimecho's base value.", es: "Cada Chimecho tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Éoko a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Palimpalim ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Chimecho ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
+    ja: "チリーンは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "치렁은 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "风铃铃有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "風鈴鈴有20%機率變為黃金——命中它時其基礎價值永久提升。",
+  },
+  "charm-golden-diamond": { en: "Golden Carbink" },
+  "golden-diamond-desc": {
+    en: "Each Carbink has a 20% chance to be Golden — scoring it permanently raises Carbink's base value.", es: "Cada Carbink tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Strassie a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Rocara ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Carbink ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
+    ja: "メレシーは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "멜리시는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "小碎钻有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "小碎鑽有20%機率變為黃金——命中它時其基礎價值永久提升。",
+  },
+  "charm-golden-treasure": { en: "Golden Gholdengo" },
+  "golden-treasure-desc": {
+    en: "Each Gholdengo has a 20% chance to be Golden — scoring it permanently raises Gholdengo's base value.", es: "Cada Gholdengo tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Gromago a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Monetigo ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Gholdengo ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
+    ja: "サーフゴーは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "타부자고는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "赛富豪有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "賽富豪有20%機率變為黃金——命中它時其基礎價值永久提升。",
+  },
+  "charm-golden-seven": { en: "Golden Seviper" },
+  "golden-seven-desc": {
+    en: "Each Seviper has a 20% chance to be Golden — scoring it permanently raises Seviper's base value.", es: "Cada Seviper tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Séviper a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jeder Vipitis ist mit 20% Chance Golden — ihn zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Seviper ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
+    ja: "ハブネークは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "세비퍼는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "饭匙蛇有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "飯匙蛇有20%機率變為黃金——命中它時其基礎價值永久提升。",
+  },
+  "charm-griseous-orb": { en: "Griseous Orb" },
+  "griseous-orb-desc": {
+    en: "Carbink, Gholdengo and Seviper have a 12% chance to be Chained — scoring them permanently raises that pattern's multiplier.", es: "Carbink, Gholdengo y Seviper tienen un 12% de probabilidad de ser Encadenados — puntuarlos aumenta permanentemente el multiplicador de ese patrón.", fr: "Strassie, Gromago et Séviper ont 12 % de chance d'être Enchaînés — les marquer augmente définitivement le multiplicateur du motif.", de: "Rocara, Monetigo und Vipitis sind mit 12% Chance Verkettet — sie zu treffen erhöht den Multiplikator dieses Musters dauerhaft.", it: "Carbink, Gholdengo e Seviper hanno il 12% di probabilità di essere Incatenati — completarli aumenta permanentemente il moltiplicatore di quella combinazione.",
+    ja: "メレシー・サーフゴー・ハブネークは12%の確率でチェーンになる——成立させるとそのパターンの倍率が永久に上がる。", ko: "멜리시·타부자고·세비퍼는 12% 확률로 체인이 된다——당첨시키면 그 패턴의 배율이 영구히 오른다.", "zh-hans": "小碎钻、赛富豪、饭匙蛇有12%概率变为连锁——命中它们时该牌型倍率永久提升。", "zh-hant": "小碎鑽、賽富豪、飯匙蛇有12%機率變為連鎖——命中它們時該牌型倍率永久提升。",
+  },
+  "The Focus Band shatters! Quota wiped — seven pulls on the house.": {
+    en: "The Focus Band shatters! Quota wiped — seven pulls on the house.", es: "¡La Banda Focus se rompe! Cuota borrada: siete tiradas por la casa.", fr: "Le Bandeau Focus se brise ! Quote-part effacée — sept tirages offerts.", de: "Das Focus-Band zersplittert! Rate gelöscht — sieben Züge gehen auf das Haus.", it: "La Fascia Concentrazione va in frantumi! Rata cancellata — sette slate offerte.",
+    ja: "がんばリバンドが砕け散る！分割払いは消滅——レバー7回はサービスだ。", ko: "승부밴드가 산산조각난다! 분할금 소멸——레버 7회는 서비스다.", "zh-hans": "气势绑带碎裂了！配额被清除——7次拉杆由本店请客。", "zh-hant": "氣勢綁帶碎裂了！配額被清除——7次拉桿由本店請客。",
+  },
+  "The Pokédoll sells your interest on the spot.": {
+    en: "The Pokédoll sells your interest on the spot.", es: "El Muñeco Poké vende tu interés al instante.", fr: "La Poupée Pokémon vend tes intérêts sur place.", de: "Die Poké-Puppe verkauft deine Zinsen sofort.", it: "La Poké Bambola vende i tuoi interessi sul posto.",
+    ja: "ポケ人形が利息をその場で換金する。", ko: "포켓몬 인형이 이자를 그 자리에서 현금으로 바꾼다.", "zh-hans": "宝可梦玩偶当场把你的利息变现。", "zh-hant": "寶可夢玩偶當場把你的利息變現。",
+  },
+  "The Cleanse Tag hums — every symbol is worth more!": {
+    en: "The Cleanse Tag hums — every symbol is worth more!", es: "El amuleto purificador vibra: ¡todos los símbolos valen más!", fr: "Le talisman purifiant vibre — tous les symboles valent plus !", de: "Der Reinigungstalisman summt — alle Symbole sind mehr wert!", it: "L'amuleto purificante vibra: tutti i simboli valgono di più!",
+    ja: "おふだが低く鳴る——すべてのシンボルの価値が上がる！", ko: "부적이 울린다——모든 심볼의 가치가 올라간다!", "zh-hans": "洁净护符嗡嗡作响——所有图案都更值钱了！", "zh-hant": "潔淨護符嗡嗡作響——所有圖案都更值錢了！",
   },
 };
 
