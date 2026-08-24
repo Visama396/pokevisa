@@ -172,3 +172,26 @@
 .animate-spin3d {
   animation: spin3d 0.3s linear;
 }
+
+/* PokéSlots (src/components/PokeSlots.jsx): reels that haven't stopped yet
+   jitter vertically with motion blur while a spin is resolving. */
+@keyframes reel-blur {
+  0%   { transform: translateY(-16%); filter: blur(2.5px); }
+  50%  { transform: translateY(12%);  filter: blur(3.5px); }
+  100% { transform: translateY(-16%); filter: blur(2.5px); }
+}
+.animate-reel-blur {
+  animation: reel-blur 0.14s linear infinite;
+}
+
+/* PokéSlots jackpot banner: pops in oversized, overshoots and settles. */
+@keyframes jackpot-pop {
+  0%   { transform: scale(0.3) rotate(-6deg); opacity: 0; }
+  45%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
+  65%  { transform: scale(0.96) rotate(-1deg); }
+  85%  { transform: scale(1.04); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.animate-jackpot {
+  animation: jackpot-pop 0.9s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}

@@ -125,6 +125,31 @@ sessions. When a phase is finished, mark it `[x]` here.
   `isWalkable`. `VILLAGE_TILES`/`tileWalkable` unchanged; every walkable cell
   stays reachable (verified by flood-fill + unit checks).
 
+## Phase 7 — PokéSlots (DONE)
+- CloverPit-inspired slot machine at `/pokeslots` (`PokeSlots.jsx` + pure logic
+  in `src/lib/pokeslots.js`). 5×3 grid, 7 Pokémon symbols (Exeggcute/Cherubi/
+  Sprigatito/Chimecho/Carbink/Gholdengo/Seviper = CloverPit's lemon/cherry/
+  clover/bell/diamond/treasure/seven), 11 patterns decoded from the wiki icons.
+- Scoring: larger matched patterns swallow smaller contained ones; JACKPOT is
+  exempt both ways. Payout = Σ symbolValue×cells×patternMult × 1.5^global
+  upgrades × Amulet Coin/Luck Incense.
+- Symbols ARE the Pokémon (official localized names embedded in `SYMBOLS`,
+  extracted from pokedex.json — `symbolName(id, lang)`), values 18–63 ₽.
+- Round entry (rework): every round starts at a mandatory "choose your pulls"
+  screen — 3 pulls cost 25% of the quota (10 tickets + 2/spare pull at the
+  end) or 7 pulls cost 50% (5 tickets + 1/spare); shortfall is added to debt.
+  Clearing the quota early via ATM banks spare pulls as tickets and skips the
+  interest charge. Quota card shows only the current quota; total debt lives
+  in the ATM.
+- Economy: 70 starting coins, 5000 debt, quota 100×1.32^(r−1) UNCAPPED,
+  8% interest on unpaid debt after each deadline; win = debt cleared, lose =
+  can't pay quota. Pulls earn tickets → Rotom Phone shop:
+  12 charms (PokéAPI item sprites) + permanent symbol/pattern/global upgrades,
+  rerolls, charm selling. Focus Band halves one unpayable quota.
+- Balance calibrated via Monte Carlo sims (/tmp/opencode/slots-tune2.mjs):
+  naive play loses ~round 5, engaged play wins ~50% around round 10.
+- All UI strings translated (9 languages); home card + changelog entry added.
+
 ## Ongoing conventions
 - Dev server: `astro dev --background`; never run `astro build` during development.
 - Migrations are applied manually in the Supabase SQL editor.

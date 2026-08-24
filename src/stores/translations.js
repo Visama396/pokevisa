@@ -1934,6 +1934,379 @@ const ui = {
     en: "Save", es: "Guardar", fr: "Enregistrer", de: "Speichern", it: "Salva",
     ja: "保存", ko: "저장", "zh-hans": "保存", "zh-hant": "儲存",
   },
+
+  // ------------------------------------------------------------------
+  // PokéSlots (src/components/PokeSlots.jsx)
+  // ------------------------------------------------------------------
+  "Pay your debt to Team Rocket or fall into the pit": {
+    en: "Pay your debt to Team Rocket or fall into the pit", es: "Paga tu deuda al Equipo Rocket o cae al pozo", fr: "Rembourse ta dette à la Team Rocket ou tombe dans le puits", de: "Zahle deine Schulden an Team Rocket oder stürze in die Grube", it: "Paga il tuo debito al Team Rocket o precipita nella fossa",
+    ja: "ロケット団に借金を返せ。さもなくば穴へ落ちる", ko: "로켓단에 빚을 갚아라. 아니면 구멍으로 떨어진다", "zh-hans": "向火箭队还债，否则坠入深渊", "zh-hant": "向火箭隊還債，否則墜入深淵",
+  },
+  "Coins": {
+    en: "Coins", es: "Monedas", fr: "Pièces", de: "Münzen", it: "Monete",
+    ja: "コイン", ko: "코인", "zh-hans": "金币", "zh-hant": "金幣",
+  },
+  "Debt": {
+    en: "Debt", es: "Deuda", fr: "Dette", de: "Schulden", it: "Debito",
+    ja: "借金", ko: "빚", "zh-hans": "债务", "zh-hant": "債務",
+  },
+  "quota": {
+    en: "quota", es: "cuota", fr: "quote-part", de: "Rate", it: "rata",
+    ja: "分割払い", ko: "분할금", "zh-hans": "配额", "zh-hant": "配額",
+  },
+  "Tickets": {
+    en: "Tickets", es: "Tickets", fr: "Tickets", de: "Tickets", it: "Biglietti",
+    ja: "チケット", ko: "티켓", "zh-hans": "券", "zh-hant": "券",
+  },
+  "Round": {
+    en: "Round", es: "Ronda", fr: "Manche", de: "Runde", it: "Turno",
+    ja: "ラウンド", ko: "라운드", "zh-hans": "回合", "zh-hant": "回合",
+  },
+  "Pulls left": {
+    en: "Pulls left", es: "Tiradas restantes", fr: "Tirages restants", de: "Züge übrig", it: "Slate rimaste",
+    ja: "残りレバー回数", ko: "남은 레버 횟수", "zh-hans": "剩余拉杆次数", "zh-hant": "剩餘拉桿次數",
+  },
+  "PULL": {
+    en: "PULL", es: "TIRAR", fr: "TIRER", de: "ZIEHEN", it: "TIRA",
+    ja: "回す", ko: "돌리기", "zh-hans": "拉杆", "zh-hant": "拉桿",
+  },
+  "Shop": {
+    en: "Shop", es: "Tienda", fr: "Boutique", de: "Laden", it: "Negozio",
+    ja: "ショップ", ko: "상점", "zh-hans": "商店", "zh-hant": "商店",
+  },
+  "Charms": {
+    en: "Charms", es: "Amuletos", fr: "Grigris", de: "Glücksbringer", it: "Amuleti",
+    ja: "おまもり", ko: "부적", "zh-hans": "护符", "zh-hant": "護符",
+  },
+  "Symbols": {
+    en: "Symbols", es: "Símbolos", fr: "Symboles", de: "Symbole", it: "Simboli",
+    ja: "シンボル", ko: "심볼", "zh-hans": "图案", "zh-hant": "圖案",
+  },
+  "Patterns": {
+    en: "Patterns", es: "Patrones", fr: "Motifs", de: "Muster", it: "Combinazioni",
+    ja: "パターン", ko: "패턴", "zh-hans": "牌型", "zh-hant": "牌型",
+  },
+  "Out of pulls! Pay the quota at the ATM before time runs out": {
+    en: "Out of pulls! Pay the quota at the ATM before time runs out", es: "¡Sin tiradas! Paga la cuota en el cajero antes de que acabe el tiempo", fr: "Plus de tirages ! Paie la quote-part au distributeur avant la fin du temps", de: "Keine Züge mehr! Zahle die Rate am Automaten, bevor die Zeit abläuft", it: "Slate esaurite! Paga la rata all'ATM prima che scada il tempo",
+    ja: "レバー回数を使い切った！時間切れの前にATMで支払え", ko: "레버 횟수 소진! 시간이 다 되기 전에 ATM에서 분할금을 지불해라", "zh-hans": "拉杆次数用完！在时间结束前到ATM支付配额", "zh-hant": "拉桿次數用完！在時間結束前到ATM支付配額",
+  },
+  "gone": {
+    en: "gone", es: "eliminado", fr: "absent", de: "entfernt", it: "assente",
+    ja: "出現しない", ko: "등장 안 함", "zh-hans": "已移除", "zh-hant": "已移除",
+  },
+  "Rotom Phone Shop": {
+    en: "Rotom Phone Shop", es: "Tienda del móvil Rotom", fr: "Boutique du Rotom Phone", de: "Rotom-Handy-Laden", it: "Negozio del Rotom Phone",
+    ja: "ロトム携帯ショップ", ko: "로토무폰 상점", "zh-hans": "洛托姆手机商店", "zh-hant": "洛托姆手機商店",
+  },
+  "Reroll": {
+    en: "Reroll", es: "Renovar", fr: "Relancer", de: "Neu ziehen", it: "Ritira",
+    ja: "リロール", ko: "다시 뽑기", "zh-hans": "刷新", "zh-hant": "重新整理",
+  },
+  "Sold out! Come back next round": {
+    en: "Sold out! Come back next round", es: "¡Agotado! Vuelve la próxima ronda", fr: "Épuisé ! Reviens à la prochaine manche", de: "Ausverkauft! Komm in der nächsten Runde wieder", it: "Esaurito! Torna al prossimo turno",
+    ja: "売り切れ！次のラウンドに来てね", ko: "품절! 다음 라운드에 다시 와라", "zh-hans": "售罄！下回合再来", "zh-hant": "售罄！下回合再來",
+  },
+  "Your charms": {
+    en: "Your charms", es: "Tus amuletos", fr: "Tes grigris", de: "Deine Glücksbringer", it: "I tuoi amuleti",
+    ja: "あなたのおまもり", ko: "내 부적", "zh-hans": "你的护符", "zh-hant": "你的護符",
+  },
+  "sell for": {
+    en: "sell for", es: "vender por", fr: "vendre pour", de: "verkaufen für", it: "vendere per",
+    ja: "売値", ko: "판매 가격", "zh-hans": "出售价", "zh-hant": "出售價",
+  },
+  "Click a charm to sell it": {
+    en: "Click a charm to sell it", es: "Haz clic en un amuleto para venderlo", fr: "Clique sur un grigri pour le vendre", de: "Klicke einen Glücksbringer an, um ihn zu verkaufen", it: "Clicca un amuleto per venderlo",
+    ja: "おまもりをクリックすると売れる", ko: "부적을 클릭하면 판매된다", "zh-hans": "点击护符即可出售", "zh-hant": "點擊護符即可出售",
+  },
+  "QUOTA DEADLINE!": {
+    en: "QUOTA DEADLINE!", es: "¡FECHA LÍMITE DE LA CUOTA!", fr: "DATE LIMITE DE LA QUOTE-PART !", de: "RATE FÄLLIG!", it: "SCADENZA DELLA RATA!",
+    ja: "分割払いの期限！", ko: "분할금 기한!", "zh-hans": "配额截止！", "zh-hant": "配額截止！",
+  },
+  "Giovanni": {
+    en: "Giovanni", es: "Giovanni", fr: "Giovanni", de: "Giovanni", it: "Giovanni",
+    ja: "サカキ", ko: "비주", "zh-hans": "坂木", "zh-hant": "坂木",
+  },
+  "Pay up, and maybe I'll let you keep pulling.": {
+    en: "Pay up, and maybe I'll let you keep pulling.", es: "Paga, y quizá te deje seguir tirando.", fr: "Paie, et je te laisserai peut-être continuer à tirer.", de: "Zahl, und vielleicht darfst du weiterziehen.", it: "Paga, e forse ti lascio continuare a tirare.",
+    ja: "払えば、続けさせてやるかもしれない。", ko: "갚으면 계속 돌리게 해줄지도 모르지.", "zh-hans": "付钱，我也许让你继续拉。", "zh-hant": "付錢，我也許讓你繼續拉。",
+  },
+  "You're short, trainer.": {
+    en: "You're short, trainer.", es: "Te falta dinero, entrenador.", fr: "Tu manques d'argent, dresseur.", de: "Dir fehlt Geld, Trainer.", it: "Ti mancano soldi, allenatore.",
+    ja: "金が足りないな、トレーナー。", ko: "돈이 모자라군, 트레이너.", "zh-hans": "你钱不够，训练家。", "zh-hant": "你錢不夠，訓練家。",
+  },
+  "Quota due": {
+    en: "Quota due", es: "Cuota a pagar", fr: "Quote-part due", de: "Fällige Rate", it: "Rata dovuta",
+    ja: "支払期限", ko: "지불 기한", "zh-hans": "应付配额", "zh-hant": "應付配額",
+  },
+  "Your coins": {
+    en: "Your coins", es: "Tus monedas", fr: "Tes pièces", de: "Deine Münzen", it: "Le tue monete",
+    ja: "所持コイン", ko: "보유 코인", "zh-hans": "你的金币", "zh-hant": "你的金幣",
+  },
+  "Remaining debt": {
+    en: "Remaining debt", es: "Deuda restante", fr: "Dette restante", de: "Restschuld", it: "Debito residuo",
+    ja: "残りの借金", ko: "남은 빚", "zh-hans": "剩余债务", "zh-hant": "剩餘債務",
+  },
+  "Interest after payment": {
+    en: "Interest after payment", es: "Interés tras el pago", fr: "Intérêts après paiement", de: "Zinsen nach Zahlung", it: "Interessi dopo il pagamento",
+    ja: "支払後の利息", ko: "지불 후 이자", "zh-hans": "付款后的利息", "zh-hant": "付款後的利息",
+  },
+  "MIN": {
+    en: "MIN", es: "MIN", fr: "MIN", de: "MIN", it: "MIN",
+    ja: "最小", ko: "최소", "zh-hans": "最少", "zh-hant": "最少",
+  },
+  "MAX": {
+    en: "MAX", es: "MAX", fr: "MAX", de: "MAX", it: "MAX",
+    ja: "最大", ko: "최대", "zh-hans": "最多", "zh-hant": "最多",
+  },
+  "Pay": {
+    en: "Pay", es: "Pagar", fr: "Payer", de: "Zahlen", it: "Paga",
+    ja: "支払う", ko: "지불", "zh-hans": "支付", "zh-hant": "支付",
+  },
+  "Keep": {
+    en: "Keep", es: "Cerrar", fr: "Fermer", de: "Behalten", it: "Chiudi",
+    ja: "閉じる", ko: "닫기", "zh-hans": "关闭", "zh-hant": "關閉",
+  },
+  "Focus Band will halve the quota for you — once": {
+    en: "Focus Band will halve the quota for you — once", es: "La Banda Focus reducirá la cuota a la mitad — una sola vez", fr: "Le Bandeau Focus divisera la quote-part par deux — une seule fois", de: "Das Focus-Band halbiert die Rate — genau einmal", it: "La Fascia Concentrazione dimezzerà la rata — una sola volta",
+    ja: "がんばリバンドが一度だけ分割払いを半減する", ko: "승부밴드가 단 한 번 분할금을 반으로 줄여준다", "zh-hans": "气势绑带会为你把配额减半——仅一次", "zh-hant": "氣勢綁帶會為你把配額減半——僅一次",
+  },
+  "How to play": {
+    en: "How to play", es: "Cómo jugar", fr: "Comment jouer", de: "Spielanleitung", it: "Come si gioca",
+    ja: "遊び方", ko: "플레이 방법", "zh-hans": "玩法说明", "zh-hant": "玩法說明",
+  },
+  "You get 7 pulls per round. Matching symbols in patterns pays coins.": {
+    en: "Every round you buy pulls: 3 (half price, 10 tickets + 2 per spare pull at the end) or 7 (5 tickets + 1 per spare pull).", es: "Cada ronda compras tiradas: 3 (mitad de precio, 10 tickets + 2 por tirada sobrante al final) o 7 (5 tickets + 1 por tirada sobrante).", fr: "Chaque manche, tu achètes des tirages : 3 (moitié prix, 10 tickets + 2 par tirage restant à la fin) ou 7 (5 tickets + 1 par tirage restant).", de: "Jede Runde kaufst du Züge: 3 (halber Preis, 10 Tickets + 2 pro übrigem Zug am Ende) oder 7 (5 Tickets + 1 pro übrigem Zug).", it: "A ogni turno compri le slate: 3 (metà prezzo, 10 biglietti + 2 per slata avanzata alla fine) o 7 (5 biglietti + 1 per slata avanzata).",
+    ja: "毎ラウンド、レバー回数を購入する：3回（半額、終了時にチケット10枚+残り1回につき2枚）か7回（チケット5枚+残り1回につき1枚）。", ko: "매 라운드 레버 횟수를 구매한다: 3회(반값, 종료 시 티켓 10장 + 남은 1회당 2장) 또는 7회(티켓 5장 + 남은 1회당 1장).", "zh-hans": "每回合购买拉杆次数：3次（半价，结束时10券+每剩余1次加2券）或7次（5券+每剩余1次加1券）。", "zh-hant": "每回合購買拉桿次數：3次（半價，結束時10券+每剩餘1次加2券）或7次（5券+每剩餘1次加1券）。",
+  },
+  "Each round ends with a quota you must pay at the ATM — or it's over.": {
+    en: "Each round ends with a quota you must pay at the ATM — or it's over.", es: "Cada ronda acaba con una cuota que debes pagar en el cajero, o se acabó.", fr: "Chaque manche se termine par une quote-part à payer au distributeur — sinon c'est fini.", de: "Jede Runde endet mit einer Rate am Automaten — sonst ist alles vorbei.", it: "Ogni turno finisce con una rata da pagare all'ATM — o è finita.",
+    ja: "各ラウンドの終わりにATMで分割払いを支払う。できなければ終わりだ。", ko: "각 라운드 끝에 ATM에서 분할금을 지불해야 한다. 못 하면 끝이다.", "zh-hans": "每回合结束时必须在ATM支付配额——否则游戏结束。", "zh-hant": "每回合結束時必須在ATM支付配額——否則遊戲結束。",
+  },
+  "Unpaid debt grows 8% interest every round. Overpay early to dodge it.": {
+    en: "Unpaid debt grows 8% interest every round. Overpay early to dodge it.", es: "La deuda sin pagar crece un 8% cada ronda. Paga de más pronto para evitarla.", fr: "La dette impayée grossit de 8% par manche. Paie plus tôt pour l'éviter.", de: "Unbezahlte Schulden wachsen jede Runde um 8%. Zahle früh extra, um sie zu vermeiden.", it: "Il debito non pagato cresce dell'8% ogni turno. Paga in anticipo per evitarlo.",
+    ja: "未払いの借金は毎ラウンド8%の利息で増える。早めに多く払って回避しよう。", ko: "미납 빚은 매 라운드 8%씩 늘어난다. 미리 갚아서 피해라.", "zh-hans": "未还债务每回合增长8%利息。尽早多还可避免。", "zh-hant": "未還債務每回合增長8%利息。儘早多還可避免。",
+  },
+  "Pulls earn tickets. Tickets buy charms and permanent upgrades in the shop.": {
+    en: "Pulls earn tickets. Tickets buy charms and permanent upgrades in the shop.", es: "Las tiradas dan tickets. Los tickets compran amuletos y mejoras permanentes en la tienda.", fr: "Les tirages donnent des tickets. Les tickets achètent grigris et améliorations permanentes.", de: "Züge bringen Tickets. Tickets kaufen Glücksbringer und permanente Upgrades.", it: "Le slate fanno biglietti. I biglietti comprano amuleti e potenziamenti permanenti.",
+    ja: "レバーを回すとチケットがもらえる。チケットでおまもりや永久アップグレードを買おう。", ko: "레버를 돌리면 티켓을 얻는다. 티켓으로 부적과 영구 업그레이드를 구매해라.", "zh-hans": "拉杆赚券。用券购买护符和永久升级。", "zh-hant": "拉桿賺券。用券購買護符和永久升級。",
+  },
+  "Clear the whole debt to escape. That's the win.": {
+    en: "Clear the whole debt to escape. That's the win.", es: "Liquidar toda la deuda para escapar. Esa es la victoria.", fr: "Solde toute la dette pour t'échapper. C'est ça, la victoire.", de: "Zahl den ganzen Schulden ab, um zu entkommen. Das ist der Sieg.", it: "Estingui tutto il debito per fuggire. Questa è la vittoria.",
+    ja: "借金を全額返して脱出しよう。それが勝利だ。", ko: "빚을 전액 갚고 탈출해라. 그것이 승리다.", "zh-hans": "还清全部债务即可逃脱。这就是胜利。", "zh-hant": "還清全部債務即可逃脫。這就是勝利。",
+  },
+  "Smaller patterns are swallowed by bigger ones that contain them — chase the big shapes!": {
+    en: "Smaller patterns are swallowed by bigger ones that contain them — chase the big shapes!", es: "Los patrones pequeños son absorbidos por los grandes que los contienen; ¡busca las figuras grandes!", fr: "Les petits motifs sont absorbés par les grands qui les contiennent — vise les grandes formes !", de: "Kleine Muster werden von größeren verschluckt, die sie enthalten — jage die großen Formen!", it: "Le combinazioni piccole vengono assorbite da quelle grandi che le contengono — punta alle figure grandi!",
+    ja: "小さいパターンはそれを含む大きいパターンに飲み込まれる。大きい形を狙え！", ko: "작은 패턴은 그것을 포함하는 큰 패턴에 삼켜진다. 큰 도형을 노려라!", "zh-hans": "小牌型会被包含它的大牌型吞并——追大形状！", "zh-hant": "小牌型會被包含它的大牌型吞併——追大形狀！",
+  },
+  "GAME OVER": {
+    en: "GAME OVER", es: "FIN DEL JUEGO", fr: "PARTIE TERMINÉE", de: "GAME OVER", it: "GAME OVER",
+    ja: "ゲームオーバー", ko: "게임 오버", "zh-hans": "游戏结束", "zh-hant": "遊戲結束",
+  },
+  "You couldn't pay the quota. Team Rocket repossessed your team AND your shoes.": {
+    en: "You couldn't pay the quota. Team Rocket repossessed your team AND your shoes.", es: "No pudiste pagar la cuota. El Equipo Rocket embargó a tu equipo Y tus zapatos.", fr: "Tu n'as pas pu payer la quote-part. La Team Rocket a saisi ton équipe ET tes chaussures.", de: "Du konntest die Rate nicht zahlen. Team Rocket hat dein Team UND deine Schuhe gepfändet.", it: "Non hai potuto pagare la rata. Il Team Rocket ha sequestrato la tua squadra E le tue scarpe.",
+    ja: "分割払いが払えなかった。ロケット団はポケモンと靴も差し押さえた。", ko: "분할금을 못 갚았다. 로켓단은 포켓몬과 신발까지 압수했다.", "zh-hans": "你没付起配额。火箭队收走了你的队伍……还有你的鞋。", "zh-hant": "你沒付起配額。火箭隊收走了你的隊伍……還有你的鞋。",
+  },
+  "Round reached": {
+    en: "Round reached", es: "Ronda alcanzada", fr: "Manche atteinte", de: "Erreichte Runde", it: "Turno raggiunto",
+    ja: "到達ラウンド", ko: "도달한 라운드", "zh-hans": "到达回合", "zh-hant": "到達回合",
+  },
+  "Total earned": {
+    en: "Total earned", es: "Total ganado", fr: "Total gagné", de: "Insgesamt verdient", it: "Totale guadagnato",
+    ja: "獲得コイン総額", ko: "총 획득 코인", "zh-hans": "总收益", "zh-hant": "總收益",
+  },
+  "Best single pull": {
+    en: "Best single pull", es: "Mejor tirada", fr: "Meilleur tirage", de: "Bester Zug", it: "Miglior tirata",
+    ja: "最高の1回", ko: "최고의 한 번", "zh-hans": "最佳单次拉杆", "zh-hant": "最佳單次拉桿",
+  },
+  "Jackpots": {
+    en: "Jackpots", es: "Jackpots", fr: "Jackpots", de: "Jackpots", it: "Jackpot",
+    ja: "ジャックポット", ko: "잭팟", "zh-hans": "头奖", "zh-hant": "頭獎",
+  },
+  "Try again": {
+    en: "Try again", es: "Intentar de nuevo", fr: "Réessayer", de: "Nochmal versuchen", it: "Riprova",
+    ja: "もう一度挑戦", ko: "다시 도전", "zh-hans": "再试一次", "zh-hant": "再試一次",
+  },
+  "DEBT CLEARED!": {
+    en: "DEBT CLEARED!", es: "¡DEUDA SALDADA!", fr: "DETTE SOLDÉE !", de: "SCHULDEN GETILGT!", it: "DEBITO ESTINTO!",
+    ja: "借金完済！", ko: "빚 완납!", "zh-hans": "债务清零！", "zh-hant": "債務清零！",
+  },
+  "The vault door creaks open. You walk out richer than Giovanni — he'll remember this.": {
+    en: "The vault door creaks open. You walk out richer than Giovanni — he'll remember this.", es: "La puerta blindada se abre chirriando. Sales más rico que Giovanni; él lo recordará.", fr: "La porte blindée s'ouvre en grinçant. Tu ressors plus riche que Giovanni — il s'en souviendra.", de: "Die Panzertür knarrt auf. Du gehst reicher als Giovanni hinaus — er wird sich das merken.", it: "La porta corazzata si apre cigolando. Esci più ricco di Giovanni — se lo ricorderà.",
+    ja: "金庫の扉がきしむ音とともに開く。サカキより金持ちになって脱出成功。奴は忘れないだろう。", ko: "금고 문이 삐걱거리며 열린다. 비주보다 부자가 되어 탈출했다. 녀석은 잊지 않을 거다.", "zh-hans": "金库门吱呀打开。你比坂木还有钱地走了出去——他会记住的。", "zh-hant": "金庫門吱呀打開。你比坂木還有錢地走了出去——他會記住的。",
+  },
+  "Escaped in": {
+    en: "Escaped in", es: "Escapaste en", fr: "Échappé en", de: "Entkommen in", it: "Fuggito in",
+    ja: "脱出にかかったラウンド", ko: "탈출한 라운드", "zh-hans": "逃脱用了", "zh-hant": "逃脫用了",
+  },
+  "rounds": {
+    en: "rounds", es: "rondas", fr: "manches", de: "Runden", it: "turni",
+    ja: "ラウンド", ko: "라운드", "zh-hans": "回合", "zh-hant": "回合",
+  },
+  "Play again": {
+    en: "Play again", es: "Jugar otra vez", fr: "Rejouer", de: "Nochmal spielen", it: "Rigioca",
+    ja: "もう一度遊ぶ", ko: "다시 플레이", "zh-hans": "再玩一局", "zh-hant": "再玩一局",
+  },
+  "Escapes": {
+    en: "Escapes", es: "Escapes", fr: "Évasions", de: "Ausbrüche", it: "Evasioni",
+    ja: "脱出回数", ko: "탈출 횟수", "zh-hans": "逃脱次数", "zh-hant": "逃脫次數",
+  },
+  "Fastest escape": {
+    en: "Fastest escape", es: "Escape más rápido", fr: "Évasion la plus rapide", de: "Schnellster Ausbruch", it: "Fuga più veloce",
+    ja: "最速脱出", ko: "최고 속도 탈출", "zh-hans": "最快逃脱", "zh-hant": "最快逃脫",
+  },
+  "No one has ever escaped this basement... probably": {
+    en: "No one has ever escaped this basement... probably", es: "Nadie ha escapado jamás de este sótano... probablemente", fr: "Personne n'est jamais sorti de ce sous-sol... probablement", de: "Niemand hat diesen Keller je verlassen... wahrscheinlich", it: "Nessuno è mai scappato da questo seminterrato... probabilmente",
+    ja: "この地下室から抜け出した者はいない……たぶん", ko: "이 지하실에서 탈출한 자는 없다…… 아마도", "zh-hans": "从没有人从这个地下室逃出去过……大概吧", "zh-hant": "從沒有人從這個地下室逃出去過……大概吧",
+  },
+  "FULL HOUSE!": {
+    en: "FULL HOUSE!", es: "¡PANTALLA COMPLETA!", fr: "GRILLE PLEINE !", de: "VOLLES BILD!", it: "SCHEDE PIENE!",
+    ja: "フルハウス！", ko: "풀하우스!", "zh-hans": "满盘通吃！", "zh-hant": "滿盤通吃！",
+  },
+  "JACKPOT?! ...Enjoy it while it lasts.": {
+    en: "JACKPOT?! ...Enjoy it while it lasts.", es: "¿JACKPOT? ...Disfrútalo mientras dure.", fr: "UN JACKPOT ?! ...Profites-en tant que ça dure.", de: "JACKPOT?! ...Genieß es, solange es dauert.", it: "JACKPOT?! ...Goditelo finché dura.",
+    ja: "ジャックポット？！…好きなだけ楽しめ。", ko: "잭팟?! …되는 동안 즐겨라.", "zh-hans": "头奖？！……趁还在享受吧。", "zh-hant": "頭獎？！……趁還在享受吧。",
+  },
+  "You're free... for now.": {
+    en: "You're free... for now.", es: "Eres libre... por ahora.", fr: "Tu es libre... pour l'instant.", de: "Du bist frei ... vorerst.", it: "Sei libero... per ora.",
+    ja: "自由だ……今のところは。", ko: "자유다… 일단은.", "zh-hans": "你自由了……目前是。", "zh-hant": "你自由了……目前是。",
+  },
+  "Team Rocket blasted off with YOUR wallet!": {
+    en: "Team Rocket blasted off with YOUR wallet!", es: "¡El Equipo Rocket salió volando con TU cartera!", fr: "La Team Rocket s'est envolée avec TON portefeuille !", de: "Team Rocket ist mit DEINEM Portemonnaie davongeflogen!", it: "Il Team Rocket è decollato con IL TUO portafoglio!",
+    ja: "ロケット団はおまえの財布を持って飛んでいった！", ko: "로켓단이 네 지갑을 들고 날아가 버렸다!", "zh-hans": "火箭队带着你的钱包飞上了天！", "zh-hant": "火箭隊帶著你的錢包飛上了天！",
+  },
+  "Symbols Multiplier": {
+    en: "Symbols Multiplier", es: "Multiplicador de símbolos", fr: "Multiplicateur de symboles", de: "Symbol-Multiplikator", it: "Moltiplicatore simboli",
+    ja: "シンボル倍率", ko: "심볼 배율", "zh-hans": "图案倍率", "zh-hant": "圖案倍率",
+  },
+  "All payouts": {
+    en: "All payouts", es: "Todos los premios", fr: "Tous les gains", de: "Alle Auszahlungen", it: "Tutti i premi",
+    ja: "すべての配当", ko: "모든 배당", "zh-hans": "所有派彩", "zh-hant": "所有派彩",
+  },
+  "value": {
+    en: "value", es: "valor", fr: "valeur", de: "Wert", it: "valore",
+    ja: "価値", ko: "가치", "zh-hans": "价值", "zh-hant": "價值",
+  },
+  "multiplier": {
+    en: "multiplier", es: "multiplicador", fr: "multiplicateur", de: "Multiplikator", it: "moltiplicatore",
+    ja: "倍率", ko: "배율", "zh-hans": "倍数", "zh-hant": "倍數",
+  },
+  "The boss expects your quota on time. Don't disappoint Team Rocket.": {
+    en: "The boss expects your quota on time. Don't disappoint Team Rocket.", es: "El jefe espera su cuota a tiempo. No decepciones al Equipo Rocket.", fr: "Le chef attend ta quote-part à l'heure. Ne déçois pas la Team Rocket.", de: "Der Boss erwartet seine Rate pünktlich. Enttäusche Team Rocket nicht.", it: "Il capo vuole la sua rata in orario. Non deludere il Team Rocket.",
+    ja: "ボスは期限どおりの分割払いを待っている。ロケット団を失望させるな。", ko: "보스는 분할금을 제때 기대신다. 로켓단을 실망시키지 마라.", "zh-hans": "老板要求按时交配额。别让火箭队失望。", "zh-hant": "老闆要求按時交配額。別讓火箭隊失望。",
+  },
+  "Time is money, trainer. Buy your pulls and pay the fee.": {
+    en: "Time is money, trainer. Buy your pulls and pay the fee.", es: "El tiempo es dinero, entrenador. Compra tus tiradas y paga la cuota.", fr: "Le temps c'est de l'argent, dresseur. Achète tes tirages et paie.", de: "Zeit ist Geld, Trainer. Kauf deine Züge und zahle die Gebühr.", it: "Il tempo è denaro, allenatore. Compra le tue slate e paga la tariffa.",
+    ja: "時は金なりだ、トレーナー。レバー回数を買って料金を払え。", ko: "시간은 돈이다, 트레이너. 레버 횟수를 사고 요금을 지불해라.", "zh-hans": "时间就是金钱，训练家。购买拉杆次数并付费。", "zh-hant": "時間就是金錢，訓練家。購買拉桿次數並付費。",
+  },
+  "Interest never sleeps. Neither do I.": {
+    en: "Interest never sleeps. Neither do I.", es: "Los intereses nunca duermen. Yo tampoco.", fr: "Les intérêts ne dorment jamais. Moi non plus.", de: "Zinsen schlafen nie. Ich auch nicht.", it: "Gli interessi non dormono mai. Nemmeno io.",
+    ja: "利息は眠らない。私もだ。", ko: "이자는 잠들지 않지. 나도 마찬가지다.", "zh-hans": "利息从不睡觉。我也一样。", "zh-hant": "利息從不睡覺。我也一樣。",
+  },
+  "A wise investor pays early. A broke one pays interest.": {
+    en: "A wise investor pays early. A broke one pays interest.", es: "El inversionista listo paga temprano. El pelado paga intereses.", fr: "L'investisseur avisé paie tôt. Le fauché paie des intérêts.", de: "Ein kluger Anleger zahlt früh. Ein Pleiter zahlt Zinsen.", it: "L'investitore saggio paga presto. Il squattrinato paga interessi.",
+    ja: "賢い投資家は早く払う。破産者は利息を払う。", ko: "현명한 투자자는 일찍 갚는다. 파산한 놈은 이자를 낸다.", "zh-hans": "聪明的投资者早点还。破产的才付利息。", "zh-hant": "聰明的投資者早點還。破產的才付利息。",
+  },
+  "The machine owes us. Make it pay.": {
+    en: "The machine owes us. Make it pay.", es: "La máquina nos debe. Hazla pagar.", fr: "La machine nous doit de l'argent. Fais-la payer.", de: "Die Maschine schuldet uns was. Lass sie zahlen.", it: "La macchina ci deve dei soldi. Falla pagare.",
+    ja: "このマシンには貸しがあるんだ。払わせろ。", ko: "저 기계는 우리 빚이 있다. 물어내게 해라.", "zh-hans": "这台机器欠我们的。让它掏钱。", "zh-hant": "這台機器欠我們的。讓它掏錢。",
+  },
+  "Not bad. The boss loves a productive machine.": {
+    en: "Not bad. The boss loves a productive machine.", es: "Nada mal. Al jefe le encantan las máquinas productivas.", fr: "Pas mal. Le chef adore les machines productives.", de: "Nicht schlecht. Der Boss liebt produktive Maschinen.", it: "Niente male. Al capo piacciono le macchine produttive.",
+    ja: "悪くない。ボスは実績のあるマシンがお好きでな。", ko: "나쁘지 않군. 보스는 실적 있는 기계를 좋아하신다.", "zh-hans": "不错嘛。老板喜欢多产的机器。", "zh-hant": "不錯嘛。老闆喜歡多產的機器。",
+  },
+
+  // PokéSlots — round entry (3 or 7 pulls bought each round)
+  "Quota": {
+    en: "Quota", es: "Cuota", fr: "Quote-part", de: "Rate", it: "Rata",
+    ja: "分割払い", ko: "분할금", "zh-hans": "配额", "zh-hant": "配額",
+  },
+  "Choose your pulls": {
+    en: "Choose your pulls", es: "Elige tus tiradas", fr: "Choisis tes tirages", de: "Wähle deine Züge", it: "Scegli le tue slate",
+    ja: "レバー回数を選べ", ko: "레버 횟수를 선택해라", "zh-hans": "选择拉杆次数", "zh-hant": "選擇拉桿次數",
+  },
+  "Team Rocket charges an entry fee every round.": {
+    en: "Team Rocket charges an entry fee every round.", es: "El Equipo Rocket cobra una entrada cada ronda.", fr: "La Team Rocket facture des frais d'entrée à chaque manche.", de: "Team Rocket verlangt jede Runde eine Eintrittsgebühr.", it: "Il Team Rocket chiede un biglietto d'ingresso a ogni turno.",
+    ja: "ロケット団は毎ラウンド、入場料金を請求してくる。", ko: "로켓단은 매 라운드 입장료를 요구한다.", "zh-hans": "火箭队每回合都收取入场费。", "zh-hant": "火箭隊每回合都收取入場費。",
+  },
+  "pulls": {
+    en: "pulls", es: "tiradas", fr: "tirages", de: "Züge", it: "slate",
+    ja: "回", ko: "회", "zh-hans": "次拉杆", "zh-hant": "次拉桿",
+  },
+  "per spare pull": {
+    en: "per spare pull", es: "por tirada sobrante", fr: "par tirage restant", de: "pro übrigem Zug", it: "per slata avanzata",
+    ja: "残り1回につき", ko: "남은 1회당", "zh-hans": "每剩余1次", "zh-hant": "每剩餘1次",
+  },
+  "added to your debt": {
+    en: "added to your debt", es: "añadido a tu deuda", fr: "ajoutés à ta dette", de: "zu deinen Schulden hinzugefügt", it: "aggiunto al tuo debito",
+    ja: "借金に上乗せ", ko: "빚에 추가됨", "zh-hans": "计入你的债务", "zh-hant": "計入你的債務",
+  },
+  "Can't afford the fee? Team Rocket adds the difference to your debt.": {
+    en: "Can't afford the fee? Team Rocket adds the difference to your debt.", es: "¿No te alcanza para la entrada? El Equipo Rocket añade la diferencia a tu deuda.", fr: "Pas de quoi payer ? La Team Rocket ajoute la différence à ta dette.", de: "Fee zu teuer? Team Rocket fügt die Differenz deinen Schulden hinzu.", it: "Non puoi permetterti la tariffa? Il Team Rocket aggiunge la differenza al tuo debito.",
+    ja: "料金が払えないか？ロケット団が差額を借金に追加してやる。", ko: "요금을 낼 수 없나? 로켓단이 차액을 빚에 더해준다.", "zh-hans": "付不起费用？火箭队会把差额记到你的债务上。", "zh-hant": "付不起費用？火箭隊會把差額記到你的債務上。",
+  },
+
+  // PokéSlots charms — names stay as the item proper nouns (EN), the
+  // descriptions below are fully translated.
+  "charm-silk-scarf": { en: "Silk Scarf" },
+  "silk-scarf-desc": {
+    en: "Lemon and Cherry symbols are worth +1.", es: "Los símbolos Limón y Cereza valen +1.", fr: "Les symboles Citron et Cerise valent +1.", de: "Zitronen- und Kirsch-Symbole sind +1 wert.", it: "I simboli Limone e Ciliegia valgono +1.",
+    ja: "レモンとチェリーのシンボルの価値+1。", ko: "레몬과 체리 심볼의 가치 +1.", "zh-hans": "柠檬与樱桃图案价值+1。", "zh-hant": "檸檬與櫻桃圖案價值+1。",
+  },
+  "charm-lucky-egg": { en: "Lucky Egg" },
+  "lucky-egg-desc": {
+    en: "Earns double tickets from every pull.", es: "Consigue el doble de tickets en cada tirada.", fr: "Donne le double de tickets à chaque tirage.", de: "Bringt pro Zug die doppelten Tickets.", it: "Fa guadagnare il doppio dei biglietti per ogni tirata.",
+    ja: "レバー1回ごとのチケットが2倍。", ko: "레버 한 번당 티켓 2배.", "zh-hans": "每次拉杆获得的券翻倍。", "zh-hant": "每次拉桿獲得的券加倍。",
+  },
+  "charm-choice-specs": { en: "Choice Specs" },
+  "choice-specs-desc": {
+    en: "DIAG, ZIG and ZAG multipliers +2.", es: "Los multiplicadores de DIAG, ZIG y ZAG +2.", fr: "Multiplicateurs DIAG, ZIG et ZAG +2.", de: "DIAG-, ZIG- und ZAG-Multiplikatoren +2.", it: "Moltiplicatori DIAG, ZIG e ZAG +2.",
+    ja: "DIAG・ZIG・ZAGの倍率+2。", ko: "DIAG·ZIG·ZAG 배율 +2.", "zh-hans": "DIAG、ZIG、ZAG倍率+2。", "zh-hant": "DIAG、ZIG、ZAG倍率+2。",
+  },
+  "charm-muscle-band": { en: "Muscle Band" },
+  "muscle-band-desc": {
+    en: "HOR, HOR-L and HOR-XL multipliers +2.", es: "Los multiplicadores de HOR, HOR-L y HOR-XL +2.", fr: "Multiplicateurs HOR, HOR-L et HOR-XL +2.", de: "HOR-, HOR-L- und HOR-XL-Multiplikatoren +2.", it: "Moltiplicatori HOR, HOR-L e HOR-XL +2.",
+    ja: "HOR・HOR-L・HOR-XLの倍率+2。", ko: "HOR·HOR-L·HOR-XL 배율 +2.", "zh-hans": "HOR、HOR-L、HOR-XL倍率+2。", "zh-hant": "HOR、HOR-L、HOR-XL倍率+2。",
+  },
+  "charm-focus-band": { en: "Focus Band" },
+  "focus-band-desc": {
+    en: "Once per run, halves a quota you can't afford (consumed).", es: "Una vez por partida, reduce a la mitad una cuota que no puedas pagar (se consume).", fr: "Une fois par partie, divise par deux une quote-part impayable (consommé).", de: "Einmal pro Run halbiert er eine unbezahlbare Rate (wird verbraucht).", it: "Una volta per partita, dimezza una rata che non puoi pagare (consumata).",
+    ja: "1回限り、払えない分割払いを半減する（消費）。", ko: "1회 한정, 낼 수 없는 분할금을 반으로 줄인다(소모).", "zh-hans": "每局一次，将付不起的配额减半（消耗）。", "zh-hant": "每局一次，將付不起的配額減半（消耗）。",
+  },
+  "charm-luck-incense": { en: "Luck Incense" },
+  "luck-incense-desc": {
+    en: "All payouts ×1.3.", es: "Todos los premios ×1,3.", fr: "Tous les gains ×1,3.", de: "Alle Auszahlungen ×1,3.", it: "Tutti i premi ×1,3.",
+    ja: "すべての配当×1.3。", ko: "모든 배당 ×1.3.", "zh-hans": "所有派彩×1.3。", "zh-hant": "所有派彩×1.3。",
+  },
+  "charm-wide-lens": { en: "Wide Lens" },
+  "wide-lens-desc": {
+    en: "Diamond, Treasure and Seven appear ~60% more often.", es: "Diamante, Tesoro y Siete aparecen ~60% más seguido.", fr: "Diamant, Trésor et Sept apparaissent ~60% plus souvent.", de: "Diamant, Schatz und Sieben erscheinen ~60% häufiger.", it: "Diamante, Tesoro e Sette appaiono ~60% più spesso.",
+    ja: "ダイヤ・宝物・セブンの出現率が約6割増。", ko: "다이아·보물·세븐 등장률 약 60% 증가.", "zh-hans": "钻石、宝藏、幸运7出现率提高约60%。", "zh-hant": "鑽石、寶藏、幸運7出現率提高約60%。",
+  },
+  "charm-metal-coat": { en: "Metal Coat" },
+  "metal-coat-desc": {
+    en: "Bell and Diamond symbols are worth +2.", es: "Los símbolos Campana y Diamante valen +2.", fr: "Les symboles Cloche et Diamant valent +2.", de: "Glocken- und Diamant-Symbole sind +2 wert.", it: "I simboli Campana e Diamante valgono +2.",
+    ja: "ベルとダイヤのシンボルの価値+2。", ko: "종과 다이아 심볼의 가치 +2.", "zh-hans": "铃铛与钻石图案价值+2。", "zh-hant": "鈴鐺與鑽石圖案價值+2。",
+  },
+  "charm-amulet-coin": { en: "Amulet Coin" },
+  "amulet-coin-desc": {
+    en: "All payouts ×1.5.", es: "Todos los premios ×1,5.", fr: "Tous les gains ×1,5.", de: "Alle Auszahlungen ×1,5.", it: "Tutti i premi ×1,5.",
+    ja: "すべての配当×1.5。", ko: "모든 배당 ×1.5.", "zh-hans": "所有派彩×1.5。", "zh-hant": "所有派彩×1.5。",
+  },
+  "charm-super-repel": { en: "Super Repel" },
+  "super-repel-desc": {
+    en: "Lemons stop appearing on the reels entirely.", es: "Los Limones dejan de aparecer por completo.", fr: "Les Citrons cessent totalement d'apparaître.", de: "Zitronen erscheinen gar nicht mehr.", it: "I Limoni smettono completamente di apparire.",
+    ja: "レモンが一切出現しなくなる。", ko: "레몬이 아예 등장하지 않게 된다.", "zh-hans": "柠檬完全不再出现。", "zh-hant": "檸檬完全不 再出現。",
+  },
+  "charm-magnet": { en: "Magnet" },
+  "magnet-desc": {
+    en: "Each spin converts one cell into the grid's most common symbol.", es: "En cada tirada convierte una casilla en el símbolo más común de la pantalla.", fr: "À chaque tirage, transforme une case en le symbole le plus courant de la grille.", de: "Verwandelt bei jedem Zug eine Zelle in das häufigste Symbol des Bildes.", it: "A ogni tirata converte una cella nel simbolo più comune della schermata.",
+    ja: "スピンごとにマスを1つ、画面内で最も多いシンボルに変える。", ko: "스핀마다 칸 하나를 화면에서 가장 흔한 심볼로 바꾼다.", "zh-hans": "每次旋转将一个格子变成屏上最多的图案。", "zh-hant": "每次旋轉將一個格子變成屏上最多的圖案。",
+  },
+  "charm-gold-bottle-cap": { en: "Gold Bottle Cap" },
+  "gold-bottle-cap-desc": {
+    en: "Seven symbols are worth +5.", es: "Los símbolos Siete valen +5.", fr: "Les symboles Sept valent +5.", de: "Sieben-Symbole sind +5 wert.", it: "I simboli Sette valgono +5.",
+    ja: "セブンのシンボルの価値+5。", ko: "세븐 심볼의 가치 +5.", "zh-hans": "幸运7图案价值+5。", "zh-hant": "幸運7圖案價值+5。",
+  },
 };
 
 // Looks up a translation key for the given language.

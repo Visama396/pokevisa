@@ -53,6 +53,14 @@ const GAMES = [
     descKey: "Multiplayer dungeon exploration with friends",
     color: "purple",
   },
+  {
+    href: "/pokeslots",
+    img: null,
+    emoji: "🎰",
+    titleKey: "PokéSlots",
+    descKey: "CloverPit-style slot machine — beat your debt to Team Rocket",
+    color: "pink",
+  },
 ];
 
 const COLOR_MAP = {
@@ -62,9 +70,30 @@ const COLOR_MAP = {
   green: "hover:border-green-500 hover:shadow-green-500/10 group-hover:text-green-400",
   orange: "hover:border-orange-500 hover:shadow-orange-500/10 group-hover:text-orange-400",
   purple: "hover:border-purple-500 hover:shadow-purple-500/10 group-hover:text-purple-400",
+  pink: "hover:border-pink-500 hover:shadow-pink-500/10 group-hover:text-pink-400",
 };
 
 const CHANGELOG = [
+  {
+    date: "2026-08-24",
+    title: "PokéSlots rework",
+    items: [
+      "Every round starts with a choice: buy 3 pulls (cheap, fatter tickets) or 7 pulls",
+      "Quotas now start at 100₽ and climb forever — clear the whole 5000₽ debt to escape",
+      "Finish a quota early to bank your spare pulls as tickets and dodge interest",
+      "Symbols are now named after the Pokémon themselves (Exeggcute, Cherubi...)",
+    ],
+  },
+  {
+    date: "2026-08-24",
+    title: "PokéSlots",
+    items: [
+      "New CloverPit-inspired slot machine: 7 Pokémon symbols, 11 patterns, jackpots",
+      "Beat the quota every round or pay 8% interest on what you owe",
+      "Spend tickets in the Rotom Phone shop on charms and permanent upgrades",
+      "Clear the whole debt to escape the basement",
+    ],
+  },
   {
     date: "2026-08-13",
     title: "Move sorting fix",
