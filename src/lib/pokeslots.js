@@ -167,7 +167,10 @@ export function createRunState() {
     coins: START_COINS,
     debt: START_DEBT,
     tickets: 0,
-    round: 1, // display counter, increments with every played round
+    round: 1, // round WITHIN the current quota (1..ROUNDS_PER_QUOTA), resets each cycle
+    // Total rounds played across all quotas — not shown directly, but charms
+    // can key effects off it (e.g. "every N rounds").
+    totalRounds: 0,
     cycle: 1, // which quota you're on (quota grows per cycle)
     roundsLeft: ROUNDS_PER_QUOTA, // rounds remaining to clear the current quota
     // Every round starts at the pull-choice state (awaitingChoice): buy 3 or
@@ -179,6 +182,8 @@ export function createRunState() {
     quotaPaid: 0,
     lastMode: null, // 3 | 7 — set when the current round's pulls are picked
     awaitingChoice: true,
+    // Shop rerolls bought this cycle; drives the escalating rerollCost().
+    rerolls: 0,
     grid: [...STARTER_GRID],
     charms: [],
     upgrades: emptyUpgrades(),
@@ -187,41 +192,46 @@ export function createRunState() {
   };
 }
 
-export const START_COINS = 70;
+export const START_COINS = 50;
 export const START_DEBT = 5000;
 export const INTEREST_RATE = 0.08;
 export const MAX_CHARMS = 6;
-export const REROLL_COST = 2;
+
+// Rerolling the Rotom Phone's offers costs COINS (not tickets) and the price
+// doubles with every reroll inside the current quota cycle — it resets back to
+// the base cost when a quota is cleared, together with the shop itself.
+export const REROLL_BASE_COST = 40;
+export const REROLL_COST_GROWTH = 2;
+export function rerollCost(state) {
+  return REROLL_BASE_COST * Math.pow(REROLL_COST_GROWTH, state.rerolls || 0);
+}
 
 // ---------------------------------------------------------------------------
 // Rounds & quotas
 // ---------------------------------------------------------------------------
 // A QUOTA spans ROUNDS_PER_QUOTA rounds. Each round the player buys 3 or 7
-// pulls — entry costs a share of the CURRENT quota (3 pulls = 10%, 7 = 20%;
-// see roundCost). Patterns pay coins only; tickets come exclusively from
-// clearing a quota before its last round:
-//   cleared with 3 rounds left → +20% of the quota and 15 tickets
-//   cleared with 2 rounds left → +10% of the quota and 10 tickets
-//   cleared with 1 round left  →  +5% of the quota and  5 tickets
-//   cleared on the last round  →   no bonus        and  3 tickets
+// pulls — entry costs a share of the CURRENT quota (3 pulls = 5%, 7 = 10%;
+// see roundCost) and earns 4 / 2 tickets. Patterns pay coins only; tickets
+// also come from clearing a quota early (see quotaClearBonus).
 // Missing the last round's deadline is game over (Focus Band halves once).
 export const ROUNDS_PER_QUOTA = 3;
 
-// Entry costs are part of the mode: 3 pulls cost 10% of the quota, 7 pulls
-// cost 20% (a fat-spin premium). A pick the player can't afford is still
-// allowed — chooseRoundMode adds the shortfall to the debt on round start.
+// Entry costs are part of the mode: 3 pulls cost 5% of the quota, 7 pulls
+// cost 10% (a fat-spin premium). There is NO credit anymore: a pick the
+// player can't cover with coins can still be entered by spending tickets
+// instead (see ROUND_TICKET_COSTS, no rewards earned that way), and someone
+// who can't pay either loses the run on the spot (checked by PokeSlots.jsx
+// whenever the pull picker opens).
 export const ROUND_MODES = {
-  3: { pulls: 3, costPct: 0.1 },
-  7: { pulls: 7, costPct: 0.2 },
+  3: { pulls: 3, costPct: 0.05, tickets: 4 },
+  7: { pulls: 7, costPct: 0.1, tickets: 2 },
 };
 
-// Reward table for clearing a quota, indexed by rounds left when it happens.
-export const QUOTA_CLEAR_REWARDS = {
-  3: { pct: 0.2, tickets: 15 },
-  2: { pct: 0.1, tickets: 10 },
-  1: { pct: 0.05, tickets: 5 },
-  0: { pct: 0, tickets: 3 },
-};
+// Ticket price of a round when the player can't (or won't) pay its coin fee.
+// Paying with tickets does NOT earn the mode's ticket reward.
+export const ROUND_TICKET_COSTS = { 3: 1, 7: 2 };
+
+// Reward table for clearing a quota early — see quotaClearBonus below.
 
 function emptyUpgrades() {
   return {
@@ -244,13 +254,27 @@ export function currentQuota(state) {
   return quotaForCycle(state.cycle);
 }
 
-// Entry price of a round mode: a share of the CURRENT quota (3 pulls = 10%,
-// 7 = 50%), so the fee scales with the debt you're chipping away at.
+// Entry price of a round mode: a share of the CURRENT quota (3 pulls = 5%,
+// 7 = 10%), so the fee scales with the debt you're chipping away at.
 // Used by the pull picker (PokeSlots.jsx chooseRoundMode), the ATM's MAX
 // clamp and the help text.
 export function roundCost(state, mode) {
   const pct = ROUND_MODES[mode]?.costPct ?? 0;
   return Math.max(1, Math.ceil(currentQuota(state) * pct));
+}
+
+// Early-clear bonus: clearing a quota while rounds are still left pays 7% of
+// the current quota plus tickets — a flat 4 and one extra per remaining
+// round. Paying right on the deadline (0 rounds left) is not early and earns
+// nothing extra. Lucky Egg's ticketMult is applied by the caller.
+export const QUOTA_CLEAR_BONUS_PCT = 0.07;
+export const QUOTA_CLEAR_BASE_TICKETS = 4;
+export function quotaClearBonus(state) {
+  if ((state.roundsLeft || 0) <= 0) return { coins: 0, tickets: 0 };
+  return {
+    coins: Math.floor(currentQuota(state) * QUOTA_CLEAR_BONUS_PCT),
+    tickets: QUOTA_CLEAR_BASE_TICKETS + state.roundsLeft,
+  };
 }
 
 // Coin ceiling for the ATM's MAX shortcut (and its default slider value):

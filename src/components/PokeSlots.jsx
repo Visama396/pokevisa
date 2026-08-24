@@ -3,6 +3,7 @@ import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import HomeButton from "./HomeButton";
 import LanguageSelector from "./LanguageSelector";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import {
   GRID_COLS,
   GRID_ROWS,
@@ -21,16 +22,17 @@ import {
   rollWeights,
   currentQuota,
   roundCost,
+  quotaClearBonus,
   atmMaxDeposit,
   interestForDebt,
   ROUND_MODES,
-  QUOTA_CLEAR_REWARDS,
+  ROUND_TICKET_COSTS,
   ROUNDS_PER_QUOTA,
   generateShopOffers,
   rerollShop,
   charmCost,
   MAX_CHARMS,
-  REROLL_COST,
+  rerollCost,
 } from "../lib/pokeslots";
 
 // PokéSlots — CloverPit-inspired slot machine roguelite. The run rules live in
@@ -44,6 +46,9 @@ import {
 const fmt = (n) => Math.floor(n).toLocaleString("en-US");
 const ITEM_SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items";
 const GLOBAL_MULT_STEP = 1.5;
+// The pulls-left strip always shows this many slots; slots beyond the bought
+// round mode stay switched off.
+const MAX_PULL_SLOTS = Math.max(...Object.values(ROUND_MODES).map((m) => m.pulls));
 
 // Giovanni's texts through the Rotom Phone. The English sentences are the
 // translation keys; missing languages fall back to English inside t().
@@ -57,6 +62,8 @@ const PHONE_ROUND_MSGS = [
 
 // Best-results persistence (local only — this is an arcade side game).
 const RECORDS_KEY = "pokeslots_records";
+// Persisted sound-effects volume (0..1).
+const VOLUME_KEY = "pokeslots_volume";
 function loadRecords() {
   try {
     return JSON.parse(localStorage.getItem(RECORDS_KEY)) || { wins: 0, bestWinRound: null, bestPayout: 0 };
@@ -188,6 +195,10 @@ export default function PokeSlots() {
   const [scoredTypes, setScoredTypes] = useState(new Set());
   const [popups, setPopups] = useState([]);
   const [jackpotBanner, setJackpotBanner] = useState(false);
+  // Upgrade purchases briefly light up the matching row on the Symbols /
+  // Patterns boards ("symbol:<id>" / "pattern:<type>" → true) so the player
+  // can see exactly what just got better behind the shop modal.
+  const [flashes, setFlashes] = useState({});
   const [modal, setModal] = useState(null); // null | shop | atm | deadline | over | won | help
   const [payAmount, setPayAmount] = useState(0);
   const [phoneMsg, setPhoneMsg] = useState(PHONE_ROUND_MSGS[0]);
@@ -212,6 +223,48 @@ export default function PokeSlots() {
   const later = (fn, ms) => timersRef.current.push(setTimeout(fn, ms));
   const pushMsg = (msg) => setPhoneMsg(msg);
 
+  // Sound effects (mp3s in /public): slot-spin plays while the reels roll,
+  // cash-register chimes on shop purchases. Each file gets ONE shared Audio
+  // element created lazily, so rapid pulls retrigger instead of stacking
+  // players; play() rejections (autoplay policy) are ignored.
+  const sfxRef = useRef({});
+
+  // SFX volume (0..1). Persisted in localStorage like the records; a ref
+  // mirrors it so timer-driven sfx callers never read a stale closure.
+  const [volume, setVolumeState] = useState(1);
+  const volumeRef = useRef(1);
+  useEffect(() => {
+    try {
+      const stored = parseFloat(localStorage.getItem(VOLUME_KEY));
+      if (!Number.isNaN(stored)) setVolumeState(Math.min(1, Math.max(0, stored)));
+    } catch {}
+  }, []);
+  useEffect(() => {
+    volumeRef.current = volume;
+    Object.values(sfxRef.current).forEach((a) => {
+      try {
+        a.volume = volume;
+      } catch {}
+    });
+    try {
+      localStorage.setItem(VOLUME_KEY, String(volume));
+    } catch {}
+  }, [volume]);
+
+  const playSfx = (name) => {
+    try {
+      const audio = (sfxRef.current[name] ||= new Audio(`/${name}`));
+      audio.volume = volumeRef.current;
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch {}
+  };
+  const stopSfx = (name) => {
+    try {
+      sfxRef.current[name]?.pause();
+    } catch {}
+  };
+
   const addPopup = (popup) => {
     const id = Math.random().toString(36).slice(2);
     setPopups((p) => [...p, { id, ...popup }]);
@@ -231,6 +284,7 @@ export default function PokeSlots() {
     setStoppedCols(0);
     setWinCells(new Set());
     setScoredTypes(new Set());
+    playSfx("slot-spin.mp3");
 
     let stopped = 0;
     const shuffle = setInterval(() => {
@@ -253,6 +307,7 @@ export default function PokeSlots() {
   };
 
   const resolvePull = (finalGrid) => {
+    stopSfx("slot-spin.mp3"); // the mp3 outlasts the reel animation
     const cur = runRef.current;
     const next = { ...cur, grid: finalGrid };
     const res = evaluateGrid(next, finalGrid);
@@ -295,7 +350,12 @@ export default function PokeSlots() {
         const now = runRef.current;
         if (now.awaitingChoice) return; // quota was cleared via ATM meanwhile
         if (now.roundsLeft > 0) {
-          commit({ ...now, round: now.round + 1, pullsLeft: 0, awaitingChoice: true });
+          // Mid-cycle: move to the next round of this quota. totalRounds
+          // counts every played round across all quotas (charm hook).
+          const next = { ...now, round: now.round + 1, totalRounds: (now.totalRounds || 0) + 1, pullsLeft: 0, awaitingChoice: true };
+          commit(next);
+          // Broke with no tickets to fall back on → game over right here.
+          if (!canEnterRound(next)) endRun(false);
         } else {
           // Deadline comes due against the WHOLE cycle: deposits already made
           // (quotaPaid) plus whatever is left in hand must cover the quota.
@@ -322,24 +382,50 @@ export default function PokeSlots() {
   };
 
   // Round start: buy 3 or 7 pulls. Entering a round costs a share of the
-  // current quota (roundCost); whatever the balance can't cover is added to
-  // the debt instead of blocking the pick. Playing a round consumes one of
-  // the quota's ROUNDS_PER_QUOTA rounds, so the pick is also a pacing choice.
+  // current quota (roundCost) and earns its mode's tickets (4 for 3 pulls,
+  // 2 for 7 — see ROUND_MODES). There is no credit anymore: if the coins
+  // don't cover the fee, the round is paid with tickets instead
+  // (ROUND_TICKET_COSTS, earning nothing back). Playing a round consumes
+  // one of the quota's ROUNDS_PER_QUOTA rounds, so the pick is also a
+  // pacing choice.
   const chooseRoundMode = (mode) => {
     if (phase !== "idle" || !runRef.current.awaitingChoice) return;
     const cur = runRef.current;
-    const cost = roundCost(cur, mode);
-    commit({
-      ...cur,
-      coins: Math.max(0, cur.coins - cost),
-      debt: cur.debt + Math.max(0, cost - cur.coins), // shortfall → debt
-      pullsLeft: ROUND_MODES[mode].pulls,
-      lastMode: Number(mode),
-      awaitingChoice: false,
-      roundsLeft: cur.roundsLeft - 1,
-    });
+    const m = Number(mode);
+    const coinCost = roundCost(cur, m);
+    if (cur.coins >= coinCost) {
+      commit({
+        ...cur,
+        coins: cur.coins - coinCost,
+        pullsLeft: ROUND_MODES[m].pulls,
+        tickets: cur.tickets + (ROUND_MODES[m].tickets || 0),
+        lastMode: m,
+        awaitingChoice: false,
+        roundsLeft: cur.roundsLeft - 1,
+      });
+    } else {
+      const ticketCost = ROUND_TICKET_COSTS[m];
+      if ((cur.tickets || 0) < ticketCost) return;
+      commit({
+        ...cur,
+        tickets: cur.tickets - ticketCost,
+        pullsLeft: ROUND_MODES[m].pulls,
+        lastMode: m,
+        awaitingChoice: false,
+        roundsLeft: cur.roundsLeft - 1,
+      });
+    }
     pushMsg(tr("The machine owes us. Make it pay."));
   };
+
+  // True while the player can still enter SOME round — with coins or via the
+  // ticket fallback. When neither is possible at picker time, the run ends:
+  // otherwise they'd be stuck on the pull picker forever (the deadline only
+  // comes due after pulls are spent).
+  const canEnterRound = (s) =>
+    s.coins >= roundCost(s, 3) ||
+    s.coins >= roundCost(s, 7) ||
+    (s.tickets || 0) >= ROUND_TICKET_COSTS[3];
 
   const makePayment = (amount, { deadline } = {}) => {
     const cur = runRef.current;
@@ -372,14 +458,15 @@ export default function PokeSlots() {
     // A payment clears the quota when it's the forced deadline (already
     // validated above) or when the cycle's accumulated payments cross it —
     // mid-cycle ATM deposits included. Clearing early pays out the
-    // QUOTA_CLEAR_REWARDS bonus and starts a fresh cycle; only the forced
-    // deadline charges interest on what remains.
+    // quotaClearBonus (7% of the quota + 4 tickets + 1 per round left) and
+    // starts a fresh cycle; only the forced deadline charges interest on
+    // what remains.
     const cleared = deadline || quotaPaid >= effectiveQuota;
     if (cleared) {
-      const reward = QUOTA_CLEAR_REWARDS[cur.roundsLeft] || QUOTA_CLEAR_REWARDS[0];
+      const bonus = quotaClearBonus(cur); // zero unless cleared with rounds to spare
       const eggMult = charms.includes("lucky-egg") ? CHARMS["lucky-egg"].ticketMult : 1;
-      const bonusCoins = Math.floor(quota * reward.pct);
-      const bonusTickets = Math.floor(reward.tickets * eggMult);
+      const bonusCoins = bonus.coins;
+      const bonusTickets = Math.floor(bonus.tickets * eggMult);
       if (bonusCoins > 0) {
         next.coins += bonusCoins;
         addPopup({ x: 50, y: 40, text: `+${fmt(bonusCoins)} ₽`, kind: "coins" });
@@ -390,8 +477,13 @@ export default function PokeSlots() {
       }
       next.cycle = cur.cycle + 1;
       next.quotaPaid = 0; // the new cycle's quota starts unpaid
+      next.rerolls = 0; // fresh shop for the new quota → reroll price resets
       next.roundsLeft = ROUNDS_PER_QUOTA;
-      next.round = cur.round + 1;
+      next.round = 1; // back to round 1 of the fresh quota
+      // The finished round counts toward totalRounds — unless the payment
+      // came straight from the pull picker (awaitingChoice), where no round
+      // was actually being played.
+      if (!cur.awaitingChoice) next.totalRounds = (cur.totalRounds || 0) + 1;
       next.pullsLeft = 0;
       next.awaitingChoice = true; // back to the pull picker for the new quota
       if (deadline) {
@@ -402,6 +494,10 @@ export default function PokeSlots() {
       pushMsg(tr(PHONE_ROUND_MSGS[next.cycle % PHONE_ROUND_MSGS.length]));
     }
     commit(next);
+    // A fresh cycle sends the player back to the pull picker; if they spent
+    // everything and hold no tickets, there is no way to enter a round —
+    // the run ends here.
+    if (cleared && !canEnterRound(next)) endRun(false);
   };
 
   const commit = (next) => {
@@ -419,7 +515,7 @@ export default function PokeSlots() {
       setRecords(
         saveRecord({
           wins: rec.wins + 1,
-          bestWinRound: rec.bestWinRound == null ? cur.round : Math.min(rec.bestWinRound, cur.round),
+          bestWinRound: rec.bestWinRound == null ? cur.totalRounds : Math.min(rec.bestWinRound, cur.totalRounds),
           bestPayout: Math.max(rec.bestPayout, cur.stats.biggestWin),
         })
       );
@@ -442,6 +538,7 @@ export default function PokeSlots() {
     setScoredTypes(new Set());
     setPopups([]);
     setJackpotBanner(false);
+    setFlashes({});
     setPhase("idle");
     setModal(null);
     setPhoneMsg(tr(PHONE_ROUND_MSGS[0]));
@@ -453,6 +550,7 @@ export default function PokeSlots() {
   const buyOffer = (offer) => {
     const cur = runRef.current;
     if (phase !== "idle" || cur.tickets < offer.cost) return;
+    playSfx("cash-register-purchase.mp3");
     const next = { ...cur, tickets: cur.tickets - offer.cost };
     if (offer.kind === "charm") {
       if (next.charms.length >= MAX_CHARMS) return;
@@ -468,6 +566,17 @@ export default function PokeSlots() {
     }
     commit(next);
     setOffers((o) => o.filter((x) => x !== offer));
+    // Flash the upgraded row on its board so the new value is noticeable.
+    if (offer.kind === "upgrade" && offer.target !== "global") {
+      setFlashes((f) => ({ ...f, [offer.target]: true }));
+      later(() => {
+        setFlashes((f) => {
+          const rest = { ...f };
+          delete rest[offer.target];
+          return rest;
+        });
+      }, 2400);
+    }
   };
 
   const sellCharm = (charmId) => {
@@ -478,8 +587,10 @@ export default function PokeSlots() {
 
   const doReroll = () => {
     const cur = runRef.current;
-    if (phase !== "idle" || cur.tickets < REROLL_COST) return;
-    commit({ ...cur, tickets: cur.tickets - REROLL_COST });
+    const cost = rerollCost(cur);
+    if (phase !== "idle" || cur.coins < cost) return;
+    playSfx("cash-register-purchase.mp3");
+    commit({ ...cur, coins: cur.coins - cost, rerolls: (cur.rerolls || 0) + 1 });
     setOffers(rerollShop(cur));
   };
 
@@ -518,43 +629,31 @@ export default function PokeSlots() {
         <button onClick={openAtm} disabled={!canAct} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-left transition-colors enabled:hover:border-red-500 disabled:opacity-90">
           <div className="text-[10px] uppercase tracking-wide text-slate-500">{tr("Quota")}</div>
           <div className="font-bold text-red-400">{fmt(remainingQuota)} ₽</div>
-          <div className="text-[10px] text-red-300/70">
-            {run.roundsLeft} {tr("rounds")}
-          </div>
         </button>
         <StatusChip label={tr("Tickets")} value={`${fmt(run.tickets)} 🎫`} color="text-sky-300" />
-        <StatusChip label={tr("Round")} value={run.round} color="text-purple-300" />
-        {/* The pull picker lives right in this card: each round buy 3 fast
-            pulls (10% of the quota) or 7 slower ones (20%) — the price shows
-            under each pick. */}
+        {/* Round counts WITHIN the current quota (1..3); the all-time total
+            lives in run.totalRounds for future charm effects. */}
+        <StatusChip label={tr("Round")} value={`${run.round}/${ROUNDS_PER_QUOTA}`} color="text-purple-300" />
+        {/* Pull pips: the strip always shows MAX_PULL_SLOTS slots. While no
+            round is paid for (awaitingChoice) every slot is switched off;
+            paying for a round lights up its mode's slots (3 or 7), and they
+            go out one by one as pulls are spent. Slots beyond the bought
+            mode's count stay off. */}
         <div className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2">
           <div className="text-[10px] uppercase tracking-wide text-slate-500">{tr("Pulls left")}</div>
-          {run.awaitingChoice ? (
-            <div className="flex gap-1 mt-1">
-              {[3, 7].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => chooseRoundMode(m)}
-                  disabled={!canAct}
-                  title={`${m} ${tr("pulls")} — ${fmt(roundCost(run, m))} ₽`}
-                  className={`flex-1 rounded-md border py-1 text-xs font-black transition-colors disabled:opacity-40 ${
-                    m === 3
-                      ? "border-emerald-600/60 bg-emerald-500/10 text-emerald-300 hover:border-emerald-400"
-                      : "border-yellow-600/60 bg-yellow-500/10 text-yellow-300 hover:border-yellow-400"
+          <div className="flex items-center gap-1 mt-1.5">
+            {Array.from({ length: MAX_PULL_SLOTS }).map((_, i) => {
+              const inMode = !run.awaitingChoice && i < (ROUND_MODES[run.lastMode]?.pulls || 0);
+              return (
+                <span
+                  key={i}
+                  className={`h-2.5 flex-1 rounded-sm transition-colors ${
+                    inMode ? (i < run.pullsLeft ? "bg-yellow-400" : "bg-slate-700") : "bg-slate-800/50"
                   }`}
-                >
-                  <span className="leading-none">{m}</span>
-                  <span className="mt-0.5 block text-[9px] font-bold leading-none opacity-80">{fmt(roundCost(run, m))} ₽</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 mt-1.5">
-              {Array.from({ length: ROUND_MODES[run.lastMode]?.pulls || ROUNDS_PER_QUOTA }).map((_, i) => (
-                <span key={i} className={`h-2.5 flex-1 rounded-sm ${i < run.pullsLeft ? "bg-yellow-400" : "bg-slate-700"}`} />
-              ))}
-            </div>
-          )}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -567,25 +666,33 @@ export default function PokeSlots() {
       <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-[225px_minmax(0,1fr)_225px] gap-4 items-start">
         {/* Symbols board */}
         <Board title={tr("Symbols")}>
-          {SYMBOLS.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-2 rounded-lg bg-slate-800/60 px-2 py-1">
-              <div className="size-9 shrink-0 rounded-md overflow-hidden bg-slate-900 border border-slate-700">
-                <SymbolFace symId={s.id} small />
-              </div>
-              <div className="flex-1 min-w-0 leading-tight">
-                <div className="text-xs font-semibold truncate">{symbolName(s.id, language)}</div>
-                <div className="text-[10px] text-slate-500">
-                  {totalWeight > 0 && weights[i] > 0 ? `${((weights[i] / totalWeight) * 100).toFixed(1)}%` : tr("gone")}
+          {SYMBOLS.map((s, i) => {
+            const lit = !!flashes[`symbol:${s.id}`];
+            return (
+              <div
+                key={s.id}
+                className={`flex items-center gap-2 rounded-lg px-2 py-1 transition-colors ${
+                  lit ? "bg-yellow-500/15 ring-2 ring-yellow-400" : "bg-slate-800/60"
+                }`}
+              >
+                <div className="size-9 shrink-0 rounded-md overflow-hidden bg-slate-900 border border-slate-700">
+                  <SymbolFace symId={s.id} small />
+                </div>
+                <div className="flex-1 min-w-0 leading-tight">
+                  <div className="text-xs font-semibold truncate">{symbolName(s.id, language)}</div>
+                  <div className="text-[10px] text-slate-500">
+                    {totalWeight > 0 && weights[i] > 0 ? `${((weights[i] / totalWeight) * 100).toFixed(1)}%` : tr("gone")}
+                  </div>
+                </div>
+                <div className="text-right leading-tight">
+                  <div className={`text-sm font-bold ${lit ? "text-green-300" : "text-yellow-300"}`}>
+                    {symbolValue(run, s.id)} ₽
+                    {weights[i] > 0 && symbolValue(run, s.id) > s.baseValue && <span className="text-green-400 text-[10px]"> ↑</span>}
+                  </div>
                 </div>
               </div>
-              <div className="text-right leading-tight">
-                <div className="text-sm font-bold text-yellow-300">
-                  {symbolValue(run, s.id)} ₽
-                  {weights[i] > 0 && symbolValue(run, s.id) > s.baseValue && <span className="text-green-400 text-[10px]"> ↑</span>}
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </Board>
 
         {/* Machine cabinet */}
@@ -627,34 +734,81 @@ export default function PokeSlots() {
             </div>
           </div>
 
-          {/* Lever + help */}
+          {/* Lever + help. While the round's pulls haven't been paid for yet
+              (awaitingChoice) the pull picker takes the lever's place: buy 3
+              fast pulls (5% of the quota) or 7 slower ones (10%). Choosing
+              makes the picker disappear and the lever reappear. */}
           <div className="mt-4 flex items-center justify-center gap-3">
-            <button
-              onClick={pullLever}
-              disabled={!canPull}
-              className={`rounded-xl px-10 py-3 font-black text-lg tracking-wider transition-all ${
-                canPull
-                  ? "bg-gradient-to-b from-red-500 to-red-700 text-white shadow-[0_4px_0_rgb(127_29_29)] hover:brightness-110 active:translate-y-0.5 active:shadow-none"
-                  : "bg-slate-800 text-slate-500 cursor-not-allowed"
-              }`}
-            >
-              {phase === "spinning" ? "···" : tr("PULL")}
-            </button>
-            <button
-              onClick={() => setModal("help")}
-              className="size-9 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors"
-              title={tr("How to play")}
-            >
-              ?
-            </button>
+            {run.awaitingChoice ? (
+              [3, 7].map((m) => {
+                const coinCost = roundCost(run, m);
+                const withCoins = run.coins >= coinCost; // otherwise the ticket fallback applies
+                const price = withCoins ? `${fmt(coinCost)} ₽` : `${ROUND_TICKET_COSTS[m]} 🎫`;
+                const canBuy =
+                  withCoins || (run.tickets || 0) >= ROUND_TICKET_COSTS[m];
+                return (
+                  <Tooltip key={m}>
+                    <TooltipTrigger
+                      render={
+                        <button
+                          onClick={() => chooseRoundMode(m)}
+                          disabled={!canAct || !canBuy}
+                          className={`w-28 rounded-xl border-2 py-3 font-black transition-all disabled:opacity-40 ${
+                            m === 3
+                              ? "border-emerald-600/60 bg-emerald-500/10 text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/20"
+                              : "border-yellow-600/60 bg-yellow-500/10 text-yellow-300 hover:border-yellow-400 hover:bg-yellow-500/20"
+                          }`}
+                        >
+                          <span className="block text-lg leading-none">{m}</span>
+                          <span className="mt-1 block text-[11px] font-bold leading-none opacity-80">{price}</span>
+                        </button>
+                      }
+                    />
+                    <TooltipContent side="bottom">
+                      {m} {tr("pulls")} — {price}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })
+            ) : (
+              <button
+                onClick={pullLever}
+                disabled={!canPull}
+                className={`rounded-xl px-10 py-3 font-black text-lg tracking-wider transition-all ${
+                  canPull
+                    ? "bg-gradient-to-b from-red-500 to-red-700 text-white shadow-[0_4px_0_rgb(127_29_29)] hover:brightness-110 active:translate-y-0.5 active:shadow-none"
+                    : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                }`}
+              >
+                {phase === "spinning" ? "···" : tr("PULL")}
+              </button>
+            )}
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    onClick={() => setModal("help")}
+                    className="size-9 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors"
+                  >
+                    ?
+                  </button>
+                }
+              />
+              <TooltipContent>{tr("How to play")}</TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Rotom Phone bar */}
           <div className="mt-4 flex items-center gap-2 sm:gap-3 rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2">
             <span className="text-xl shrink-0">📱</span>
-            <p className="flex-1 min-w-0 text-xs text-slate-300 italic truncate" title={phoneMsg}>
-              “{phoneMsg}”
-            </p>
+            <Tooltip>
+              <TooltipTrigger
+                render={<p className="flex-1 min-w-0 text-xs text-slate-300 italic truncate cursor-default">“{phoneMsg}”</p>}
+              />
+              <TooltipContent side="top" className="max-w-64 text-wrap">
+                {phoneMsg}
+              </TooltipContent>
+            </Tooltip>
             <button
               onClick={() => canAct && setModal("shop")}
               disabled={!canAct}
@@ -676,40 +830,133 @@ export default function PokeSlots() {
             <span className="text-[10px] uppercase tracking-wide text-slate-500 mr-1">{tr("Charms")}</span>
             {run.charms.length === 0 && <span className="text-[11px] text-slate-600">—</span>}
             {run.charms.map((c) => (
-              <div
-                key={c}
-                title={`${tr(CHARM_NAME_KEYS[c])} — ${tr(`${c}-desc`)}`}
-                className="rounded-md border border-slate-700 bg-slate-800/70 px-1.5 py-1"
-              >
-                <CharmIcon charmId={c} className="size-5" />
-              </div>
+              <Tooltip key={c}>
+                <TooltipTrigger
+                  render={
+                    <div className="rounded-md border border-slate-700 bg-slate-800/70 px-1.5 py-1 cursor-default">
+                      <CharmIcon charmId={c} className="size-5" />
+                    </div>
+                  }
+                />
+                <TooltipContent side="bottom" className="max-w-56 flex-col items-stretch gap-0.5">
+                  <span className="font-bold">{tr(CHARM_NAME_KEYS[c])}</span>
+                  <span className="opacity-80">{tr(`${c}-desc`)}</span>
+                </TooltipContent>
+              </Tooltip>
             ))}
           </div>
         </div>
 
-        {/* Patterns board */}
-        <Board title={tr("Patterns")}>
-          {PATTERN_TYPES.map((type) => (
-            <div
-              key={type}
-              className={`flex items-center gap-2 rounded-lg px-2 py-1 transition-colors ${
-                scoredTypes.has(type) ? "bg-yellow-500/15 ring-1 ring-yellow-500/60" : "bg-slate-800/60"
-              }`}
-            >
-              <MiniPattern type={type} />
-              <div className="flex-1 text-[11px] font-semibold">{type.replace("_", "-")}</div>
-              <div className={`text-sm font-bold ${scoredTypes.has(type) ? "text-yellow-300" : "text-slate-300"}`}>
-                ×{patternMult(run, type)}
-              </div>
+        {/* Right column: patterns board + SFX volume control */}
+        <div className="space-y-4">
+          <Board title={tr("Patterns")}>
+            {PATTERN_TYPES.map((type) => {
+              const lit = !!flashes[`pattern:${type}`];
+              return (
+                <div
+                  key={type}
+                  className={`flex items-center gap-2 rounded-lg px-2 py-1 transition-colors ${
+                    lit
+                      ? "bg-yellow-500/15 ring-2 ring-yellow-400"
+                      : scoredTypes.has(type)
+                        ? "bg-yellow-500/15 ring-1 ring-yellow-500/60"
+                        : "bg-slate-800/60"
+                  }`}
+                >
+                  <MiniPattern type={type} />
+                  <div className="flex-1 text-[11px] font-semibold">{type.replace("_", "-")}</div>
+                  <div className={`text-sm font-bold ${lit ? "text-green-300" : scoredTypes.has(type) ? "text-yellow-300" : "text-slate-300"}`}>
+                    ×{patternMult(run, type)}
+                  </div>
+                </div>
+              );
+            })}
+          </Board>
+
+          {/* Sound-effects volume (persisted): tap the speakers for mute/max,
+              or drag the slider. Applies to every sfx in the game. */}
+          <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 text-center">{tr("Sound volume")}</h3>
+            <div className="mt-1 flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      onClick={() => setVolumeState(0)}
+                      disabled={volume === 0}
+                      className="shrink-0 text-base w-6 text-center transition-transform enabled:hover:scale-110 disabled:opacity-50"
+                    >
+                      {volume === 0 ? "🔇" : "🔈"}
+                    </button>
+                  }
+                />
+                <TooltipContent>{tr("Mute")}</TooltipContent>
+              </Tooltip>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={volume}
+                onChange={(e) => setVolumeState(Number(e.target.value))}
+                aria-label={tr("Sound volume")}
+                className="min-w-0 w-full flex-1 accent-yellow-500"
+              />
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      onClick={() => setVolumeState(1)}
+                      disabled={volume === 1}
+                      className="shrink-0 text-base w-6 text-center transition-transform enabled:hover:scale-110 disabled:opacity-50"
+                    >
+                      🔊
+                    </button>
+                  }
+                />
+                <TooltipContent>100%</TooltipContent>
+              </Tooltip>
             </div>
-          ))}
-        </Board>
+            <div className="mt-1 text-center text-[10px] text-slate-600">{Math.round(volume * 100)}%</div>
+          </div>
+        </div>
       </div>
 
       <p className="mx-auto max-w-6xl mt-4 text-center text-[11px] text-slate-600">
         {records.wins > 0
           ? `${tr("Escapes")}: ${records.wins} · ${tr("Fastest escape")}: ${tr("round")} ${records.bestWinRound}`
           : tr("No one has ever escaped this basement... probably")}
+      </p>
+
+      {/* Sound effects license attributions (Pixabay content license). */}
+      <p className="mx-auto max-w-6xl mb-2 text-center text-[10px] text-slate-700">
+        Sound Effects by{" "}
+        <a
+          href="https://pixabay.com/users/victorabdo-24752366/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=232536"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-slate-500 transition-colors"
+        >
+          victor abdo
+        </a>{" "}
+        and{" "}
+        <a
+          href="https://pixabay.com/users/freesound_community-46691455/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=87313"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-slate-500 transition-colors"
+        >
+          freesound_community
+        </a>{" "}
+        from{" "}
+        <a
+          href="https://pixabay.com/sound-effects//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=232536"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-slate-500 transition-colors"
+        >
+          Pixabay
+        </a>
       </p>
 
       {/* JACKPOT banner */}
@@ -731,10 +978,10 @@ export default function PokeSlots() {
             <div className="text-sm text-sky-300 font-bold">🎫 {fmt(run.tickets)}</div>
             <button
               onClick={doReroll}
-              disabled={run.tickets < REROLL_COST || phase !== "idle"}
+              disabled={run.coins < rerollCost(run) || phase !== "idle"}
               className="rounded-lg border border-sky-600 px-3 py-1 text-xs text-sky-300 hover:bg-sky-600/20 disabled:opacity-40 transition-colors"
             >
-              ⟳ {tr("Reroll")} ({REROLL_COST} 🎫)
+              ⟳ {tr("Reroll")} ({fmt(rerollCost(run))} ₽)
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -751,17 +998,27 @@ export default function PokeSlots() {
                 {tr("Your charms")} ({run.charms.length}/{MAX_CHARMS})
               </h4>
               <div className="flex flex-wrap gap-2">
-                {run.charms.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => sellCharm(c)}
-                    title={`${tr(`${c}-desc`)} — ${tr("sell for")} ${Math.max(1, Math.floor(charmCost(c, run.cycle) / 2))} 🎫`}
-                    className="flex items-center gap-1 rounded-md border border-slate-700 bg-slate-800/70 px-2 py-1 hover:border-red-500 hover:bg-red-500/10 transition-colors"
-                  >
-                    <CharmIcon charmId={c} className="size-5" />
-                    <span className="text-[10px] text-slate-400">+{Math.max(1, Math.floor(charmCost(c, run.cycle) / 2))}🎫</span>
-                  </button>
-                ))}
+                {run.charms.map((c) => {
+                  const refund = Math.max(1, Math.floor(charmCost(c, run.cycle) / 2));
+                  return (
+                    <Tooltip key={c}>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            onClick={() => sellCharm(c)}
+                            className="flex items-center gap-1 rounded-md border border-slate-700 bg-slate-800/70 px-2 py-1 hover:border-red-500 hover:bg-red-500/10 transition-colors"
+                          >
+                            <CharmIcon charmId={c} className="size-5" />
+                            <span className="text-[10px] text-slate-400">+{refund}🎫</span>
+                          </button>
+                        }
+                      />
+                      <TooltipContent side="bottom" className="max-w-56 text-wrap">
+                        {tr(`${c}-desc`)} — {tr("sell for")} {refund} 🎫
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
               </div>
               <p className="mt-1 text-[10px] text-slate-600">{tr("Click a charm to sell it")}</p>
             </>
@@ -840,8 +1097,8 @@ export default function PokeSlots() {
       {modal === "help" && (
         <Overlay title={tr("How to play")} onClose={() => setModal(null)}>
           <ul className="list-disc pl-4 space-y-2 text-sm text-slate-300">
-            <li>{tr("Each round, buy 3 pulls (10% of the quota) or 7 (20%) — a quota gives you 3 rounds to pay it at the ATM. Can't afford a round? The shortfall is added to your debt.")}</li>
-            <li>{tr("Clear a quota early for a bonus: +20% and 15 tickets with 3 rounds left, +10% and 10 with 2, +5% and 5 with 1 — on the last round you only get 3 tickets.")}</li>
+            <li>{tr("Each round, buy 3 pulls (5% of the quota) or 7 (10%) — paying with coins earns 4 tickets (3-pull) or 2 (7-pull). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead. No coins and no tickets? You lose.")}</li>
+            <li>{tr("Clear a quota early for a bonus: 7% of the quota + 4 tickets, plus 1 extra ticket per round still left. Paying right on the deadline earns no bonus.")}</li>
             <li>{tr("Patterns pay coins only. Tickets come from clearing quotas — spend them on charms and permanent upgrades.")}</li>
             <li>{tr("Unpaid debt grows 8% interest at every deadline. Overpay early to dodge it.")}</li>
             <li>{tr("Clear the whole debt to escape. That's the win.")}</li>
@@ -916,7 +1173,7 @@ export default function PokeSlots() {
   function EndStats() {
     return (
       <div className="text-xs text-slate-500 space-y-0.5">
-        <div>{tr("Round reached")}: {run.round}</div>
+        <div>{tr("Round reached")}: {run.totalRounds}</div>
         <div>{tr("Total earned")}: {fmt(run.stats.totalEarned)} ₽</div>
         <div>{tr("Best single pull")}: {fmt(run.stats.biggestWin)} ₽</div>
         <div>{tr("Jackpots")}: {run.stats.jackpots}</div>

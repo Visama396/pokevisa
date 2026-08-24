@@ -2066,31 +2066,39 @@ const ui = {
     en: "Focus Band will halve the quota for you — once", es: "La Banda Focus reducirá la cuota a la mitad — una sola vez", fr: "Le Bandeau Focus divisera la quote-part par deux — une seule fois", de: "Das Focus-Band halbiert die Rate — genau einmal", it: "La Fascia Concentrazione dimezzerà la rata — una sola volta",
     ja: "がんばリバンドが一度だけ分割払いを半減する", ko: "승부밴드가 단 한 번 분할금을 반으로 줄여준다", "zh-hans": "气势绑带会为你把配额减半——仅一次", "zh-hant": "氣勢綁帶會為你把配額減半——僅一次",
   },
-  "Each round, buy 3 pulls (10% of the quota) or 7 (20%) — a quota gives you 3 rounds to pay it at the ATM. Can't afford a round? The shortfall is added to your debt.": {
-    en: "Each round, buy 3 pulls (10% of the quota) or 7 (20%) — a quota gives you 3 rounds to pay it at the ATM. Can't afford a round? The shortfall is added to your debt.",
-    es: "Cada ronda, compra 3 tiradas (10% de la cuota) o 7 (20%): tienes 3 rondas para pagarla en el cajero. ¿No te llega? La diferencia se añade a tu deuda.",
-    fr: "À chaque manche, achète 3 tirages (10 % de la quote-part) ou 7 (20 %) — tu as 3 manches pour la payer au distributeur. Pas assez d'argent ? La différence s'ajoute à ta dette.",
-    de: "Kaufe jede Runde 3 Züge (10 % der Rate) oder 7 (20 %) — für die Rate hast du 3 Runden Zeit, sie am Automaten zu zahlen. Reicht das Geld nicht? Der Fehlbetrag kommt auf deine Schulden.",
-    it: "A ogni turno compra 3 slate (10% della rata) o 7 (20%) — hai 3 turni per pagarla all'ATM. Non ti bastano? La differenza si aggiunge al tuo debito.",
-    ja: "毎ラウンド、レバー回数を購入する：3回（分割払いの10%）か7回（20%）。分割払いはATMで支払うまで3ラウンドある。金が足りないときは、不足分が借金に加算される。",
-    ko: "매 라운드 레버 횟수를 구매한다: 3회(분할금의 10%) 또는 7회(20%). 분할금은 ATM으로 지불할 때까지 3라운드가 주어진다. 돈이 부족하면 부족분이 빚에 더해진다.",
-    "zh-hans": "每回合购买拉杆次数：3次（配额的10%）或7次（20%）——你有3回合时间在ATM支付配额。钱不够？差额会记入你的债务。",
-    "zh-hant": "每回合購買拉桿次數：3次（配額的10%）或7次（20%）——你有3回合時間在ATM支付配額。錢不夠？差額會記入你的債務。",
+  "Each round, buy 3 pulls (5% of the quota) or 7 (10%) — paying with coins earns 4 tickets (3-pull) or 2 (7-pull). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead. No coins and no tickets? You lose.": {
+    en: "Each round, buy 3 pulls (5% of the quota) or 7 (10%) — paying with coins earns 4 tickets (3-pull) or 2 (7-pull). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead. No coins and no tickets? You lose.",
+    es: "Cada ronda, compra 3 tiradas (5% de la cuota) o 7 (10%): pagar con monedas te da 4 tickets (3 tiradas) o 2 (7 tiradas). ¿Sin monedas? La ronda cuesta 1 ticket (3 tiradas) o 2 tickets (7 tiradas). ¿Ni monedas ni tickets? Pierdes.",
+    fr: "À chaque manche, achète 3 tirages (5 % de la quote-part) ou 7 (10 %) — payer en pièces rapporte 4 tickets (3 tirages) ou 2 (7 tirages). Pas assez de pièces ? La manche coûte alors 1 ticket (3 tirages) ou 2 tickets (7 tirages). Ni pièces ni tickets ? Tu perds.",
+    de: "Kaufe jede Runde 3 Züge (5 % der Rate) oder 7 (10 %) — Zahlung mit Münzen bringt 4 Tickets (3 Züge) oder 2 (7 Züge). Keine Münzen? Dann kostet die Runde 1 Ticket (3 Züge) oder 2 Tickets (7 Züge). Weder Münzen noch Tickets? Dann verloren.",
+    it: "A ogni turno compra 3 slate (5% della rata) o 7 (10%) — pagare con monete fa guadagnare 4 biglietti (3 slate) o 2 (7 slate). Monete finite? Il turno costa 1 biglietto (3 slate) o 2 biglietti (7 slate). Né monete né biglietti? Hai perso.",
+    ja: "毎ラウンド、レバー回数を購入する：3回（分割払いの5%）か7回（10%）。コインで支払うとチケットがもらえる（3回なら4枚、7回なら2枚）。コインが足りないときはチケットで購入（3回=1枚、7回=2枚）。どちらもないと負けだ。",
+    ko: "매 라운드 레버 횟수를 구매한다: 3회(분할금의 5%) 또는 7회(10%). 코인으로 지불하면 티켓을 얻는다(3회는 4장, 7회는 2장). 코인이 부족하면 티켓으로 구매(3회=1장, 7회=2장). 둘 다 없으면 패배한다.",
+    "zh-hans": "每回合购买拉杆次数：3次（配额的5%）或7次（10%）——用金币支付可获得4张券（3次）或2张券（7次）。金币不够？可用券支付（3次=1张，7次=2张）。金币和券都没有？你就输了。",
+    "zh-hant": "每回合購買拉桿次數：3次（配額的5%）或7次（10%）——用金幣支付可獲得4張券（3次）或2張券（7次）。金幣不夠？可用券支付（3次=1張，7次=2張）。金幣和券都沒有？你就輸了。",
+  },
+  "Sound volume": {
+    en: "Sound volume", es: "Volumen del sonido", fr: "Volume du son", de: "Lautstärke", it: "Volume del suono",
+    ja: "効果音の音量", ko: "효과음 볼륨", "zh-hans": "音效音量", "zh-hant": "音效音量",
+  },
+  "Mute": {
+    en: "Mute", es: "Silenciar", fr: "Couper le son", de: "Stumm", it: "Silenzia",
+    ja: "ミュート", ko: "음소거", "zh-hans": "静音", "zh-hant": "靜音",
   },
   "How to play": {
     en: "How to play", es: "Cómo jugar", fr: "Comment jouer", de: "Spielanleitung", it: "Come si gioca",
     ja: "遊び方", ko: "플레이 방법", "zh-hans": "玩法说明", "zh-hant": "玩法說明",
   },
-  "Clear a quota early for a bonus: +20% and 15 tickets with 3 rounds left, +10% and 10 with 2, +5% and 5 with 1 — on the last round you only get 3 tickets.": {
-    en: "Clear a quota early for a bonus: +20% and 15 tickets with 3 rounds left, +10% and 10 with 2, +5% and 5 with 1 — on the last round you only get 3 tickets.",
-    es: "Liquida una cuota antes de tiempo para una bonificación: +20% y 15 tickets con 3 rondas restantes, +10% y 10 con 2, +5% y 5 con 1; en la última ronda solo obtienes 3 tickets.",
-    fr: "Solde une quote-part en avance pour un bonus : +20 % et 15 tickets avec 3 manches restantes, +10 % et 10 avec 2, +5 % et 5 avec 1 — à la dernière manche, tu n'obtiens que 3 tickets.",
-    de: "Zahle eine Rate vorzeitig für einen Bonus: +20 % und 15 Tickets mit 3 Runden übrig, +10 % und 10 mit 2, +5 % und 5 mit 1 — in der letzten Runde gibt es nur 3 Tickets.",
-    it: "Salda una rata in anticipo per un bonus: +20% e 15 biglietti con 3 turni rimasti, +10% e 10 con 2, +5% e 5 con 1 — all'ultimo turno ottieni solo 3 biglietti.",
-    ja: "分割払いを早めに払い切るとボーナス：残り3ラウンドで+20%とチケット15枚、残り2で+10%と10枚、残り1で+5%と5枚。最終ラウンドではチケット3枚だけだ。",
-    ko: "분할금을 미리 갚으면 보너스: 남은 라운드가 3일 때 +20%와 티켓 15장, 2일 때 +10%와 10장, 1일 때 +5%와 5장. 마지막 라운드에는 티켓 3장뿐이다.",
-    "zh-hans": "提前清空配额可获得奖励：剩3回合时+20%和15券，剩2回合时+10%和10券，剩1回合时+5%和5券——最后一回合只能得到3券。",
-    "zh-hant": "提前清空配額可獲得獎勵：剩3回合時+20%和15券，剩2回合時+10%和10券，剩1回合時+5%和5券——最後一回合只能得到3券。",
+  "Clear a quota early for a bonus: 7% of the quota + 4 tickets, plus 1 extra ticket per round still left. Paying right on the deadline earns no bonus.": {
+    en: "Clear a quota early for a bonus: 7% of the quota + 4 tickets, plus 1 extra ticket per round still left. Paying right on the deadline earns no bonus.",
+    es: "Liquida una cuota antes de tiempo para una bonificación: 7% de la cuota + 4 tickets, más 1 ticket extra por cada ronda restante. Pagar justo en el plazo final no da bonificación.",
+    fr: "Solde une quote-part en avance pour un bonus : 7 % de la quote-part + 4 tickets, plus 1 ticket supplémentaire par manche restante. Payer pile à l'échéance ne rapporte aucun bonus.",
+    de: "Zahle eine Rate vorzeitig für einen Bonus: 7 % der Rate + 4 Tickets, dazu 1 Extra-Ticket pro verbleibender Runde. Zahlst du erst am Stichtag, gibt es keinen Bonus.",
+    it: "Salda una rata in anticipo per un bonus: 7% della rata + 4 biglietti, più 1 biglietto extra per ogni turno rimasto. Pagare proprio alla scadenza non dà nessun bonus.",
+    ja: "分割払いを早めに払い切るとボーナス：分割払いの7%＋チケット4枚、さらに残りラウンド1つにつきチケット1枚追加。期限ちょうどの支払いではボーナスはない。",
+    ko: "분할금을 미리 갚으면 보너스: 분할금의 7% + 티켓 4장, 남은 라운드 1개당 티켓 1장 추가. 기한에 정확히 맞춰 내면 보너스는 없다.",
+    "zh-hans": "提前清空配额可获得奖励：配额的7% + 4张券，剩余每回合额外+1张券。正好在期限当天支付没有奖励。",
+    "zh-hant": "提前清空配額可獲得獎勵：配額的7% + 4張券，剩餘每回合額外+1張券。正好在期限當天支付沒有獎勵。",
   },
   "Patterns pay coins only. Tickets come from clearing quotas — spend them on charms and permanent upgrades.": {
     en: "Patterns pay coins only. Tickets come from clearing quotas — spend them on charms and permanent upgrades.",
@@ -2311,13 +2319,13 @@ const ui = {
   },
   "charm-wide-lens": { en: "Wide Lens" },
   "wide-lens-desc": {
-    en: "Diamond, Treasure and Seven appear ~60% more often.", es: "Diamante, Tesoro y Siete aparecen ~60% más seguido.", fr: "Diamant, Trésor et Sept apparaissent ~60% plus souvent.", de: "Diamant, Schatz und Sieben erscheinen ~60% häufiger.", it: "Diamante, Tesoro e Sette appaiono ~60% più spesso.",
-    ja: "ダイヤ・宝物・セブンの出現率が約6割増。", ko: "다이아·보물·세븐 등장률 약 60% 증가.", "zh-hans": "钻石、宝藏、幸运7出现率提高约60%。", "zh-hant": "鑽石、寶藏、幸運7出現率提高約60%。",
+    en: "Carbink, Gholdengo and Seviper appear ~60% more often.", es: "Carbink, Gholdengo y Seviper aparecen ~60% más seguido.", fr: "Strassie, Gromago et Séviper apparaissent ~60% plus souvent.", de: "Rocara, Monetigo und Vipitis erscheinen ~60% häufiger.", it: "Carbink, Gholdengo e Seviper appaiono ~60% più spesso.",
+    ja: "メレシー・サーフゴー・ハブネークの出現率が約6割増。", ko: "멜리시·타부자고·세비퍼 등장률 약 60% 증가.", "zh-hans": "小碎钻、赛富豪、饭匙蛇出现率提高约60%。", "zh-hant": "小碎鑽、賽富豪、飯匙蛇出現率提高約60%。",
   },
   "charm-metal-coat": { en: "Metal Coat" },
   "metal-coat-desc": {
-    en: "Bell and Diamond symbols are worth +2.", es: "Los símbolos Campana y Diamante valen +2.", fr: "Les symboles Cloche et Diamant valent +2.", de: "Glocken- und Diamant-Symbole sind +2 wert.", it: "I simboli Campana e Diamante valgono +2.",
-    ja: "ベルとダイヤのシンボルの価値+2。", ko: "종과 다이아 심볼의 가치 +2.", "zh-hans": "铃铛与钻石图案价值+2。", "zh-hant": "鈴鐺與鑽石圖案價值+2。",
+    en: "Chimecho and Carbink are worth +2.", es: "Chimecho y Carbink valen +2.", fr: "Éoko et Strassie valent +2.", de: "Palimpalim und Rocara sind +2 wert.", it: "Chimecho e Carbink valgono +2.",
+    ja: "チリーンとメレシーの価値+2。", ko: "치렁과 멜리시의 가치 +2.", "zh-hans": "风铃铃与小碎钻价值+2。", "zh-hant": "風鈴鈴與小碎鑽價值+2。",
   },
   "charm-amulet-coin": { en: "Amulet Coin" },
   "amulet-coin-desc": {
@@ -2326,8 +2334,8 @@ const ui = {
   },
   "charm-super-repel": { en: "Super Repel" },
   "super-repel-desc": {
-    en: "Lemons stop appearing on the reels entirely.", es: "Los Limones dejan de aparecer por completo.", fr: "Les Citrons cessent totalement d'apparaître.", de: "Zitronen erscheinen gar nicht mehr.", it: "I Limoni smettono completamente di apparire.",
-    ja: "レモンが一切出現しなくなる。", ko: "레몬이 아예 등장하지 않게 된다.", "zh-hans": "柠檬完全不再出现。", "zh-hant": "檸檬完全不 再出現。",
+    en: "Exeggcute stops appearing on the reels entirely.", es: "Exeggcute deja de aparecer por completo.", fr: "Noeunoeuf cesse totalement d'apparaître.", de: "Owei erscheint gar nicht mehr.", it: "Exeggcute smette completamente di apparire.",
+    ja: "タマタマが一切出現しなくなる。", ko: "아라리가 아예 등장하지 않게 된다.", "zh-hans": "蛋蛋完全不再出现。", "zh-hant": "蛋蛋完全不再出現。",
   },
   "charm-magnet": { en: "Magnet" },
   "magnet-desc": {
@@ -2336,8 +2344,8 @@ const ui = {
   },
   "charm-gold-bottle-cap": { en: "Gold Bottle Cap" },
   "gold-bottle-cap-desc": {
-    en: "Seven symbols are worth +5.", es: "Los símbolos Siete valen +5.", fr: "Les symboles Sept valent +5.", de: "Sieben-Symbole sind +5 wert.", it: "I simboli Sette valgono +5.",
-    ja: "セブンのシンボルの価値+5。", ko: "세븐 심볼의 가치 +5.", "zh-hans": "幸运7图案价值+5。", "zh-hant": "幸運7圖案價值+5。",
+    en: "Seviper is worth +5.", es: "Seviper vale +5.", fr: "Séviper vaut +5.", de: "Vipitis ist +5 wert.", it: "Seviper vale +5.",
+    ja: "ハブネークの価値+5。", ko: "세비퍼의 가치 +5.", "zh-hans": "饭匙蛇价值+5。", "zh-hant": "飯匙蛇價值+5。",
   },
 };
 
