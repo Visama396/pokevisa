@@ -71,7 +71,7 @@ export function symbolSprite(id) {
   return `${SLOT_SPRITES}/sym-${SYMBOL_BY_ID[id].pokemonId}.png`;
 }
 
-// Shiny variant of the HOME render — the Golden charms' icons.
+// Shiny variant of the HOME render — the Shiny charms' icons.
 export function shinySymbolSprite(id) {
   return `${SLOT_SPRITES}/sym-shiny-${SYMBOL_BY_ID[id].pokemonId}.png`;
 }
@@ -201,16 +201,65 @@ export function createRunState() {
     // Cleanse Tag stacks: every symbol's coin value rises by this amount
     // (one stack on purchase, one more per pull that lands 5+ patterns).
     cleanseStacks: 0,
-    // Golden charm / Griseous Orb growth: permanent per-run bumps to symbol
+    // Shiny charm / Griseous Orb growth: permanent per-run bumps to symbol
     // values and pattern multipliers earned by scoring modified cells.
     goldenLevels: {},
     chainLevels: {},
-    // Cell indices carrying the Golden/Chain modifiers on the CURRENT grid
+    // Cell indices carrying the Shiny/Chain modifiers on the CURRENT grid
     // (re-rolled every pull by rollModifiers; used for scoring and rendering).
     goldenCells: [],
     chainCells: [],
-    // Shop rerolls bought this cycle; drives the escalating rerollCost().
+    // Shop rerolls bought this RUN (never resets); drives rerollCost().
     rerolls: 0,
+    // Permanent per-run symbol boosts expressed in whole base values — Black
+    // Sludge feeds them whenever a charm is discarded, Parcel feeds them on a
+    // random empty pull (both applied by discardCharm / PokeSlots.jsx).
+    permLevels: {},
+    // Pull-to-pull memory for the guarantee/comeback charms:
+    // lastPullEmpty — Star Piece: previous pull hit no pattern at all
+    // emptyStreak / metronomeFires — Metronome: consecutive empty pulls and
+    //   how many times it already fired on this streak (+2 Luck per fire)
+    // bigDrought — Deep Sea Tooth: pulls since the last 5+ cell pattern
+    lastPullEmpty: false,
+    emptyStreak: 0,
+    metronomeFires: 0,
+    bigDrought: 0,
+    // Bright Powder counts charm activations within the current round and
+    // pays Luck +7 once it reaches 5 (reset when a new round is bought).
+    itemTriggers: 0,
+    brightPowderFired: false,
+    // Lucky Egg: 3 consecutive pulls scoring a rare (Carbink/Gholdengo/Seviper)
+    // sets luckyEggPending, forcing EYE on the next pull.
+    luckyEggStreak: 0,
+    luckyEggPending: false,
+    // --- Third-wave charm state -------------------------------------------
+    // Choice Specs: permanent per-run pattern boosts in whole base mults.
+    permPatternLevels: {},
+    // Contest scarves: activation counters (red/blue wear out at maxFires).
+    scarfFires: {},
+    // Green/Yellow scarf Luck bonuses (quota-scoped) and the Pink Scarf's
+    // per-quota reroll counter; scarfFired = luck granted by scarves on the
+    // CURRENT pull (read by resolvePull, e.g. Green Scarf growth).
+    greenScarfBonus: 0,
+    yellowScarfBonus: 0,
+    rerollsThisCycle: 0,
+    scarfFired: null,
+    // Round-scoped temp boosts (reset when a round is bought): Adamant Mint
+    // stacks base values on symbols, Sassy Mint doubles them, Electric Seed
+    // stacks base mults on patterns, Psychic Seed doubles them. Misty Seed
+    // doubles patterns permanently; Grassy Seed feeds grassyLevels (+1 per
+    // cleared quota, alternating Symbols/Patterns via grassyTurns).
+    adamantStacks: 0,
+    sassyDoubles: 0,
+    electricBoost: 0,
+    psychicDoubles: 0,
+    mistyDoubles: 0,
+    grassyLevels: { global: 0, pattern: 0 },
+    grassyTurns: 0,
+    // Leftovers: completed rounds since purchase — self-discards at 10.
+    leftoversRounds: 0,
+    // Poffin Case is offered only once per run, even if sold.
+    poffinCaseBought: false,
     grid: [...STARTER_GRID],
     charms: [],
     upgrades: emptyUpgrades(),
@@ -222,7 +271,7 @@ export function createRunState() {
 export const START_COINS = 70;
 export const START_DEBT = 50000;
 // Runs begin with enough tickets to buy a cheap charm or an upgrade.
-export const START_TICKETS = 4;
+export const START_TICKETS = 0;
 // Clearing a debt doesn't end the run: the loan is replaced by a bigger one
 // (×DEBT_GROWTH each time) and the charm tray gains +1 slot per debt paid,
 // so runs become endless escalations instead of a single win.
@@ -230,15 +279,16 @@ export const DEBT_GROWTH = 2;
 export function nextDebt(debtsCleared) {
   return Math.ceil(START_DEBT * Math.pow(DEBT_GROWTH, debtsCleared));
 }
-// Charm tray capacity: base slots, plus one per cleared debt.
+// Charm tray capacity: base slots, plus one per cleared debt, plus one when
+// the Poffin Case is owned (which itself takes no space — see buyOffer).
 export const CHARM_SLOTS_BASE = 8;
 export function charmSlots(state) {
-  return CHARM_SLOTS_BASE + (state.debtsCleared || 0);
+  return CHARM_SLOTS_BASE + (state.debtsCleared || 0) + (state.charms.includes("poffin-case") ? 1 : 0);
 }
 
 // Rerolling the Rotom Phone's offers costs COINS (not tickets) and the price
-// doubles with every reroll inside the current quota cycle — it resets back to
-// the base cost when a quota is cleared, together with the shop itself.
+// doubles with every reroll — the counter NEVER resets (not between rounds,
+// not between quotas), so rerolling only ever gets pricier during a run.
 export const REROLL_BASE_COST = 3;
 export const REROLL_COST_GROWTH = 2;
 export function rerollCost(state) {
@@ -249,22 +299,29 @@ export function rerollCost(state) {
 // Rounds & quotas
 // ---------------------------------------------------------------------------
 // A QUOTA spans ROUNDS_PER_QUOTA rounds. Each round the player buys 3 or 7
-// pulls — entry costs a share of the CURRENT quota (3 pulls = 5%, 7 = 10%;
-// see roundCost) and earns 4 / 2 tickets. Patterns pay coins only; tickets
-// also come from clearing a quota early (see quotaClearBonus).
-// Missing the last round's deadline is game over (Focus Band halves once).
+// pulls — entry costs a fixed coin fee that grows with every quota (see
+// ROUND_COST_TABLE / roundCost) and earns 8 / 3 tickets. Patterns pay coins
+// only; tickets also come from clearing a quota early (see quotaClearBonus).
+// Missing the last round's deadline is game over (Focus Sash postpones it
+// once, Focus Band halves once).
 export const ROUNDS_PER_QUOTA = 3;
 
-// Entry costs are part of the mode: 3 pulls cost 5% of the quota, 7 pulls
-// cost 10% (a fat-spin premium). There is NO credit anymore: a pick the
-// player can't cover with coins can still be entered by spending tickets
+// Entry fees are FIXED per quota (not a share of it): the 7-pull fee follows
+// ROUND_COST_TABLE, the 3-pull fee is ~35% of it. There is NO credit: a pick
+// the player can't cover with coins can still be entered by spending tickets
 // instead (see ROUND_TICKET_COSTS, no rewards earned that way), and someone
 // who can't pay either loses the run on the spot (checked by PokeSlots.jsx
 // whenever the pull picker opens).
 export const ROUND_MODES = {
-  3: { pulls: 3, costPct: 0.03, tickets: 8 },
-  7: { pulls: 7, costPct: 0.065, tickets: 3 },
+  3: { pulls: 3, tickets: 6 },
+  7: { pulls: 7, tickets: 3 },
 };
+
+// 7-pull entry fee per quota index; beyond the table the fee climbs +10%
+// per quota (see roundCost).
+export const ROUND_COST_TABLE = [7, 14, 28, 42, 56, 140, 168, 196, 224, 756, 1260, 1386, 1500];
+export const THREE_PULL_COST_PCT = 0.35;
+export const ROUND_COST_GROWTH = 1.1;
 
 // Ticket price of a round when the player can't (or won't) pay its coin fee.
 // Paying with tickets does NOT earn the mode's ticket reward.
@@ -280,39 +337,51 @@ function emptyUpgrades() {
   };
 }
 
-// The installment due within ROUNDS_PER_QUOTA rounds. Escalates geometrically
-// per CYCLE and without limit — overpaying shrinks the principal, which
-// shrinks the interest charged at each deadline. Clearing the whole debt is
-// still how you escape.
+// The installment due within ROUNDS_PER_QUOTA rounds. Follows a steep
+// exponential table (CloverPit's curve); beyond the last entry it keeps
+// growing ×10 per quota without limit. Overpaying shrinks the debt principal,
+// which shrinks the interest charged at each deadline. Clearing the whole
+// debt is still how you escape.
+export const QUOTA_TABLE = [
+  75, 200, 666, 2222, 12500, 33333, 66666, 200000, 1000000, 6000000,
+  144000000, 13800000000, 2e13, 2e17, 2e22,
+];
+export const QUOTA_TABLE_GROWTH = 10;
 export function quotaForCycle(cycle) {
-  const raw = 100 * Math.pow(1.32, cycle - 1);
-  return Math.max(5, Math.round(raw / 5) * 5);
+  if (cycle <= QUOTA_TABLE.length) return QUOTA_TABLE[cycle - 1];
+  return QUOTA_TABLE[QUOTA_TABLE.length - 1] * Math.pow(QUOTA_TABLE_GROWTH, cycle - QUOTA_TABLE.length);
 }
 
 export function currentQuota(state) {
   return quotaForCycle(state.cycle);
 }
 
-// Entry price of a round mode: a share of the CURRENT quota (3 pulls = 5%,
-// 7 = 10%), so the fee scales with the debt you're chipping away at.
-// Used by the pull picker (PokeSlots.jsx chooseRoundMode), the ATM's MAX
-// clamp and the help text.
+// Entry price of a round mode: the 7-pull fee is ROUND_COST_TABLE indexed by
+// the current quota (then +10% per quota beyond the table); the 3-pull fee is
+// ~35% of that. Used by the pull picker (PokeSlots.jsx chooseRoundMode), the
+// ATM's MAX clamp and the help text.
 export function roundCost(state, mode) {
-  const pct = ROUND_MODES[mode]?.costPct ?? 0;
-  return Math.max(1, Math.ceil(currentQuota(state) * pct));
+  const cycle = state.cycle;
+  const last = ROUND_COST_TABLE.length;
+  const cost7 =
+    cycle <= last
+      ? ROUND_COST_TABLE[cycle - 1]
+      : Math.ceil(ROUND_COST_TABLE[last - 1] * Math.pow(ROUND_COST_GROWTH, cycle - last));
+  if (Number(mode) === 7) return cost7;
+  return Math.max(1, Math.round(cost7 * THREE_PULL_COST_PCT));
 }
 
 // Early-clear bonus: clearing a quota while rounds are still left pays 7% of
-// the current quota plus tickets — a flat 4 and one extra per remaining
-// round. Paying right on the deadline (0 rounds left) is not early and earns
-// nothing extra. Lucky Egg's ticketMult is applied by the caller.
+// the current quota plus 4 tickets per remaining round. Paying right on the
+// deadline (0 rounds left) is not early and earns nothing extra. Lucky Egg's
+// ticketMult is applied by the caller.
 export const QUOTA_CLEAR_BONUS_PCT = 0.07;
 export const QUOTA_CLEAR_BASE_TICKETS = 4;
 export function quotaClearBonus(state) {
   if ((state.roundsLeft || 0) <= 0) return { coins: 0, tickets: 0 };
   return {
     coins: Math.floor(currentQuota(state) * QUOTA_CLEAR_BONUS_PCT),
-    tickets: QUOTA_CLEAR_BASE_TICKETS + state.roundsLeft,
+    tickets: QUOTA_CLEAR_BASE_TICKETS * state.roundsLeft,
   };
 }
 
@@ -342,18 +411,54 @@ export function atmMaxDeposit(state) {
 // focus-band is the exception: it is consumed to survive one missed deadline.
 // `cost` is the FIXED ticket price in the Rotom Phone shop; `file` is a
 // PokeAPI item sprite; `emoji` is the fallback if it 404s.
+
+// --- Third-wave charm tunables --------------------------------------------
+// Drives key off the lifetime pull counter: every 7th pull.
+export const DRIVE_EVERY_PULLS = 7;
+export const SHOCK_DRIVE_LUCK = 7;
+export const CHILL_DRIVE_EXTRA_PULLS = 2;
+// Choice Scarf / Choice Specs: fire when the empty-pull streak hits exactly 3.
+export const CHOICE_STREAK = 3;
+// Bold Mint: +1 Symbols Multiplier level per N tickets owned.
+export const BOLD_MINT_TICKETS = 5;
+// Adamant Mint: patterns beyond the Nth in one pull each feed a round-scoped
+// base-value stack on every symbol.
+export const ADAMANT_MINT_FREE_PATTERNS = 2;
+// Sassy Mint: N+ patterns in one pull double every symbol until round end.
+export const SASSY_MINT_PATTERNS = 5;
+// Electric Seed: a scored pattern with base mult >= 4 feeds a round-scoped
+// +base-mult stack on every pattern; Psychic Seed needs >= 5 and doubles.
+export const ELECTRIC_SEED_MIN_MULT = 4;
+export const PSYCHIC_SEED_MIN_MULT = 5;
+// Green Scarf feeds +STEP on every pattern with base mult >= MIN it sees
+// while firing; Pink grows +STEP per shop reroll of the current quota;
+// Yellow starts each quota at STEP x rounds skipped on the previous quota.
+export const GREEN_SCARF_PATTERN_MULT = 3;
+export const GREEN_SCARF_STEP = 3;
+export const PINK_SCARF_STEP = 2;
+export const YELLOW_SCARF_STEP = 4;
+// Leftovers self-discards after this many completed rounds.
+export const LEFTOVERS_ROUNDS = 10;
+// Poison Barb: this many Sevipers on the grid all turn Shiny.
+export const POISON_BARB_SEVENS = 7;
+// The Symbols Multiplier (global payout dial, shown under the boards):
+// x1.5 per level — shop upgrades + Bold Mint + Grassy Seed levels.
+export const SYMBOLS_MULT_STEP = 1.5;
+
 export const CHARMS = {
   "silk-scarf": {
     cost: 2, file: "silk-scarf.png", emoji: "🧣",
     bonusValues: { lemon: 1, cherry: 1 },
   },
   "lucky-egg": {
-    cost: 5, file: "lucky-egg.png", emoji: "🥚",
-    ticketMult: 2, // doubles the tickets from clearing a quota
+    cost: 2, file: "lucky-egg.png", emoji: "🥚",
+    luckyEgg: true, // 3 consecutive rare-scored pulls → next pull guaranteed EYE
   },
+  // Choice Specs (rework): 3 consecutive empty pulls permanently raise every
+  // pattern by its own base multiplier (permPatternLevels).
   "choice-specs": {
-    cost: 6, file: "choice-specs.png", emoji: "🕶️",
-    patternBonus: { DIAG: 2, ZIG: 2, ZAG: 2 },
+    cost: 2, file: "choice-specs.png", emoji: "🕶️",
+    choiceSpecs: true,
   },
   "muscle-band": {
     cost: 6, file: "muscle-band.png", emoji: "💪",
@@ -379,6 +484,7 @@ export const CHARMS = {
   "amulet-coin": {
     cost: 1, file: "amulet-coin.png", emoji: "🪙",
     amuletCoin: true, // 10% chance per pull: refund the pull + Luck for it
+    trait: "random", // "Triggers Randomly" — shown colored in tooltips
   },
   "super-repel": {
     cost: 6, file: "super-repel.png", emoji: "🚫",
@@ -390,7 +496,7 @@ export const CHARMS = {
   },
   "gold-bottle-cap": {
     cost: 8, file: "gold-bottle-cap.png", emoji: "🧴",
-    bonusValues: { seven: 4 },
+    bonusValues: { seven: 5 },
   },
   "big-mushroom": {
     cost: 4, file: "big-mushroom.png", emoji: "🍄",
@@ -409,9 +515,10 @@ export const CHARMS = {
     cost: 3, file: "spell-tag.png", emoji: "👻",
     spellTag: true, // +7 Luck on the last pull of each round
   },
-  // Golden charms: each spin, cells of their symbol may turn GOLDEN. Scoring
-  // a pattern with a golden cell permanently raises that symbol's base value.
+  // Shiny charms: each spin, cells of their symbol may turn SHINY. Scoring
+  // a pattern with a shiny cell permanently raises that symbol's base value.
   // Their icon is the symbol's shiny Pokémon HOME render (`sprite` field).
+  // Internal ids stay `golden-*` so persisted runs/cloud saves keep working.
   "golden-lemon": { cost: 1, sprite: shinySymbolSprite("lemon"), emoji: "✨🍋", goldenSymbol: "lemon" },
   "golden-cherry": { cost: 1, sprite: shinySymbolSprite("cherry"), emoji: "✨🍒", goldenSymbol: "cherry" },
   "golden-clover": { cost: 2, sprite: shinySymbolSprite("clover"), emoji: "✨🍀", goldenSymbol: "clover" },
@@ -425,13 +532,200 @@ export const CHARMS = {
     cost: 4, file: "griseous-orb.png", emoji: "🔮",
     chainSymbols: ["diamond", "treasure", "seven"],
   },
+  // --- The CloverPit-style second wave of charms -------------------------
+  // focus-sash: consumed at a missed deadline — postpones it 2 rounds.
+  "focus-sash": {
+    cost: 5, file: "focus-sash.png", emoji: "🩹",
+    focusSash: true,
+  },
+  // lagging-tail: doubles every "Triggers Randomly" charm's chance.
+  "lagging-tail": {
+    cost: 3, file: "lagging-tail.png", emoji: "🐌",
+    laggingTail: true,
+  },
+  // arceus-statue: the next pull becomes a guaranteed JACKPOT, then the
+  // statue discards itself (feeding Black Sludge). Icon = Arceus itself —
+  // there is no Arceus Statue item in the games (self-hosted pokemon/493).
+  "arceus-statue": {
+    cost: 2, file: "arceus-statue.png", emoji: "🗿",
+    arceusStatue: true,
+  },
+  // black-sludge: whenever ANY charm is discarded (sold or consumed), every
+  // symbol permanently gains its own base value for this run (permLevels).
+  "black-sludge": {
+    cost: 5, file: "black-sludge.png", emoji: "🟣",
+    blackSludge: true,
+  },
+  // metronome: after 2 consecutive empty pulls, charges the next pull with
+  // Luck 5 (+2 more per consecutive fire) — see resolvePull in PokeSlots.jsx.
+  "metronome": {
+    cost: 1, file: "metronome.png", emoji: "🎵",
+    metronome: true,
+  },
+  // heal-powder: a pull that hits exactly ONE pattern re-rolls it with the
+  // pattern's cells turned into the most valuable symbol.
+  "heal-powder": {
+    cost: 3, file: "heal-powder.png", emoji: "💊",
+    healPowder: true,
+  },
+  // zoom-lens: +1 to every pattern multiplier per 15 tickets owned.
+  "zoom-lens": {
+    cost: 1, file: "zoom-lens.png", emoji: "🔎",
+    zoomLens: true,
+  },
+  // guidebook: finishing a quota raises the Symbols Multiplier (global
+  // upgrade level) by the rounds skipped in that quota + 1.
+  "guidebook": {
+    cost: 3, file: "guidebook.png", emoji: "📖",
+    guidebook: true,
+  },
+  // star-piece: after a pull with zero patterns, the next pull is guaranteed
+  // a HOR-XL on the center row (forced in pullLever).
+  "star-piece": {
+    cost: 3, file: "star-piece.png", emoji: "🌟",
+    starPiece: true,
+  },
+  // odd-keystone: 35% per pull that every pattern pays one extra time.
+  "odd-keystone": {
+    cost: 3, file: "odd-keystone.png", emoji: "🪨",
+    oddKeystone: true,
+    trait: "random",
+  },
+  // bright-powder: 5 charm activations in one round charge the next pull
+  // with Luck +7 (once per round).
+  "bright-powder": {
+    cost: 3, file: "bright-powder.png", emoji: "✨",
+    brightPowder: true,
+  },
+  // deep-sea-tooth: 3 pulls without a 5+ cell pattern guarantee an ABOVE or
+  // BELOW on the next pull (forced in pullLever).
+  "deep-sea-tooth": {
+    cost: 3, file: "deep-sea-tooth.png", emoji: "🦷",
+    deepSeaTooth: true,
+  },
+  // point-card: +1 Symbols Multiplier level per shop reroll of the run
+  // (retroactive on purchase; the reroll counter never resets).
+  "point-card": {
+    cost: 2, file: "point-card.png", emoji: "🃏",
+    pointCard: true,
+  },
+  // parcel: 25% per EMPTY pull that every symbol permanently gains its own
+  // base value (permLevels) — same boost as a Black Sludge feeding.
+  "parcel": {
+    cost: 2, file: "parcel.png", emoji: "📦",
+    parcel: true,
+    trait: "random",
+  },
+  // --- Third wave: drives, mints, seeds, scarves & held-item staples ------
+  // poffin-case: takes no tray space and adds +1 charm slot; offered once.
+  "poffin-case": {
+    cost: 2, file: "poffin-case.png", emoji: "🧰",
+    poffinCase: true,
+  },
+  // The four Gen 5 drives key off the pull counter (every 7th pull).
+  "douse-drive": {
+    cost: 1, file: "douse-drive.png", emoji: "💧",
+    douseDrive: true, // every 7th pull: patterns trigger one extra time
+  },
+  "shock-drive": {
+    cost: 1, file: "shock-drive.png", emoji: "⚡",
+    shockDrive: true, // every 7th pull: Luck +7
+  },
+  "burn-drive": {
+    cost: 1, file: "burn-drive.png", emoji: "🔥",
+    burnDrive: true, // every 7th pull: ZIG & ZAG guaranteed
+  },
+  "chill-drive": {
+    cost: 4, file: "chill-drive.png", emoji: "❄️",
+    chillDrive: true, // +2 pulls on every bought round
+  },
+  // choice-scarf: 3 consecutive empty pulls permanently raise every symbol
+  // by its own base value (permLevels).
+  "choice-scarf": {
+    cost: 2, file: "choice-scarf.png", emoji: "🧣",
+    choiceScarf: true,
+  },
+  // Mints (no official item sprites exist for them — emoji icons).
+  "modest-mint": {
+    cost: 2, emoji: "🍃",
+    modestMint: true, // quota clear: +1 ticket per (quota #) tickets held
+  },
+  "bold-mint": {
+    cost: 1, emoji: "🌱",
+    boldMint: true, // Symbols Multiplier +1 level per 5 tickets owned
+  },
+  "adamant-mint": {
+    cost: 2, emoji: "🌿",
+    adamantMint: true, // per pull, +base value to all symbols per pattern past the 2nd (round-scoped)
+  },
+  "sassy-mint": {
+    cost: 3, emoji: "☘️",
+    sassyMint: true, // 5+ patterns in a pull: double all symbols until round end
+  },
+  // Terrain seeds.
+  "electric-seed": {
+    cost: 1, file: "electric-seed.png", emoji: "⚡",
+    electricSeed: true, // a ×4+ pattern lands: all patterns +base mult until round end
+  },
+  "psychic-seed": {
+    cost: 2, file: "psychic-seed.png", emoji: "🔮",
+    psychicSeed: true, // a ×5+ pattern lands: double all patterns until round end
+  },
+  "misty-seed": {
+    cost: 2, file: "misty-seed.png", emoji: "🌫️",
+    mistySeed: true, // EYE pattern scores ALONE: double all patterns permanently
+  },
+  "grassy-seed": {
+    cost: 3, file: "grassy-seed.png", emoji: "🌱",
+    grassySeed: true, // each cleared quota feeds +1 to Symbols/Patterns mult, alternating
+  },
+  "leftovers": {
+    cost: 4, file: "leftovers.png", emoji: "🍱",
+    leftovers: true, // Exeggcute/Cherubi patterns pay twice; self-discards after 10 rounds
+  },
+  "poison-barb": {
+    cost: 2, file: "poison-barb.png", emoji: "🦂",
+    poisonBarb: true, // 7 Sevipers on the grid all turn Shiny
+  },
+  "twisted-spoon": {
+    cost: 1, file: "twisted-spoon.png", emoji: "🥄",
+    twistedSpoon: true, // a lone Carbink/Gholdengo pattern triggers twice more (last pays double)
+  },
+  // Contest scarves: "Triggers Randomly" Luck for the CURRENT pull. Red/Blue
+  // wear out after N activations; Pink/Green/Yellow grow their Luck bonus
+  // during the quota (rerolls / ×3+ patterns / rounds skipped last quota).
+  "red-scarf": {
+    cost: 1, file: "red-scarf.png", emoji: "🧣",
+    scarf: { luck: 5, chance: 0.2, maxFires: 12 },
+    trait: "random",
+  },
+  "blue-scarf": {
+    cost: 2, file: "blue-scarf.png", emoji: "🧣",
+    scarf: { luck: 7, chance: 0.15, maxFires: 9 },
+    trait: "random",
+  },
+  "pink-scarf": {
+    cost: 2, file: "pink-scarf.png", emoji: "🧣",
+    scarf: { luck: 0, chance: 0.1, source: "rerolls", step: PINK_SCARF_STEP },
+    trait: "random",
+  },
+  "green-scarf": {
+    cost: 2, file: "green-scarf.png", emoji: "🧣",
+    scarf: { luck: 0, chance: 0.1, source: "patterns", step: GREEN_SCARF_STEP },
+    trait: "random",
+  },
+  "yellow-scarf": {
+    cost: 2, file: "yellow-scarf.png", emoji: "🧣",
+    scarf: { luck: 0, chance: 0.1, source: "skipped", step: YELLOW_SCARF_STEP },
+    trait: "random",
+  },
 };
 
 // Modifier chances per cell, rolled every spin (see rollModifiers).
 export const GOLDEN_CHANCE = 0.2;
 export const CHAIN_CHANCE = 0.12;
 
-// Roll the Golden/Chain modifiers for a freshly landed grid: returns the
+// Roll the Shiny/Chain modifiers for a freshly landed grid: returns the
 // indices of the cells carrying each modifier (stored on the run state so
 // both scoring and rendering read the same flags).
 export function rollModifiers(state, grid) {
@@ -456,6 +750,42 @@ export const AMULET_COIN_CHANCE = 0.1;
 export const AMULET_COIN_LUCK = 4;
 // Spell Tag: Luck granted to the last pull of a round.
 export const SPELL_TAG_LUCK = 7;
+// Odd Keystone: chance per pull that every pattern pays one extra time.
+export const ODD_KEYSTONE_CHANCE = 0.35;
+// Parcel: chance per EMPTY pull that every symbol gains its base value.
+export const PARCEL_CHANCE = 0.25;
+// Metronome: base Luck after 2 consecutive empty pulls, +STEP per extra fire.
+export const METRONOME_LUCK = 5;
+export const METRONOME_LUCK_STEP = 2;
+// Bright Powder: charm activations per round needed to charge Luck +7.
+export const BRIGHT_POWDER_TRIGGERS = 5;
+export const BRIGHT_POWDER_LUCK = 7;
+// Focus Sash: extra rounds granted when a deadline would end the run.
+export const FOCUS_SASH_EXTRA_ROUNDS = 2;
+// Deep Sea Tooth: pulls without a 5+ cell pattern before it guarantees one.
+export const DEEP_SEA_DROUGHT = 3;
+// Zoom Lens: tickets per +1 pattern multiplier.
+export const ZOOM_LENS_TICKETS = 15;
+
+// "Triggers Randomly" charms roll this helper instead of their raw chance:
+// a Lagging Tail in the tray doubles every such chance (capped at 100%).
+export function randomTriggerChance(state, base) {
+  return state.charms.includes("lagging-tail") ? Math.min(1, base * 2) : base;
+}
+
+// Discard a charm from the tray (sell or consume). If Black Sludge survives
+// the discard it feeds: every symbol permanently gains its own base value for
+// this run. Mutates the given draft (the callers pass a fresh object) and
+// returns true when the sludge fed so callers can show the popup.
+export function discardCharm(draft, charmId) {
+  draft.charms = draft.charms.filter((c) => c !== charmId);
+  if (!draft.charms.includes("black-sludge")) return false;
+  draft.permLevels = { ...(draft.permLevels || {}) };
+  for (const s of SYMBOLS) {
+    draft.permLevels[s.id] = (draft.permLevels[s.id] || 0) + s.baseValue;
+  }
+  return true;
+}
 
 // Interest the ATM pays on the LIFETIME deposit total (deposited) after every
 // round — unlike quotaPaid that total never resets, so interest keeps growing
@@ -469,23 +799,71 @@ export function depositInterest(state) {
 export const CHARM_IDS = Object.keys(CHARMS);
 
 // Current coin value of a symbol, including upgrades, charm bonuses, the
-// Cleanse Tag's all-symbol bonus and Golden charm growth.
+// Cleanse Tag's all-symbol bonus, Shiny charm growth, the permanent
+// base-value boosts (Black Sludge / Parcel / Choice Scarf — permLevels), the
+// Adamant Mint's round-scoped base-value stacks, and the Sassy Mint's
+// round-scoped doubling.
 export function symbolValue(state, symId) {
-  let value = SYMBOL_BY_ID[symId].baseValue + (state.upgrades.symbol[symId] || 0) + (state.cleanseStacks || 0) + (state.goldenLevels?.[symId] || 0);
+  let value = SYMBOL_BY_ID[symId].baseValue + (state.upgrades.symbol[symId] || 0) + (state.cleanseStacks || 0) + (state.goldenLevels?.[symId] || 0) + (state.permLevels?.[symId] || 0);
   for (const charmId of state.charms) {
     const bonus = CHARMS[charmId].bonusValues?.[symId];
     if (bonus) value += bonus;
   }
+  value += (state.adamantStacks || 0) * SYMBOL_BY_ID[symId].baseValue;
+  if ((state.sassyDoubles || 0) > 0) value *= Math.pow(2, state.sassyDoubles);
   return value;
 }
 
-// Current multiplier of a pattern type, including upgrades, charm bonuses and
-// Griseous Orb chain growth.
+// Current multiplier of a pattern type, including upgrades, charm bonuses,
+// Griseous Orb chain growth, the Choice Specs' permanent base-mult boosts,
+// the Zoom Lens (+1 per 15 tickets), Grassy Seed levels, the Electric Seed's
+// round-scoped base-mult stacks, and the Psychic/Misty Seed doublings.
 export function patternMult(state, type) {
-  let mult = BASE_PATTERN_MULT[type] + (state.upgrades.pattern[type] || 0) + (state.chainLevels?.[type] || 0);
+  let mult = BASE_PATTERN_MULT[type] + (state.upgrades.pattern[type] || 0) + (state.chainLevels?.[type] || 0) + (state.permPatternLevels?.[type] || 0);
   for (const charmId of state.charms) {
     const bonus = CHARMS[charmId].patternBonus?.[type];
     if (bonus) mult += bonus;
+  }
+  if (state.charms.includes("zoom-lens")) {
+    mult += Math.floor((state.tickets || 0) / ZOOM_LENS_TICKETS);
+  }
+  mult += (state.grassyLevels?.pattern || 0) + (state.electricBoost || 0) * BASE_PATTERN_MULT[type];
+  const doubles = (state.psychicDoubles || 0) + (state.mistyDoubles || 0);
+  if (doubles > 0) mult *= Math.pow(2, doubles);
+  return mult;
+}
+
+// Symbols Multiplier — the global payout dial shown under the boards. Each
+// level is x1.5: shop upgrades, Bold Mint (+1 level per 5 tickets owned)
+// and Grassy Seed's global levels. Default x1.
+export function symbolsMultLevel(state) {
+  let level = state.upgrades.global || 0;
+  if (state.charms.includes("bold-mint")) {
+    level += Math.floor((state.tickets || 0) / BOLD_MINT_TICKETS);
+  }
+  level += state.grassyLevels?.global || 0;
+  return level;
+}
+export function symbolsMult(state) {
+  return Math.pow(SYMBOLS_MULT_STEP, symbolsMultLevel(state));
+}
+
+// Global payout multiplier applied to every pull's raw payout: the Symbols
+// Multiplier stacked with Luck Incense.
+export function payoutMult(state) {
+  let mult = symbolsMult(state);
+  for (const charmId of state.charms) {
+    if (CHARMS[charmId].payoutMult) mult *= CHARMS[charmId].payoutMult;
+  }
+  return mult;
+}
+
+// Patterns Multiplier shown under the Patterns board: the flat bonuses that
+// apply to EVERY pattern (Grassy Seed levels + Zoom Lens). Default x1.
+export function patternsMult(state) {
+  let mult = 1 + (state.grassyLevels?.pattern || 0);
+  if (state.charms.includes("zoom-lens")) {
+    mult += Math.floor((state.tickets || 0) / ZOOM_LENS_TICKETS);
   }
   return mult;
 }
@@ -545,6 +923,60 @@ export function rollGrid(state) {
   return grid;
 }
 
+// A symbol drawn with the current drop weights (Repel removals and weight
+// multipliers included) — used by the guaranteed-pattern forcing below.
+function pickWeightedSymbol(state) {
+  const weights = rollWeights(state);
+  const total = weights.reduce((a, b) => a + b, 0);
+  let roll = Math.random() * total;
+  for (let i = 0; i < SYMBOLS.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) return SYMBOLS[i].id;
+  }
+  return SYMBOLS[SYMBOLS.length - 1].id;
+}
+
+// Force the machine to land a guaranteed shape on `grid` (rolled fresh when
+// omitted): JACKPOT fills all 15 cells (Arceus Statue), ABOVE/BELOW fills the
+// pattern's 10 cells (Deep Sea Tooth) and CENTER_ROW fills the middle row for
+// a HOR-XL (Star Piece). When `symbol` is passed the forced cells use it, so
+// two guarantees on the same pull (Deep Sea Tooth + Star Piece) never break
+// each other. Returns { grid, symbol }.
+export function forceGridShape(state, shape, grid, symbol) {
+  const sym = symbol || pickWeightedSymbol(state);
+  const target = grid || rollGrid(state);
+  if (shape === "JACKPOT") {
+    return { grid: Array.from({ length: GRID_CELLS }, () => sym), symbol: sym };
+  }
+  if (shape === "ABOVE" || shape === "BELOW") {
+    for (const cell of PATTERN_INSTANCES.find((p) => p.type === shape).cells) {
+      target[cell] = sym;
+    }
+    return { grid: target, symbol: sym };
+  }
+  if (shape === "CENTER_ROW") {
+    for (let c = 0; c < GRID_COLS; c++) target[GRID_COLS + c] = sym;
+    return { grid: target, symbol: sym };
+  }
+  if (shape === "ZIG_ZAG") {
+    // Burn Drive: both fixed shapes at once — they share their middle cells,
+    // so one symbol completes the two of them.
+    const cells = new Set([
+      ...PATTERN_INSTANCES.find((p) => p.type === "ZIG").cells,
+      ...PATTERN_INSTANCES.find((p) => p.type === "ZAG").cells,
+    ]);
+    for (const cell of cells) target[cell] = sym;
+    return { grid: target, symbol: sym };
+  }
+  if (shape === "EYE") {
+    for (const cell of PATTERN_INSTANCES.find((p) => p.type === "EYE").cells) {
+      target[cell] = sym;
+    }
+    return { grid: target, symbol: sym };
+  }
+  return { grid: target, symbol: sym };
+}
+
 // ---------------------------------------------------------------------------
 // Scoring
 // ---------------------------------------------------------------------------
@@ -586,13 +1018,7 @@ export function evaluateGrid(state, grid) {
   for (const m of scored) {
     raw += symbolValue(state, m.symbol) * m.cells.length * patternMult(state, m.type);
   }
-  // Global Symbols Multiplier (repeatable shop upgrade, x1.5 each level)
-  // stacked with Luck Incense.
-  let payoutMult = Math.pow(1.5, state.upgrades.global || 0);
-  for (const charmId of state.charms) {
-    if (CHARMS[charmId].payoutMult) payoutMult *= CHARMS[charmId].payoutMult;
-  }
-  const payout = Math.floor(raw * payoutMult);
+  const payout = Math.floor(raw * payoutMult(state));
 
   const jackpot = scored.some((m) => m.type === "JACKPOT");
   return { scored, payout, jackpot };
@@ -624,39 +1050,17 @@ function pickRandom(arr, n) {
   return out;
 }
 
-// An offer is either { kind: "charm", id, cost } or
-// { kind: "upgrade", target: "symbol:<id>" | "pattern:<TYPE>" | "global", cost }.
+// Shop offers are charms only (pattern/global/symbol upgrades were removed).
 export function generateShopOffers(state) {
-  const unowned = CHARM_IDS.filter((id) => !state.charms.includes(id));
-  const charmOffers = pickRandom(unowned, 1).map((id) => ({
+  // The Poffin Case never shows up again once bought (even if sold).
+  const unowned = CHARM_IDS.filter(
+    (id) => !state.charms.includes(id) && !(id === "poffin-case" && state.poffinCaseBought)
+  );
+  return pickRandom(unowned, 3).map((id) => ({
     kind: "charm",
     id,
     cost: charmCost(id),
   }));
-  // The Symbols Multiplier is the machine's core dial, so it is ALWAYS in
-  // stock next to two rotating upgrades.
-  const globalOffer = {
-    kind: "upgrade",
-    target: "global",
-    cost: upgradeCost("global", state.upgrades.global || 0),
-  };
-  const others = [];
-  for (const sym of SYMBOLS) {
-    others.push({
-      kind: "upgrade",
-      target: `symbol:${sym.id}`,
-      cost: upgradeCost("symbol", state.upgrades.symbol[sym.id]),
-    });
-  }
-  for (const type of PATTERN_TYPES) {
-    others.push({
-      kind: "upgrade",
-      target: `pattern:${type}`,
-      cost: upgradeCost("pattern", state.upgrades.pattern[type]),
-    });
-  }
-  const upgradeOffers = [globalOffer, ...pickRandom(others, 2).map((o) => ({ ...o }))];
-  return [...charmOffers, ...upgradeOffers];
 }
 
 export function rerollShop(state) {

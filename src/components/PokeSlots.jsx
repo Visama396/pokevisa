@@ -38,8 +38,37 @@ import {
   AMULET_COIN_CHANCE,
   AMULET_COIN_LUCK,
   SPELL_TAG_LUCK,
+  ODD_KEYSTONE_CHANCE,
+  PARCEL_CHANCE,
+  METRONOME_LUCK,
+  METRONOME_LUCK_STEP,
+  BRIGHT_POWDER_TRIGGERS,
+  BRIGHT_POWDER_LUCK,
+  FOCUS_SASH_EXTRA_ROUNDS,
+  DEEP_SEA_DROUGHT,
   depositInterest,
   rollModifiers,
+  randomTriggerChance,
+  discardCharm,
+  forceGridShape,
+  payoutMult,
+  symbolsMult,
+  symbolsMultLevel,
+  patternsMult,
+  BASE_PATTERN_MULT,
+  DRIVE_EVERY_PULLS,
+  SHOCK_DRIVE_LUCK,
+  CHILL_DRIVE_EXTRA_PULLS,
+  CHOICE_STREAK,
+  ADAMANT_MINT_FREE_PATTERNS,
+  SASSY_MINT_PATTERNS,
+  ELECTRIC_SEED_MIN_MULT,
+  PSYCHIC_SEED_MIN_MULT,
+  GREEN_SCARF_PATTERN_MULT,
+  GREEN_SCARF_STEP,
+  YELLOW_SCARF_STEP,
+  LEFTOVERS_ROUNDS,
+  POISON_BARB_SEVENS,
 } from "../lib/pokeslots";
 
 // PokéSlots — CloverPit-inspired slot machine roguelite. The run rules live in
@@ -56,8 +85,8 @@ const fmt = (n) => Math.floor(n).toLocaleString("en-US");
 const ITEM_SPRITES = "/slots/items";
 const GLOBAL_MULT_STEP = 1.5;
 // The pulls-left strip always shows this many slots; slots beyond the bought
-// round mode stay switched off.
-const MAX_PULL_SLOTS = Math.max(...Object.values(ROUND_MODES).map((m) => m.pulls));
+// round mode stay switched off. Chill Drive raises the cap by its extra pulls.
+const BASE_MAX_PULL_SLOTS = Math.max(...Object.values(ROUND_MODES).map((m) => m.pulls));
 
 // Giovanni's texts through the Rotom Phone. The English sentences are the
 // translation keys; missing languages fall back to English inside t().
@@ -115,12 +144,48 @@ const CHARM_NAME_KEYS = {
   "golden-treasure": "charm-golden-treasure",
   "golden-seven": "charm-golden-seven",
   "griseous-orb": "charm-griseous-orb",
+  "focus-sash": "charm-focus-sash",
+  "lagging-tail": "charm-lagging-tail",
+  "arceus-statue": "charm-arceus-statue",
+  "black-sludge": "charm-black-sludge",
+  metronome: "charm-metronome",
+  "heal-powder": "charm-heal-powder",
+  "zoom-lens": "charm-zoom-lens",
+  guidebook: "charm-guidebook",
+  "star-piece": "charm-star-piece",
+  "odd-keystone": "charm-odd-keystone",
+  "bright-powder": "charm-bright-powder",
+  "deep-sea-tooth": "charm-deep-sea-tooth",
+  "point-card": "charm-point-card",
+  parcel: "charm-parcel",
+  "poffin-case": "charm-poffin-case",
+  "douse-drive": "charm-douse-drive",
+  "shock-drive": "charm-shock-drive",
+  "burn-drive": "charm-burn-drive",
+  "chill-drive": "charm-chill-drive",
+  "choice-scarf": "charm-choice-scarf",
+  "modest-mint": "charm-modest-mint",
+  "bold-mint": "charm-bold-mint",
+  "adamant-mint": "charm-adamant-mint",
+  "sassy-mint": "charm-sassy-mint",
+  "electric-seed": "charm-electric-seed",
+  "psychic-seed": "charm-psychic-seed",
+  "misty-seed": "charm-misty-seed",
+  "grassy-seed": "charm-grassy-seed",
+  leftovers: "charm-leftovers",
+  "poison-barb": "charm-poison-barb",
+  "twisted-spoon": "charm-twisted-spoon",
+  "red-scarf": "charm-red-scarf",
+  "blue-scarf": "charm-blue-scarf",
+  "pink-scarf": "charm-pink-scarf",
+  "green-scarf": "charm-green-scarf",
+  "yellow-scarf": "charm-yellow-scarf",
 };
 
 function CharmIcon({ charmId, className }) {
   const [failed, setFailed] = useState(false);
   const charm = CHARMS[charmId];
-  // `sprite` is a full URL (Golden charms use the shiny HOME render);
+  // `sprite` is a full URL (Shiny charms use the shiny HOME render);
   // `file` is a PokeAPI item sprite name. Emoji remains the fallback.
   const src = charm.sprite || (charm.file ? `${ITEM_SPRITES}/${charm.file}` : null);
   if (!src || failed) return <span className={className}>{charm.emoji}</span>;
@@ -419,24 +484,146 @@ export default function PokeSlots() {
     if (phase !== "idle" || modal || runRef.current.pullsLeft <= 0) return;
     const cur = runRef.current;
 
-    // Amulet Coin: 10% chance per spin to refund the pull and charge the spin
-    // with Luck. Spell Tag: the round's LAST pull always gets +7 Luck. Both
-    // feed state.luck, which rollGrid consumes as guaranteed symbol cells.
+    // Amulet Coin: 10% chance per spin (doubled by Lagging Tail) to refund the
+    // pull and charge it with Luck. Spell Tag: the round's LAST pull always
+    // gets +7 Luck. Pending Luck from Metronome / Bright Powder (state.luck)
+    // is consumed here too — everything feeds rollGrid as guaranteed cells.
     const netPulls = cur.pullsLeft - 1;
     const amuletTrigger =
-      cur.charms.includes("amulet-coin") && Math.random() < AMULET_COIN_CHANCE;
+      cur.charms.includes("amulet-coin") && Math.random() < randomTriggerChance(cur, AMULET_COIN_CHANCE);
     const pullsLeft = amuletTrigger ? cur.pullsLeft : netPulls;
     const spellTrigger = cur.charms.includes("spell-tag") && pullsLeft === 0;
-    const luckGain = (amuletTrigger ? AMULET_COIN_LUCK : 0) + (spellTrigger ? SPELL_TAG_LUCK : 0);
+    // Charm activations that fire on this pull — counted toward the Bright
+    // Powder's 5-trigger meter (resolvePull adds its own).
+    let triggerCount = (amuletTrigger ? 1 : 0) + (spellTrigger ? 1 : 0);
+    // Discard draft: consumed charms go through discardCharm so Black Sludge
+    // feeds on them (+1 base value per symbol, permanently).
+    const draft = { charms: cur.charms, permLevels: cur.permLevels };
+    let sludgeFed = false;
+
+    // The four drives key off the lifetime pull counter (every 7th pull).
+    const pullNum = cur.stats.pullsUsed + 1;
+    const driveHit = pullNum % DRIVE_EVERY_PULLS === 0;
+    // Shock Drive: every 7th pull is charged with Luck +7.
+    const shockTrigger = driveHit && cur.charms.includes("shock-drive");
+    if (shockTrigger) triggerCount += 1;
+
+    // Contest scarves ("Triggers Randomly", doubled by Lagging Tail): Luck
+    // for THIS pull. Pink grows with this quota's rerolls, Green with its
+    // stored bonus (fed by +3 patterns when it fires), Yellow with the rounds
+    // skipped on the previous quota. Red/Blue wear out after N activations
+    // and discard themselves (feeding Black Sludge).
+    const scarves = {};
+    const scarfFires = { ...(cur.scarfFires || {}) };
+    for (const c of cur.charms) {
+      const cfg = CHARMS[c].scarf;
+      if (!cfg || Math.random() >= randomTriggerChance(cur, cfg.chance)) continue;
+      let luck = cfg.luck;
+      if (cfg.source === "rerolls") luck += (cur.rerollsThisCycle || 0) * cfg.step;
+      if (cfg.source === "patterns") luck += cur.greenScarfBonus || 0;
+      if (cfg.source === "skipped") luck += cur.yellowScarfBonus || 0;
+      scarves[c] = luck;
+      triggerCount += 1;
+      if (cfg.maxFires) {
+        scarfFires[c] = (scarfFires[c] || 0) + 1;
+        if (scarfFires[c] >= cfg.maxFires) {
+          sludgeFed = discardCharm(draft, c) || sludgeFed;
+          delete scarfFires[c];
+        }
+      }
+    }
+    const scarfLuck = Object.values(scarves).reduce((a, b) => a + b, 0);
+
+    const luckGain =
+      (cur.luck || 0) +
+      (amuletTrigger ? AMULET_COIN_LUCK : 0) +
+      (spellTrigger ? SPELL_TAG_LUCK : 0) +
+      (shockTrigger ? SHOCK_DRIVE_LUCK : 0) +
+      scarfLuck;
 
     // rollGrid reads luck from its state argument; the stored run state keeps
     // luck at 0 so nothing re-consumes it later.
-    const finalGrid = rollGrid({ ...cur, luck: luckGain });
-    // Golden/Chain modifiers are rolled per cell for every fresh grid and
+    let finalGrid = rollGrid({ ...cur, luck: luckGain });
+
+    // Arceus Statue: this pull is a guaranteed JACKPOT — the statue discards
+    // itself the moment it grants it.
+    let luckyEggPending = cur.luckyEggPending || false;
+    if (cur.charms.includes("arceus-statue")) {
+      finalGrid = forceGridShape(cur, "JACKPOT", finalGrid).grid;
+      sludgeFed = discardCharm(draft, "arceus-statue");
+      triggerCount += 1;
+      addPopup({ x: 50, y: 20, text: "🗿 JACKPOT!", kind: "pattern" });
+      pushMsg(tr("The Arceus Statue glows — the reels obey."));
+      luckyEggPending = false;
+    } else {
+      // Burn Drive (ZIG+ZAG every 7th pull), Deep Sea Tooth (ABOVE/BELOW
+      // after a 3-pull drought), Star Piece (center-row HOR-XL after an
+      // empty pull) and Lucky Egg (EYE after 3 consecutive rare-scored pulls)
+      // share ONE forced symbol so guarantees on the same pull never break each other.
+      let forcedSymbol = null;
+      if (luckyEggPending && cur.charms.includes("lucky-egg")) {
+        const forced = forceGridShape(cur, "EYE", finalGrid);
+        finalGrid = forced.grid;
+        forcedSymbol = forced.symbol;
+        triggerCount += 1;
+        addPopup({ x: 50, y: 80, text: "👁️ EYE", kind: "pattern" });
+        luckyEggPending = false;
+      }
+      if (driveHit && cur.charms.includes("burn-drive")) {
+        const forced = forceGridShape(cur, "ZIG_ZAG", finalGrid, forcedSymbol);
+        finalGrid = forced.grid;
+        forcedSymbol = forced.symbol;
+        triggerCount += 1;
+        addPopup({ x: 50, y: 80, text: "🔥 ZIG+ZAG", kind: "pattern" });
+      }
+      if (cur.charms.includes("deep-sea-tooth") && (cur.bigDrought || 0) >= DEEP_SEA_DROUGHT) {
+        const forced = forceGridShape(cur, Math.random() < 0.5 ? "ABOVE" : "BELOW", finalGrid, forcedSymbol);
+        finalGrid = forced.grid;
+        forcedSymbol = forced.symbol;
+        triggerCount += 1;
+        addPopup({ x: 50, y: 74, text: "🦷", kind: "pattern" });
+      }
+      if (cur.charms.includes("star-piece") && cur.lastPullEmpty) {
+        finalGrid = forceGridShape(cur, "CENTER_ROW", finalGrid, forcedSymbol).grid;
+        triggerCount += 1;
+        addPopup({ x: 50, y: 48, text: "🌟", kind: "pattern" });
+      }
+    }
+
+    // Shiny/Chain modifiers are rolled per cell for every fresh grid and
     // stored so scoring (resolvePull) and rendering read the same flags.
-    const { golden, chain } = rollModifiers(cur, finalGrid);
-    setRun((r) => ({ ...r, pullsLeft, luck: 0, goldenCells: golden, chainCells: chain }));
-    runRef.current = { ...cur, pullsLeft, luck: 0, goldenCells: golden, chainCells: chain };
+    // Poison Barb: a grid with 7+ Sevipers turns every one of them Shiny.
+    let { golden, chain } = rollModifiers(cur, finalGrid);
+    if (cur.charms.includes("poison-barb")) {
+      const sevens = finalGrid.map((s, i) => (s === "seven" ? i : -1)).filter((i) => i >= 0);
+      if (sevens.length >= POISON_BARB_SEVENS) golden = [...new Set([...golden, ...sevens])];
+    }
+    setRun((r) => ({
+      ...r,
+      charms: draft.charms,
+      permLevels: draft.permLevels,
+      pullsLeft,
+      luck: 0,
+      goldenCells: golden,
+      chainCells: chain,
+      lastPullEmpty: false,
+      scarfFires,
+      scarfFired: Object.keys(scarves).length > 0 ? scarves : null,
+      luckyEggPending,
+    }));
+    runRef.current = {
+      ...cur,
+      charms: draft.charms,
+      permLevels: draft.permLevels,
+      pullsLeft,
+      luck: 0,
+      goldenCells: golden,
+      chainCells: chain,
+      lastPullEmpty: false,
+      scarfFires,
+      scarfFired: Object.keys(scarves).length > 0 ? scarves : null,
+      luckyEggPending,
+    };
     // Persist immediately so a tab closed mid-spin can't replay a free pull.
     persistRun(runRef.current);
     setPhase("spinning");
@@ -446,6 +633,9 @@ export default function PokeSlots() {
     playSfx("slot-spin.mp3");
     if (amuletTrigger) addPopup({ x: 50, y: 26, text: `🪙 +1 PULL`, kind: "tickets" });
     if (spellTrigger) addPopup({ x: 50, y: 26, text: `👻 +${SPELL_TAG_LUCK} LUCK`, kind: "pattern" });
+    if (shockTrigger) addPopup({ x: 50, y: 30, text: `⚡ +${SHOCK_DRIVE_LUCK} LUCK`, kind: "pattern" });
+    if (scarfLuck > 0) addPopup({ x: 50, y: 34, text: `🧣 +${scarfLuck} LUCK`, kind: "pattern" });
+    if (sludgeFed) addPopup({ x: 50, y: 52, text: "🟣 +BASE", kind: "pattern" });
 
     let stopped = 0;
     const shuffle = setInterval(() => {
@@ -463,21 +653,93 @@ export default function PokeSlots() {
     later(() => {
       clearInterval(shuffle);
       setDisplayGrid(finalGrid);
-      resolvePull(finalGrid);
+      resolvePull(finalGrid, { triggers: triggerCount, scarves });
     }, 420 + (GRID_COLS - 1) * 170 + 260);
   };
 
-  const resolvePull = (finalGrid) => {
+  const resolvePull = (finalGrid, pullInfo = {}) => {
     stopSfx("slot-spin.mp3"); // the mp3 outlasts the reel animation
     const cur = runRef.current;
-    const next = { ...cur, grid: finalGrid };
-    const res = evaluateGrid(next, finalGrid);
+    // Heal Powder: a pull that hits exactly ONE pattern transforms that
+    // pattern's symbols into the most valuable symbol and re-scores.
+    let grid = finalGrid;
+    let res = evaluateGrid(cur, grid);
+    let healPowderTrigger = false;
+    if (cur.charms.includes("heal-powder") && res.scored.length === 1) {
+      const inst = res.scored[0];
+      let best = inst.symbol;
+      for (const s of SYMBOLS) {
+        if (symbolValue(cur, s.id) > symbolValue(cur, best)) best = s.id;
+      }
+      if (best !== inst.symbol) {
+        const healed = [...grid];
+        for (const cell of inst.cells) healed[cell] = best;
+        grid = healed;
+        res = evaluateGrid(cur, healed);
+        healPowderTrigger = true;
+        setDisplayGrid(healed);
+      }
+    }
+    const next = { ...cur, grid };
     next.coins += res.payout;
     next.stats = { ...next.stats };
     next.stats.totalEarned += res.payout;
     next.stats.pullsUsed += 1;
     if (res.jackpot) next.stats.jackpots += 1;
     if (res.payout > next.stats.biggestWin) next.stats.biggestWin = res.payout;
+    // Odd Keystone ("Triggers Randomly", doubled by Lagging Tail): every
+    // pattern of this pull pays one extra time — the whole payout again.
+    let keystoneTrigger = false;
+    if (
+      next.charms.includes("odd-keystone") &&
+      res.scored.length > 0 &&
+      Math.random() < randomTriggerChance(next, ODD_KEYSTONE_CHANCE)
+    ) {
+      keystoneTrigger = true;
+      next.coins += res.payout;
+      next.stats.totalEarned += res.payout;
+      if (res.payout * 2 > next.stats.biggestWin) next.stats.biggestWin = res.payout * 2;
+    }
+    // Douse Drive: every 7th pull, all patterns trigger one extra time.
+    let douseTrigger = false;
+    if (next.charms.includes("douse-drive") && next.stats.pullsUsed % DRIVE_EVERY_PULLS === 0 && res.payout > 0) {
+      douseTrigger = true;
+      next.coins += res.payout;
+      next.stats.totalEarned += res.payout;
+      if (res.payout * 2 > next.stats.biggestWin) next.stats.biggestWin = res.payout * 2;
+    }
+    // Leftovers: patterns made of Exeggcute / Cherubi trigger one extra time.
+    let leftoversExtra = 0;
+    if (next.charms.includes("leftovers")) {
+      let extraRaw = 0;
+      for (const m of res.scored) {
+        if (m.symbol === "lemon" || m.symbol === "cherry") {
+          extraRaw += symbolValue(next, m.symbol) * m.cells.length * patternMult(next, m.type);
+        }
+      }
+      if (extraRaw > 0) {
+        leftoversExtra = Math.floor(extraRaw * payoutMult(next));
+        next.coins += leftoversExtra;
+        next.stats.totalEarned += leftoversExtra;
+        if (res.payout + leftoversExtra > next.stats.biggestWin) {
+          next.stats.biggestWin = res.payout + leftoversExtra;
+        }
+      }
+    }
+    // Twisted Spoon: a lone Carbink / Gholdengo pattern triggers twice more —
+    // the final trigger pays double (total x4).
+    let spoonTrigger = false;
+    if (
+      next.charms.includes("twisted-spoon") &&
+      res.scored.length === 1 &&
+      (res.scored[0].symbol === "diamond" || res.scored[0].symbol === "treasure") &&
+      res.payout > 0
+    ) {
+      spoonTrigger = true;
+      next.coins += res.payout * 3;
+      next.stats.totalEarned += res.payout * 3;
+      if (res.payout * 4 > next.stats.biggestWin) next.stats.biggestWin = res.payout * 4;
+    }
     // Pokédoll: 3+ patterns in one pull pay out the current deposit interest.
     let pokedollBonus = 0;
     if (next.charms.includes("pokedoll") && res.scored.length >= 3) {
@@ -489,8 +751,8 @@ export default function PokeSlots() {
     // symbol's value (same bonus as the on-purchase stack).
     const cleanseTrigger = next.charms.includes("cleanse-tag") && res.scored.length >= 5;
     if (cleanseTrigger) next.cleanseStacks = (next.cleanseStacks || 0) + 1;
-    // Golden / Chain growth: each scored pattern carrying a modified cell
-    // permanently raises its symbol's base value (+1 per Golden charm stack)
+    // Shiny / Chain growth: each scored pattern carrying a modified cell
+    // permanently raises its symbol's base value (+1 per Shiny charm stack)
     // or its pattern type's multiplier (+1 per chained cell), for this run.
     const goldenSet = new Set(next.goldenCells || []);
     const chainSet = new Set(next.chainCells || []);
@@ -515,6 +777,158 @@ export default function PokeSlots() {
       }
     }
 
+    // Parcel ("Triggers Randomly", doubled by Lagging Tail): on a pull with
+    // NO patterns, 25% chance every symbol permanently gains its base value.
+    let parcelTrigger = false;
+    if (
+      next.charms.includes("parcel") &&
+      res.scored.length === 0 &&
+      Math.random() < randomTriggerChance(next, PARCEL_CHANCE)
+    ) {
+      parcelTrigger = true;
+      next.permLevels = { ...(next.permLevels || {}) };
+      for (const s of SYMBOLS) {
+        next.permLevels[s.id] = (next.permLevels[s.id] || 0) + s.baseValue;
+      }
+      pushMsg(tr("The Parcel bursts — every symbol gains its base value!"));
+    }
+
+    // Lucky Egg: 3 consecutive pulls scoring Carbink/Gholdengo/Seviper → next pull EYE
+    let luckyEggTrigger = false;
+    if (next.charms.includes("lucky-egg")) {
+      const rareScored = res.scored.some((m) => m.symbol === "diamond" || m.symbol === "treasure" || m.symbol === "seven");
+      if (rareScored) {
+        next.luckyEggStreak = (cur.luckyEggStreak || 0) + 1;
+        if (next.luckyEggStreak >= 3) {
+          next.luckyEggPending = true;
+          next.luckyEggStreak = 0;
+          luckyEggTrigger = true;
+        }
+      } else {
+        next.luckyEggStreak = 0;
+      }
+    } else {
+      next.luckyEggStreak = 0;
+      next.luckyEggPending = false;
+    }
+
+    // Pull-to-pull memory: empty-pull streaks (Star Piece / Metronome) and
+    // the 5+ cell pattern drought (Deep Sea Tooth).
+    next.lastPullEmpty = res.scored.length === 0;
+    next.emptyStreak = res.scored.length === 0 ? (cur.emptyStreak || 0) + 1 : 0;
+    const hadBigPattern = res.scored.some((m) => m.cells.length >= 5);
+    next.bigDrought = hadBigPattern ? 0 : (cur.bigDrought || 0) + 1;
+
+    // Metronome: 2 consecutive empty pulls charge the next pull with Luck 5,
+    // +2 more per consecutive activation while the streak holds.
+    let metronomeLuck = 0;
+    if (next.charms.includes("metronome") && next.emptyStreak >= 2) {
+      next.metronomeFires = (cur.metronomeFires || 0) + 1;
+      metronomeLuck = METRONOME_LUCK + METRONOME_LUCK_STEP * (next.metronomeFires - 1);
+      next.luck = (next.luck || 0) + metronomeLuck;
+    } else if (res.scored.length > 0) {
+      next.metronomeFires = 0;
+    }
+
+    // Choice Scarf / Choice Specs: when the empty-pull streak hits exactly 3,
+    // every symbol / every pattern permanently gains its own base value /
+    // base multiplier for this run.
+    let choiceScarfTrigger = false;
+    let choiceSpecsTrigger = false;
+    if (next.emptyStreak === CHOICE_STREAK) {
+      if (next.charms.includes("choice-scarf")) {
+        choiceScarfTrigger = true;
+        next.permLevels = { ...(next.permLevels || {}) };
+        for (const s of SYMBOLS) next.permLevels[s.id] = (next.permLevels[s.id] || 0) + s.baseValue;
+      }
+      if (next.charms.includes("choice-specs")) {
+        choiceSpecsTrigger = true;
+        next.permPatternLevels = { ...(next.permPatternLevels || {}) };
+        for (const t of PATTERN_TYPES) {
+          next.permPatternLevels[t] = (next.permPatternLevels[t] || 0) + BASE_PATTERN_MULT[t];
+        }
+      }
+    }
+
+    // Adamant Mint: every pattern beyond the 2nd in one pull stacks a
+    // round-scoped base value on all symbols.
+    let adamantGain = 0;
+    if (next.charms.includes("adamant-mint") && res.scored.length > ADAMANT_MINT_FREE_PATTERNS) {
+      adamantGain = res.scored.length - ADAMANT_MINT_FREE_PATTERNS;
+      next.adamantStacks = (cur.adamantStacks || 0) + adamantGain;
+    }
+    // Sassy Mint: 5+ patterns in one pull double all symbols until round end.
+    let sassyTrigger = false;
+    if (next.charms.includes("sassy-mint") && res.scored.length >= SASSY_MINT_PATTERNS) {
+      sassyTrigger = true;
+      next.sassyDoubles = (cur.sassyDoubles || 0) + 1;
+    }
+    // Terrain seeds: Electric (+base mult to all patterns, round-scoped) on a
+    // x4+ pattern, Psychic (double all patterns, round-scoped) on a x5+,
+    // Misty (double all patterns, PERMANENT) when EYE scores alone.
+    let electricTrigger = false;
+    if (
+      next.charms.includes("electric-seed") &&
+      res.scored.some((m) => BASE_PATTERN_MULT[m.type] >= ELECTRIC_SEED_MIN_MULT)
+    ) {
+      electricTrigger = true;
+      next.electricBoost = (cur.electricBoost || 0) + 1;
+    }
+    let psychicTrigger = false;
+    if (
+      next.charms.includes("psychic-seed") &&
+      res.scored.some((m) => BASE_PATTERN_MULT[m.type] >= PSYCHIC_SEED_MIN_MULT)
+    ) {
+      psychicTrigger = true;
+      next.psychicDoubles = (cur.psychicDoubles || 0) + 1;
+    }
+    let mistyTrigger = false;
+    if (
+      next.charms.includes("misty-seed") &&
+      res.scored.length === 1 &&
+      res.scored[0].type === "EYE"
+    ) {
+      mistyTrigger = true;
+      next.mistyDoubles = (cur.mistyDoubles || 0) + 1;
+    }
+
+    // Bright Powder: counts charm activations this round (pullInfo.triggers
+    // covers Amulet Coin / Spell Tag / drives / scarves / guarantees from
+    // pullLever); reaching 5 charges the NEXT pull with Luck +7, once/round.
+    next.itemTriggers =
+      (cur.itemTriggers || 0) +
+      (pullInfo.triggers || 0) +
+      (keystoneTrigger ? 1 : 0) +
+      (douseTrigger ? 1 : 0) +
+      (spoonTrigger ? 1 : 0) +
+      (parcelTrigger ? 1 : 0) +
+      (healPowderTrigger ? 1 : 0) +
+      (metronomeLuck > 0 ? 1 : 0) +
+      (choiceScarfTrigger ? 1 : 0) +
+      (choiceSpecsTrigger ? 1 : 0) +
+      (adamantGain > 0 ? 1 : 0) +
+      (sassyTrigger ? 1 : 0) +
+      (electricTrigger ? 1 : 0) +
+      (psychicTrigger ? 1 : 0) +
+      (mistyTrigger ? 1 : 0) +
+      (luckyEggTrigger ? 1 : 0);
+    let brightPowderTrigger = false;
+    if (
+      next.charms.includes("bright-powder") &&
+      !cur.brightPowderFired &&
+      next.itemTriggers >= BRIGHT_POWDER_TRIGGERS
+    ) {
+      brightPowderTrigger = true;
+      next.brightPowderFired = true;
+      next.luck = (next.luck || 0) + BRIGHT_POWDER_LUCK;
+    }
+    // Green Scarf: each x3+ pattern on the pull where it fired feeds its
+    // quota-scoped Luck bonus (+3 each).
+    if (pullInfo.scarves && "green-scarf" in pullInfo.scarves) {
+      const plus3 = res.scored.filter((m) => BASE_PATTERN_MULT[m.type] >= GREEN_SCARF_PATTERN_MULT).length;
+      if (plus3 > 0) next.greenScarfBonus = (cur.greenScarfBonus || 0) + plus3 * GREEN_SCARF_STEP;
+    }
+
     setRun(next);
     runRef.current = next;
     setPhase("idle");
@@ -526,8 +940,29 @@ export default function PokeSlots() {
       later(() => setJackpotBanner(false), 2200);
       pushMsg(tr("JACKPOT?! ...Enjoy it while it lasts."));
     }
-    if (res.payout > 0) {
-      addPopup({ x: 50, y: 40, text: `+${fmt(res.payout)} ₽`, kind: "coins" });
+    if (keystoneTrigger) addPopup({ x: 50, y: 34, text: "🪨 ×2!", kind: "coins" });
+    if (douseTrigger) addPopup({ x: 50, y: 30, text: "💧 ×2!", kind: "coins" });
+    if (spoonTrigger) addPopup({ x: 50, y: 38, text: "🥄 ×4!", kind: "coins" });
+    if (leftoversExtra > 0) addPopup({ x: 50, y: 66, text: `🍱 +${fmt(leftoversExtra)} ₽`, kind: "coins" });
+    if (healPowderTrigger) addPopup({ x: 50, y: 56, text: "💊", kind: "pattern" });
+    if (parcelTrigger) addPopup({ x: 50, y: 62, text: "📦 +BASE", kind: "pattern" });
+    if (metronomeLuck > 0) addPopup({ x: 50, y: 26, text: `🎵 +${metronomeLuck} LUCK`, kind: "pattern" });
+    if (brightPowderTrigger) addPopup({ x: 50, y: 20, text: `✨ +${BRIGHT_POWDER_LUCK} LUCK`, kind: "pattern" });
+    if (choiceScarfTrigger) addPopup({ x: 50, y: 44, text: "🧣 +BASE", kind: "pattern" });
+    if (choiceSpecsTrigger) addPopup({ x: 50, y: 48, text: "🕶️ +BASE", kind: "pattern" });
+    if (adamantGain > 0) addPopup({ x: 50, y: 52, text: `🌿 +${adamantGain} BASE`, kind: "pattern" });
+    if (sassyTrigger) addPopup({ x: 50, y: 56, text: "☘️ ×2 SYMBOLS", kind: "pattern" });
+    if (electricTrigger) addPopup({ x: 50, y: 60, text: "⚡ +BASE PATTERNS", kind: "pattern" });
+    if (psychicTrigger) addPopup({ x: 50, y: 64, text: "🔮 ×2 PATTERNS", kind: "pattern" });
+    if (mistyTrigger) addPopup({ x: 50, y: 68, text: "🌫️ ×2 FOREVER", kind: "pattern" });
+    const totalPayout =
+      res.payout +
+      (keystoneTrigger ? res.payout : 0) +
+      (douseTrigger ? res.payout : 0) +
+      (spoonTrigger ? res.payout * 3 : 0) +
+      leftoversExtra;
+    if (totalPayout > 0) {
+      addPopup({ x: 50, y: 40, text: `+${fmt(totalPayout)} ₽`, kind: "coins" });
       if (pokedollBonus > 0) {
         addPopup({ x: 50, y: 30, text: `🧸 +${fmt(pokedollBonus)} ₽`, kind: "coins" });
         pushMsg(tr("The Pokédoll sells your interest on the spot."));
@@ -568,18 +1003,62 @@ export default function PokeSlots() {
           // Mid-cycle: move to the next round of this quota. totalRounds
           // counts every played round across all quotas (charm hook).
           const next = { ...base, round: base.round + 1, totalRounds: (base.totalRounds || 0) + 1, pullsLeft: 0, awaitingChoice: true };
+          tickLeftovers(next);
           commit(next);
           // Broke with no tickets to fall back on → game over right here.
           if (!canEnterRound(next)) endRun(false);
         } else {
           // Deadline comes due against the WHOLE cycle: deposits already made
           // (quotaPaid) plus whatever is left in hand must cover the quota.
+          // No auto modal — the Quota card glows via isDeadline and the player
+          // must pay via the ATM. Sash/Band still auto-trigger.
           const rem = Math.max(0, currentQuota(base) - (base.quotaPaid || 0));
-          if (base.coins >= rem || base.charms.includes("focus-band")) {
-            setPayAmount(Math.min(base.coins, rem));
-            setModal("deadline");
+          if (base.coins >= rem) {
+            // payable deadline — just let the Quota card glow, no modal
+          } else if (base.charms.includes("focus-sash")) {
+            // Focus Sash: about to die → two extra rounds to pay the quota,
+            // then the sash discards itself (feeding Black Sludge). The
+            // partial deposits (quotaPaid) are kept.
+            const draft = { charms: base.charms, permLevels: base.permLevels };
+            const fed = discardCharm(draft, "focus-sash");
+            commit({
+              ...base,
+              charms: draft.charms,
+              permLevels: draft.permLevels,
+              roundsLeft: base.roundsLeft + FOCUS_SASH_EXTRA_ROUNDS,
+              pullsLeft: 0,
+              awaitingChoice: true,
+            });
+            addPopup({ x: 50, y: 40, text: "🩹", kind: "pattern" });
+            pushMsg(tr("The Focus Sash shatters — two extra rounds to pay the quota!"));
+            if (fed) addPopup({ x: 50, y: 52, text: "🟣 +BASE", kind: "pattern" });
+          } else if (base.charms.includes("focus-band")) {
+            const draft = { charms: base.charms, permLevels: base.permLevels };
+            const fed = discardCharm(draft, "focus-band");
+            const extra = draft.charms.includes("chill-drive") ? CHILL_DRIVE_EXTRA_PULLS : 0;
+            commit({
+              ...base,
+              charms: draft.charms,
+              permLevels: draft.permLevels,
+              coins: 0,
+              quotaPaid: 0,
+              deposited: base.deposited || 0,
+              cycle: base.cycle + 1,
+              roundsLeft: ROUNDS_PER_QUOTA,
+              round: 1,
+              totalRounds: (base.totalRounds || 0) + 1,
+              pullsLeft: ROUND_MODES[7].pulls + extra,
+              lastMode: 7,
+              awaitingChoice: false,
+              yellowScarfBonus: 0,
+              rerollsThisCycle: 0,
+              greenScarfBonus: 0,
+            });
+            addPopup({ x: 50, y: 40, text: "🎗️", kind: "pattern" });
+            if (fed) addPopup({ x: 50, y: 52, text: "🟣 +BASE", kind: "pattern" });
+            pushMsg(tr("The Focus Band shatters! Quota wiped — seven pulls on the house."));
           } else {
-            endRun(false); // cannot cover the quota and no Focus Band left
+            endRun(false); // cannot cover the quota, no Sash, no Focus Band
           }
         }
       }, 1500);
@@ -599,10 +1078,10 @@ export default function PokeSlots() {
     setModal("atm");
   };
 
-  // Round start: buy 3 or 7 pulls. Entering a round costs a share of the
-  // current quota (roundCost) and earns its mode's tickets (4 for 3 pulls,
-  // 2 for 7 — see ROUND_MODES). There is no credit anymore: if the coins
-  // don't cover the fee, the round is paid with tickets instead
+  // Round start: buy 3 or 7 pulls. Entering a round costs a fixed coin fee
+  // that grows with every quota (roundCost) and earns its mode's tickets
+  // (8 for 3 pulls, 3 for 7 — see ROUND_MODES). There is no credit anymore:
+  // if the coins don't cover the fee, the round is paid with tickets instead
   // (ROUND_TICKET_COSTS, earning nothing back). Playing a round consumes
   // one of the quota's ROUNDS_PER_QUOTA rounds, so the pick is also a
   // pacing choice.
@@ -611,15 +1090,28 @@ export default function PokeSlots() {
     const cur = runRef.current;
     const m = Number(mode);
     const coinCost = roundCost(cur, m);
+    // Chill Drive adds its extra pulls to every bought round.
+    const pulls = ROUND_MODES[m].pulls + (cur.charms.includes("chill-drive") ? CHILL_DRIVE_EXTRA_PULLS : 0);
+    // A fresh round resets the round-scoped charm boosts (Bright Powder meter,
+    // Adamant/Sassy/Electric/Psychic stacks, scarf counters stay quota/run-wide).
+    const roundReset = {
+      itemTriggers: 0,
+      brightPowderFired: false,
+      adamantStacks: 0,
+      sassyDoubles: 0,
+      electricBoost: 0,
+      psychicDoubles: 0,
+    };
     if (cur.coins >= coinCost) {
       commit({
         ...cur,
         coins: cur.coins - coinCost,
-        pullsLeft: ROUND_MODES[m].pulls,
+        pullsLeft: pulls,
         tickets: cur.tickets + (ROUND_MODES[m].tickets || 0),
         lastMode: m,
         awaitingChoice: false,
         roundsLeft: cur.roundsLeft - 1,
+        ...roundReset,
       });
     } else {
       const ticketCost = ROUND_TICKET_COSTS[m];
@@ -627,10 +1119,11 @@ export default function PokeSlots() {
       commit({
         ...cur,
         tickets: cur.tickets - ticketCost,
-        pullsLeft: ROUND_MODES[m].pulls,
+        pullsLeft: pulls,
         lastMode: m,
         awaitingChoice: false,
         roundsLeft: cur.roundsLeft - 1,
+        ...roundReset,
       });
     }
     pushMsg(tr("The machine owes us. Make it pay."));
@@ -655,12 +1148,14 @@ export default function PokeSlots() {
     // for the 7% interest paid after every round.
     const quotaPaid = (cur.quotaPaid || 0) + paid;
     const deposited = (cur.deposited || 0) + paid;
-    let charms = cur.charms;
+    const draft = { charms: cur.charms, permLevels: cur.permLevels };
     // Focus Band auto-triggers once when a deadline can't be covered: it wipes
     // the remaining quota, empties the wallet and grants a free 7-pull round.
+    // It is discarded through discardCharm so Black Sludge can feed on it.
     let focusSave = false;
-    if (deadline && quotaPaid < quota && charms.includes("focus-band")) {
-      charms = charms.filter((c) => c !== "focus-band");
+    let sludgeFed = false;
+    if (deadline && quotaPaid < quota && draft.charms.includes("focus-band")) {
+      sludgeFed = discardCharm(draft, "focus-band");
       focusSave = true;
     }
     if (deadline && quotaPaid < quota && !focusSave) {
@@ -669,7 +1164,7 @@ export default function PokeSlots() {
     }
     let debt = cur.debt - paid;
     // A save zeroes the wallet instead of subtracting the payment.
-    let next = { ...cur, coins: focusSave ? 0 : cur.coins - paid, debt, charms, quotaPaid, deposited };
+    let next = { ...cur, coins: focusSave ? 0 : cur.coins - paid, debt, charms: draft.charms, permLevels: draft.permLevels, quotaPaid, deposited };
 
     // Debt paid in full — the run does NOT end: Team Rocket instantly grants
     // a bigger loan (nextDebt, ×DEBT_GROWTH per debt) and the charm tray
@@ -680,12 +1175,20 @@ export default function PokeSlots() {
       next.debt = nextDebt(next.debtsCleared);
       next.cycle = cur.cycle + 1;
       next.quotaPaid = 0;
-      next.rerolls = 0;
       next.roundsLeft = ROUNDS_PER_QUOTA;
       next.round = 1;
       if (!cur.awaitingChoice) next.totalRounds = (cur.totalRounds || 0) + 1;
       next.pullsLeft = 0;
       next.awaitingChoice = true;
+      // Guidebook: finishing this quota raises the Symbols Multiplier by the
+      // rounds skipped + 1 (the global upgrade level, ×1.5 each).
+      if (next.charms.includes("guidebook")) {
+        const gain = (cur.roundsLeft || 0) + 1;
+        next.upgrades = { ...next.upgrades, global: (next.upgrades.global || 0) + gain };
+        addPopup({ x: 50, y: 52, text: `📖 +${gain}`, kind: "pattern" });
+      }
+      applyQuotaFinish(next, cur);
+      if (!cur.awaitingChoice) tickLeftovers(next);
       // Deposit interest for rounds that end through this path (mirrors the
       // early-clear sweep below); deadline payments were already swept by the
       // round-end timer before this modal opened.
@@ -714,14 +1217,21 @@ export default function PokeSlots() {
       // continues straight into a free full-length (7-pull) round.
       next.cycle = cur.cycle + 1;
       next.quotaPaid = 0;
-      next.rerolls = 0;
       next.roundsLeft = ROUNDS_PER_QUOTA;
       next.round = 1;
-      if (!cur.awaitingChoice) next.totalRounds = (cur.totalRounds || 0) + 1;
+      if (!cur.awaitingChoice) {
+        next.totalRounds = (cur.totalRounds || 0) + 1;
+        tickLeftovers(next);
+      }
+      // A wipe is not a finish — Yellow Scarf gets no bonus, quota counters reset.
+      next.yellowScarfBonus = 0;
+      next.rerollsThisCycle = 0;
+      next.greenScarfBonus = 0;
       next.pullsLeft = ROUND_MODES[7].pulls;
       next.lastMode = 7; // the granted round is always the long one
       next.awaitingChoice = false;
       addPopup({ x: 50, y: 40, text: "🎗️", kind: "pattern" });
+      if (sludgeFed) addPopup({ x: 50, y: 52, text: "🟣 +BASE", kind: "pattern" });
       pushMsg(tr("The Focus Band shatters! Quota wiped — seven pulls on the house."));
       setOffers(generateShopOffers(next));
       commit(next);
@@ -740,9 +1250,8 @@ export default function PokeSlots() {
         }
       }
       const bonus = quotaClearBonus(cur); // zero unless cleared with rounds to spare
-      const eggMult = charms.includes("lucky-egg") ? CHARMS["lucky-egg"].ticketMult : 1;
       const bonusCoins = bonus.coins;
-      const bonusTickets = Math.floor(bonus.tickets * eggMult);
+      const bonusTickets = bonus.tickets;
       if (bonusCoins > 0) {
         next.coins += bonusCoins;
         addPopup({ x: 50, y: 40, text: `+${fmt(bonusCoins)} ₽`, kind: "coins" });
@@ -751,15 +1260,26 @@ export default function PokeSlots() {
         next.tickets = cur.tickets + bonusTickets;
         addPopup({ x: 50, y: 58, text: `+${fmt(bonusTickets)} 🎫`, kind: "tickets" });
       }
+      // Guidebook: finishing this quota raises the Symbols Multiplier by the
+      // rounds skipped + 1 (deadline clears skipped none → +1).
+      if (next.charms.includes("guidebook")) {
+        const gain = (cur.roundsLeft || 0) + 1;
+        next.upgrades = { ...next.upgrades, global: (next.upgrades.global || 0) + gain };
+        addPopup({ x: 50, y: 52, text: `📖 +${gain}`, kind: "pattern" });
+      }
+      applyQuotaFinish(next, cur);
       next.cycle = cur.cycle + 1;
       next.quotaPaid = 0; // the new cycle's quota starts unpaid
-      next.rerolls = 0; // fresh shop for the new quota → reroll price resets
+      // The reroll counter never resets — the price keeps climbing all run.
       next.roundsLeft = ROUNDS_PER_QUOTA;
       next.round = 1; // back to round 1 of the fresh quota
       // The finished round counts toward totalRounds — unless the payment
       // came straight from the pull picker (awaitingChoice), where no round
       // was actually being played.
-      if (!cur.awaitingChoice) next.totalRounds = (cur.totalRounds || 0) + 1;
+      if (!cur.awaitingChoice) {
+        next.totalRounds = (cur.totalRounds || 0) + 1;
+        tickLeftovers(next);
+      }
       next.pullsLeft = 0;
       next.awaitingChoice = true; // back to the pull picker for the new quota
       setOffers(generateShopOffers(next));
@@ -829,12 +1349,22 @@ export default function PokeSlots() {
     playSfx("cash-register-purchase.mp3");
     const next = { ...cur, tickets: cur.tickets - offer.cost };
     if (offer.kind === "charm") {
-      // Tray capacity grows with cleared debts (charmSlots) — a full tray
-      // blocks buying, selling first.
-      if (!CHARMS[offer.id] || next.charms.length >= charmSlots(next)) return;
+      // Tray capacity grows with cleared debts and the Poffin Case (charmSlots)
+      // — a full tray blocks buying, sell first. The Poffin Case itself takes
+      // no space, so it doesn't count against the capacity.
+      const occupying = next.charms.filter((c) => c !== "poffin-case").length;
+      if (!CHARMS[offer.id] || occupying >= charmSlots(next)) return;
       next.charms = [...next.charms, offer.id];
+      // Poffin Case: +1 charm slot (charmSlots reads it), offered only once.
+      if (offer.id === "poffin-case") next.poffinCaseBought = true;
       // Cleanse Tag's on-purchase bonus: every symbol is worth +1 from now on.
       if (offer.id === "cleanse-tag") next.cleanseStacks = (next.cleanseStacks || 0) + 1;
+      // Point Card: retroactively grants +1 Symbols Multiplier per reroll
+      // already performed this run (the counter never resets).
+      if (offer.id === "point-card" && (cur.rerolls || 0) > 0) {
+        next.upgrades = { ...next.upgrades, global: (next.upgrades.global || 0) + cur.rerolls };
+        addPopup({ x: 50, y: 52, text: `🃏 +${cur.rerolls}`, kind: "pattern" });
+      }
     } else {
       next.upgrades = { ...next.upgrades };
       if (offer.target === "global") {
@@ -859,10 +1389,14 @@ export default function PokeSlots() {
     }
   };
 
+  // Selling DISCARDS the charm — Black Sludge feeds on it (discardCharm).
   const sellCharm = (charmId) => {
     const cur = runRef.current;
     const refund = Math.max(1, Math.floor(charmCost(charmId) / 2));
-    commit({ ...cur, charms: cur.charms.filter((c) => c !== charmId), tickets: cur.tickets + refund });
+    const next = { ...cur, tickets: cur.tickets + refund };
+    const fed = discardCharm(next, charmId);
+    commit(next);
+    if (fed) addPopup({ x: 50, y: 52, text: "🟣 +BASE", kind: "pattern" });
   };
 
   const doReroll = () => {
@@ -870,8 +1404,62 @@ export default function PokeSlots() {
     const cost = rerollCost(cur);
     if (phase !== "idle" || cur.coins < cost) return;
     playSfx("cash-register-purchase.mp3");
-    commit({ ...cur, coins: cur.coins - cost, rerolls: (cur.rerolls || 0) + 1 });
-    setOffers(rerollShop(cur));
+    // rerollsThisCycle feeds the Pink Scarf and resets on quota clear.
+    const next = {
+      ...cur,
+      coins: cur.coins - cost,
+      rerolls: (cur.rerolls || 0) + 1,
+      rerollsThisCycle: (cur.rerollsThisCycle || 0) + 1,
+    };
+    // Point Card: every reroll of the run raises the Symbols Multiplier.
+    if (next.charms.includes("point-card")) {
+      next.upgrades = { ...next.upgrades, global: (next.upgrades.global || 0) + 1 };
+      addPopup({ x: 50, y: 52, text: "🃏 +1", kind: "pattern" });
+    }
+    commit(next);
+    setOffers(rerollShop(next));
+  };
+
+  // Leftovers: counts completed rounds and self-discards after 10 (feeding
+  // Black Sludge). Called everywhere a round actually completes.
+  const tickLeftovers = (next) => {
+    if (!next.charms.includes("leftovers")) return;
+    next.leftoversRounds = (next.leftoversRounds || 0) + 1;
+    if (next.leftoversRounds >= LEFTOVERS_ROUNDS) {
+      const fed = discardCharm(next, "leftovers");
+      addPopup({ x: 50, y: 46, text: "🍱", kind: "pattern" });
+      if (fed) addPopup({ x: 50, y: 52, text: "🟣 +BASE", kind: "pattern" });
+    }
+  };
+
+  // Quota-finished charm hooks shared by the clear paths: Modest Mint tickets,
+  // Grassy Seed's alternating multiplier growth, the Yellow Scarf's next-quota
+  // bonus (from rounds skipped here) and the quota-scoped counter resets.
+  const applyQuotaFinish = (next, cur) => {
+    const skipped = cur.roundsLeft || 0;
+    // Modest Mint: +1 ticket per (quota number) tickets held — X is the index
+    // of the quota just finished (quota 1 → 1 per ticket, quota 2 → 1 per 2).
+    if (next.charms.includes("modest-mint") && cur.cycle > 0) {
+      const gain = Math.floor((next.tickets || 0) / cur.cycle);
+      if (gain > 0) {
+        next.tickets = (next.tickets || 0) + gain;
+        addPopup({ x: 50, y: 58, text: `🍃 +${gain} 🎫`, kind: "tickets" });
+      }
+    }
+    // Grassy Seed: +1 alternating between the Symbols and Patterns multipliers.
+    if (next.charms.includes("grassy-seed")) {
+      const turns = cur.grassyTurns || 0;
+      next.grassyLevels = { ...(next.grassyLevels || { global: 0, pattern: 0 }) };
+      if (turns % 2 === 0) next.grassyLevels.global += 1;
+      else next.grassyLevels.pattern += 1;
+      next.grassyTurns = turns + 1;
+      addPopup({ x: 50, y: 64, text: "🌱 +1", kind: "pattern" });
+    }
+    // Yellow Scarf: next quota's Luck bonus = 4 x rounds skipped on this one.
+    next.yellowScarfBonus = skipped * YELLOW_SCARF_STEP;
+    // Quota-scoped counters reset with the new cycle.
+    next.rerollsThisCycle = 0;
+    next.greenScarfBonus = 0;
   };
 
   // ------------------------------------------------------------------
@@ -893,6 +1481,10 @@ export default function PokeSlots() {
   const goldenCells = new Set(run.goldenCells || []);
   const chainCells = new Set(run.chainCells || []);
   const spinning = phase === "spinning";
+  const maxPullSlots = BASE_MAX_PULL_SLOTS + (run.charms.includes("chill-drive") ? CHILL_DRIVE_EXTRA_PULLS : 0);
+  const sMult = symbolsMult(run);
+  const pMult = patternsMult(run);
+  const isDeadline = remainingQuota > 0 && run.roundsLeft === 0 && run.pullsLeft === 0 && !run.awaitingChoice && phase === "idle";
 
   // Login/register replaces the board while open; "Play as guest" returns.
   if (showAuth) {
@@ -946,7 +1538,19 @@ export default function PokeSlots() {
               {tr("Login")}
             </button>
           )}
-          <LanguageSelector />
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                if (confirm(tr("Restart the run? All progress will be lost."))) restart();
+              }}
+              disabled={phase === "spinning"}
+              className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-slate-400 hover:border-red-500 hover:text-red-400 disabled:opacity-40 transition-colors"
+              title={tr("Restart")}
+            >
+              ↻ {tr("Restart")}
+            </button>
+            <LanguageSelector />
+          </div>
         </div>
       </div>
 
@@ -960,7 +1564,11 @@ export default function PokeSlots() {
         <Tooltip>
           <TooltipTrigger
             render={
-              <button onClick={openAtm} disabled={!canSpend} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-left transition-colors enabled:hover:border-red-500 disabled:opacity-90">
+              <button
+                onClick={openAtm}
+                disabled={!canSpend}
+                className={`rounded-xl border bg-slate-900 px-3 py-2 text-left transition-colors enabled:hover:border-red-500 disabled:opacity-90 ${isDeadline ? "border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.6)] animate-pulse" : "border-slate-700"}`}
+              >
                 <div className="text-[10px] uppercase tracking-wide text-slate-500">{tr("Quota")}</div>
                 <div className="font-bold text-red-400">{fmt(remainingQuota)} ₽</div>
                 <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] leading-none">
@@ -990,8 +1598,10 @@ export default function PokeSlots() {
         <div className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2">
           <div className="text-[10px] uppercase tracking-wide text-slate-500">{tr("Pulls left")}</div>
           <div className="flex items-center gap-1 mt-1.5">
-            {Array.from({ length: MAX_PULL_SLOTS }).map((_, i) => {
-              const inMode = !run.awaitingChoice && i < (ROUND_MODES[run.lastMode]?.pulls || 0);
+            {Array.from({ length: maxPullSlots }).map((_, i) => {
+              const actualModePulls =
+                (ROUND_MODES[run.lastMode]?.pulls || 0) + (run.charms.includes("chill-drive") ? CHILL_DRIVE_EXTRA_PULLS : 0);
+              const inMode = !run.awaitingChoice && i < actualModePulls;
               return (
                 <span
                   key={i}
@@ -1041,6 +1651,10 @@ export default function PokeSlots() {
               </div>
             );
           })}
+          <div className="mt-2 flex items-center justify-between rounded-lg bg-slate-800/60 px-2 py-1 text-[10px]">
+            <span className="uppercase tracking-wide text-slate-500">{tr("Symbols Multiplier")}</span>
+            <span className="font-bold text-yellow-300 text-sm">×{Number.isInteger(sMult) ? sMult : sMult.toFixed(2)}</span>
+          </div>
         </Board>
 
         {/* Machine cabinet */}
@@ -1086,8 +1700,9 @@ export default function PokeSlots() {
 
           {/* Lever + help. While the round's pulls haven't been paid for yet
               (awaitingChoice) the pull picker takes the lever's place: buy 3
-              fast pulls (5% of the quota) or 7 slower ones (10%). Choosing
-              makes the picker disappear and the lever reappear. */}
+              fast pulls (~35% of the fee) or 7 slower ones (the full fee,
+              fixed per quota). Choosing makes the picker disappear and the
+              lever reappear. */}
           <div className="mt-4 flex items-center justify-center gap-3">
             {run.awaitingChoice ? (
               [3, 7].map((m) => {
@@ -1190,6 +1805,18 @@ export default function PokeSlots() {
                 />
                 <TooltipContent side="bottom" className="max-w-56 flex-col items-stretch gap-0.5">
                   <span className="font-bold">{tr(CHARM_NAME_KEYS[c])}</span>
+                  {CHARMS[c].trait === "random" && (() => {
+                    const pct = CHARMS[c].scarf
+                      ? Math.round(CHARMS[c].scarf.chance * 100)
+                      : c === "amulet-coin"
+                        ? Math.round(AMULET_COIN_CHANCE * 100)
+                        : c === "odd-keystone"
+                          ? Math.round(ODD_KEYSTONE_CHANCE * 100)
+                          : c === "parcel"
+                            ? Math.round(PARCEL_CHANCE * 100)
+                            : null;
+                    return <span className="font-semibold text-fuchsia-400">{tr("Triggers Randomly")} ({pct}%)</span>;
+                  })()}
                   <span className="opacity-80">{tr(`${c}-desc`)}</span>
                 </TooltipContent>
               </Tooltip>
@@ -1221,6 +1848,10 @@ export default function PokeSlots() {
                 </div>
               );
             })}
+          <div className="mt-2 flex items-center justify-between rounded-lg bg-slate-800/60 px-2 py-1 text-[10px]">
+            <span className="uppercase tracking-wide text-slate-500">{tr("Patterns Multiplier")}</span>
+            <span className="font-bold text-slate-300 text-sm">×{pMult}</span>
+          </div>
           </Board>
 
           {/* Sound-effects volume (persisted): tap the speakers for mute/max,
@@ -1449,7 +2080,7 @@ export default function PokeSlots() {
       {modal === "help" && (
         <Overlay title={tr("How to play")} onClose={() => setModal(null)}>
           <ul className="list-disc pl-4 space-y-2 text-sm text-slate-300">
-            <li>{tr("Each round, buy 3 pulls (5% of the quota) or 7 (10%) — paying with coins earns 4 tickets (3-pull) or 2 (7-pull). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead. No coins and no tickets? You lose.")}</li>
+            <li>{tr("Each round, buy 3 pulls or 7 — the coin fee grows with every quota. Paying with coins earns tickets (3 pulls earn more). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead, earning nothing back. No coins and no tickets? You lose.")}</li>
             <li>{tr("Clear a quota early for a bonus: 7% of the quota + 4 tickets, plus 1 extra ticket per round still left. Paying right on the deadline earns no bonus.")}</li>
             <li>{tr("Patterns pay coins only. Tickets come from clearing quotas — spend them on charms and permanent upgrades.")}</li>
             <li>{tr("Deposits earn 7% interest, paid by the ATM after every round.")}</li>
@@ -1578,6 +2209,18 @@ export default function PokeSlots() {
         <div className="shrink-0 size-10 flex items-center justify-center">{icon}</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold leading-tight">{name}</div>
+          {offer.kind === "charm" && CHARMS[offer.id].trait === "random" && (() => {
+            const pct = CHARMS[offer.id].scarf
+              ? Math.round(CHARMS[offer.id].scarf.chance * 100)
+              : offer.id === "amulet-coin"
+                ? Math.round(AMULET_COIN_CHANCE * 100)
+                : offer.id === "odd-keystone"
+                  ? Math.round(ODD_KEYSTONE_CHANCE * 100)
+                  : offer.id === "parcel"
+                    ? Math.round(PARCEL_CHANCE * 100)
+                    : null;
+            return <div className="text-[11px] font-semibold text-fuchsia-400">{tr("Triggers Randomly")} ({pct}%)</div>;
+          })()}
           <div className="text-[11px] text-slate-400 leading-snug">{desc}</div>
         </div>
         <div className={`shrink-0 text-sm font-black ${affordable ? "text-sky-300" : "text-slate-600"}`}>{offer.cost}🎫</div>

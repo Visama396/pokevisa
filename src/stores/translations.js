@@ -2083,16 +2083,16 @@ const ui = {
     en: "Focus Band: wipes the quota for free — your wallet is emptied, but you get 7 pulls", es: "Banda Focus: borra la cuota gratis; tu monedero se vacía, pero recibes 7 tiradas", fr: "Bandeau Focus : efface la quote-part gratuitement ; ta bourse est vidée, mais tu obtiens 7 tirages", de: "Focus-Band: löscht die Rate kostenlos — dein Beutel wird geleert, aber du erhältst 7 Züge", it: "Fascia Concentrazione: cancella la rata gratis; il portamonete viene svuotato, ma ottieni 7 slate",
     ja: "がんばリバンド：分割払いを無料で消滅。コインは空になるが、レバー7回をもらえる。", ko: "승부밴드: 분할금을 무료로 지워준다. 코인은 모두 사라지지만 레버 7회를 얻는다.", "zh-hans": "气势绑带：免费清除配额——钱包会被清空，但你会获得7次拉杆。", "zh-hant": "氣勢綁帶：免費清除配額——錢包會被清空，但你會獲得7次拉桿。",
   },
-  "Each round, buy 3 pulls (5% of the quota) or 7 (10%) — paying with coins earns 4 tickets (3-pull) or 2 (7-pull). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead. No coins and no tickets? You lose.": {
-    en: "Each round, buy 3 pulls (5% of the quota) or 7 (10%) — paying with coins earns 4 tickets (3-pull) or 2 (7-pull). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead. No coins and no tickets? You lose.",
-    es: "Cada ronda, compra 3 tiradas (5% de la cuota) o 7 (10%): pagar con monedas te da 4 tickets (3 tiradas) o 2 (7 tiradas). ¿Sin monedas? La ronda cuesta 1 ticket (3 tiradas) o 2 tickets (7 tiradas). ¿Ni monedas ni tickets? Pierdes.",
-    fr: "À chaque manche, achète 3 tirages (5 % de la quote-part) ou 7 (10 %) — payer en pièces rapporte 4 tickets (3 tirages) ou 2 (7 tirages). Pas assez de pièces ? La manche coûte alors 1 ticket (3 tirages) ou 2 tickets (7 tirages). Ni pièces ni tickets ? Tu perds.",
-    de: "Kaufe jede Runde 3 Züge (5 % der Rate) oder 7 (10 %) — Zahlung mit Münzen bringt 4 Tickets (3 Züge) oder 2 (7 Züge). Keine Münzen? Dann kostet die Runde 1 Ticket (3 Züge) oder 2 Tickets (7 Züge). Weder Münzen noch Tickets? Dann verloren.",
-    it: "A ogni turno compra 3 slate (5% della rata) o 7 (10%) — pagare con monete fa guadagnare 4 biglietti (3 slate) o 2 (7 slate). Monete finite? Il turno costa 1 biglietto (3 slate) o 2 biglietti (7 slate). Né monete né biglietti? Hai perso.",
-    ja: "毎ラウンド、レバー回数を購入する：3回（分割払いの5%）か7回（10%）。コインで支払うとチケットがもらえる（3回なら4枚、7回なら2枚）。コインが足りないときはチケットで購入（3回=1枚、7回=2枚）。どちらもないと負けだ。",
-    ko: "매 라운드 레버 횟수를 구매한다: 3회(분할금의 5%) 또는 7회(10%). 코인으로 지불하면 티켓을 얻는다(3회는 4장, 7회는 2장). 코인이 부족하면 티켓으로 구매(3회=1장, 7회=2장). 둘 다 없으면 패배한다.",
-    "zh-hans": "每回合购买拉杆次数：3次（配额的5%）或7次（10%）——用金币支付可获得4张券（3次）或2张券（7次）。金币不够？可用券支付（3次=1张，7次=2张）。金币和券都没有？你就输了。",
-    "zh-hant": "每回合購買拉桿次數：3次（配額的5%）或7次（10%）——用金幣支付可獲得4張券（3次）或2張券（7次）。金幣不夠？可用券支付（3次=1張，7次=2張）。金幣和券都沒有？你就輸了。",
+  "Each round, buy 3 pulls or 7 — the coin fee grows with every quota. Paying with coins earns tickets (3 pulls earn more). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead, earning nothing back. No coins and no tickets? You lose.": {
+    en: "Each round, buy 3 pulls or 7 — the coin fee grows with every quota. Paying with coins earns tickets (3 pulls earn more). Can't afford a round? It costs 1 ticket (3 pulls) or 2 tickets (7 pulls) instead, earning nothing back. No coins and no tickets? You lose.",
+    es: "Cada ronda, compra 3 tiradas o 7 — la entrada en monedas sube con cada cuota. Pagar con monedas da tickets (3 tiradas dan más). ¿No te alcanza? Cuesta 1 ticket (3 tiradas) o 2 tickets (7 tiradas), sin recompensa. ¿Sin monedas ni tickets? Pierdes.",
+    fr: "À chaque manche, achète 3 tirages ou 7 — les frais en pièces augmentent à chaque quote-part. Payer en pièces rapporte des tickets (3 tirages en donnent plus). Pas assez ? Ça coûte 1 ticket (3 tirages) ou 2 tickets (7 tirages), sans rien rapporter. Ni pièces ni tickets ? Perdu.",
+    de: "Kaufe jede Runde 3 Züge oder 7 — die Münzgebühr wächst mit jeder Rate. Mit Münzen zahlen bringt Tickets (3 Züge bringen mehr). Nicht genug? Dann kostet es 1 Ticket (3 Züge) oder 2 Tickets (7 Züge), ohne Belohnung. Weder Münzen noch Tickets? Verloren.",
+    it: "Ogni turno, compra 3 tirate o 7 — la tariffa in monete cresce a ogni rata. Pagare con monete dà biglietti (3 tirate ne danno di più). Non puoi permettertelo? Costa 1 biglietto (3 tirate) o 2 biglietti (7 tirate), senza ricompensa. Né monete né biglietti? Hai perso.",
+    ja: "毎ラウンド、レバー3回か7回を購入する——入場料は分割払いごとに上がる。コインで払うとチケットがもらえる（3回のほうが多い）。払えない場合はチケット1枚（3回）か2枚（7回）で、報酬はなし。コインもチケットもないと負けだ。",
+    ko: "매 라운드 레버 3회 또는 7회를 구매한다——입장료는 분할금마다 오른다. 코인으로 내면 티켓을 얻는다(3회가 더 많다). 낼 수 없다면 티켓 1장(3회) 또는 2장(7회)이 들며 보상은 없다. 코인도 티켓도 없으면 패배한다.",
+    "zh-hans": "每回合购买3次或7次拉杆——金币费用随每次配额上涨。用金币支付可获得票券（3次拉杆更多）。付不起？改用1张票（3次）或2张票（7次），无任何回报。既无金币也无票？你输了。",
+    "zh-hant": "每回合購買3次或7次拉桿——金幣費用隨每次配額上漲。用金幣支付可獲得票券（3次拉桿更多）。付不起？改用1張票（3次）或2張票（7次），無任何回報。既無金幣也無票？你輸了。",
   },
   "Sound volume": {
     en: "Sound volume", es: "Volumen del sonido", fr: "Volume du son", de: "Lautstärke", it: "Volume del suono",
@@ -2253,6 +2253,10 @@ const ui = {
     en: "Symbols Multiplier", es: "Multiplicador de símbolos", fr: "Multiplicateur de symboles", de: "Symbol-Multiplikator", it: "Moltiplicatore simboli",
     ja: "シンボル倍率", ko: "심볼 배율", "zh-hans": "图案倍率", "zh-hant": "圖案倍率",
   },
+  "Patterns Multiplier": {
+    en: "Patterns Multiplier", es: "Multiplicador de patrones", fr: "Multiplicateur de motifs", de: "Muster-Multiplikator", it: "Moltiplicatore combinazioni",
+    ja: "パターン倍率", ko: "패턴 배율", "zh-hans": "牌型倍率", "zh-hant": "牌型倍率",
+  },
   "All payouts": {
     en: "All payouts", es: "Todos los premios", fr: "Tous les gains", de: "Alle Auszahlungen", it: "Tutti i premi",
     ja: "すべての配当", ko: "모든 배당", "zh-hans": "所有派彩", "zh-hant": "所有派彩",
@@ -2324,18 +2328,18 @@ const ui = {
   // descriptions below are fully translated.
   "charm-silk-scarf": { en: "Silk Scarf" },
   "silk-scarf-desc": {
-    en: "Lemon and Cherry symbols are worth +1.", es: "Los símbolos Limón y Cereza valen +1.", fr: "Les symboles Citron et Cerise valent +1.", de: "Zitronen- und Kirsch-Symbole sind +1 wert.", it: "I simboli Limone e Ciliegia valgono +1.",
-    ja: "レモンとチェリーのシンボルの価値+1。", ko: "레몬과 체리 심볼의 가치 +1.", "zh-hans": "柠檬与樱桃图案价值+1。", "zh-hant": "檸檬與櫻桃圖案價值+1。",
+    en: "Exeggcute and Cherubi are worth +1.", es: "Exeggcute y Cherubi valen +1.", fr: "Noeunoeuf et Ceribou valent +1.", de: "Owei und Kikugi sind +1 wert.", it: "Exeggcute e Cherubi valgono +1.",
+    ja: "タマタマとチェリンボの価値+1。", ko: "아라리와 체리버의 가치 +1.", "zh-hans": "蛋蛋与樱花宝价值+1。", "zh-hant": "蛋蛋與櫻花寶價值+1。",
   },
   "charm-lucky-egg": { en: "Lucky Egg" },
   "lucky-egg-desc": {
-    en: "Earns double tickets from every pull.", es: "Consigue el doble de tickets en cada tirada.", fr: "Donne le double de tickets à chaque tirage.", de: "Bringt pro Zug die doppelten Tickets.", it: "Fa guadagnare il doppio dei biglietti per ogni tirata.",
-    ja: "レバー1回ごとのチケットが2倍。", ko: "레버 한 번당 티켓 2배.", "zh-hans": "每次拉杆获得的券翻倍。", "zh-hant": "每次拉桿獲得的券加倍。",
+    en: "Every 3 consecutive pulls scoring Carbink, Gholdengo or Seviper guarantees EYE on the next pull.", es: "Cada 3 tiradas seguidas puntuando Carbink, Gholdengo o Seviper garantizan EYE en la siguiente tirada.", fr: "Tous les 3 tirages consécutifs marquant Strassie, Gromago ou Séviper garantissent EYE au tirage suivant.", de: "Alle 3 aufeinanderfolgenden Züge mit Rocara, Monetigo oder Vipitis garantieren EYE im nächsten Zug.", it: "Ogni 3 tirate consecutive che segnano Carbink, Gholdengo o Seviper garantiscono EYE alla tirata successiva.",
+    ja: "メレシー・サーフゴー・ハブネークのいずれかで3回連続成立すると、次のレバーでEYEが保証される。", ko: "멜리시, 타부자고 또는 세비퍼로 3회 연속 당첨되면 다음 레버에서 EYE가 보장된다.", "zh-hans": "连续3次拉杆命中小碎钻、赛富豪或饭匙蛇时，下一次拉杆必出EYE。", "zh-hant": "連續3次拉桿命中小碎鑽、賽富豪或飯匙蛇時，下一次拉桿必出EYE。",
   },
   "charm-choice-specs": { en: "Choice Specs" },
   "choice-specs-desc": {
-    en: "DIAG, ZIG and ZAG multipliers +2.", es: "Los multiplicadores de DIAG, ZIG y ZAG +2.", fr: "Multiplicateurs DIAG, ZIG et ZAG +2.", de: "DIAG-, ZIG- und ZAG-Multiplikatoren +2.", it: "Moltiplicatori DIAG, ZIG e ZAG +2.",
-    ja: "DIAG・ZIG・ZAGの倍率+2。", ko: "DIAG·ZIG·ZAG 배율 +2.", "zh-hans": "DIAG、ZIG、ZAG倍率+2。", "zh-hant": "DIAG、ZIG、ZAG倍率+2。",
+    en: "If the previous 3 pulls had no patterns, permanently raises every pattern by its base multiplier.", es: "Si las 3 tiradas anteriores no tuvieron patrones, aumenta permanentemente cada patrón en su multiplicador base.", fr: "Si les 3 derniers tirages n'ont eu aucun motif, augmente définitivement chaque motif de son multiplicateur de base.", de: "Hatten die letzten 3 Züge keine Muster, erhöht er jedes Muster dauerhaft um seinen Grund-Multiplikator.", it: "Se le ultime 3 tirate non hanno avuto combinazioni, aumenta permanentemente ogni combinazione del suo moltiplicatore base.",
+    ja: "直近3回でパターンが一度も成立しなかった場合、すべてのパターンの倍率を基本倍率ぶん永続的に上げる。", ko: "최근 3회 레버에서 패턴이 없었다면 모든 패턴의 배율을 기본 배율만큼 영구히 올린다.", "zh-hans": "若之前3次拉杆均未触发图案，则所有牌型永久提升其基础倍率。", "zh-hant": "若之前3次拉桿均未觸發圖案，則所有牌型永久提升其基礎倍率。",
   },
   "charm-muscle-band": { en: "Muscle Band" },
   "muscle-band-desc": {
@@ -2402,45 +2406,245 @@ const ui = {
     en: "The last pull of each round gets +7 Luck.", es: "La última tirada de cada ronda recibe +7 de suerte.", fr: "Le dernier tirage de chaque manche reçoit +7 de Chance.", de: "Der letzte Zug jeder Runde erhält +7 Glück.", it: "L'ultima tirata di ogni turno riceve +7 Fortuna.",
     ja: "各ラウンドの最後のレバーに運+7。", ko: "각 라운드의 마지막 레버에 행운 +7.", "zh-hans": "每回合的最后一次拉杆获得+7幸运。", "zh-hant": "每回合的最後一次拉桿獲得+7幸運。",
   },
-  "charm-golden-lemon": { en: "Golden Exeggcute" },
+  "charm-golden-lemon": { en: "Shiny Exeggcute" },
   "golden-lemon-desc": {
-    en: "Each Exeggcute has a 20% chance to be Golden — scoring it permanently raises Exeggcute's base value.", es: "Cada Exeggcute tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Noeunoeuf a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Owei ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Exeggcute ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
-    ja: "タマタマは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "아라리는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "蛋蛋有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "蛋蛋有20%機率變為黃金——命中它時其基礎價值永久提升。",
+    en: "Each Exeggcute has a 20% chance to be Shiny — scoring it permanently raises Exeggcute's base value.", es: "Cada Exeggcute tiene un 20% de probabilidad de ser Variocolor — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Noeunoeuf a 20 % de chance d'être Chromatique — le marquer augmente définitivement sa valeur de base.", de: "Jedes Owei ist mit 20% Chance schillernd — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Exeggcute ha il 20% di probabilità di essere cromatico — completarlo ne aumenta permanentemente il valore base.",
+    ja: "タマタマは20%の確率で色違いになる——成立させるとその基本価値が永久に上がる。", ko: "아라리는 20% 확률로 색이 다른 포켓몬이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "蛋蛋有20%概率变为异色——命中它时其基础价值永久提升。", "zh-hant": "蛋蛋有20%機率變為異色——命中它時其基礎價值永久提升。",
   },
-  "charm-golden-cherry": { en: "Golden Cherubi" },
+  "charm-golden-cherry": { en: "Shiny Cherubi" },
   "golden-cherry-desc": {
-    en: "Each Cherubi has a 20% chance to be Golden — scoring it permanently raises Cherubi's base value.", es: "Cada Cherubi tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Ceribou a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Kikugi ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Cherubi ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
-    ja: "チェリンボは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "체리버는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "樱花宝有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "櫻花寶有20%機率變為黃金——命中它時其基礎價值永久提升。",
+    en: "Each Cherubi has a 20% chance to be Shiny — scoring it permanently raises Cherubi's base value.", es: "Cada Cherubi tiene un 20% de probabilidad de ser Variocolor — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Ceribou a 20 % de chance d'être Chromatique — le marquer augmente définitivement sa valeur de base.", de: "Jedes Kikugi ist mit 20% Chance schillernd — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Cherubi ha il 20% di probabilità di essere cromatico — completarlo ne aumenta permanentemente il valore base.",
+    ja: "チェリンボは20%の確率で色違いになる——成立させるとその基本価値が永久に上がる。", ko: "체리버는 20% 확률로 색이 다른 포켓몬이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "樱花宝有20%概率变为异色——命中它时其基础价值永久提升。", "zh-hant": "櫻花寶有20%機率變為異色——命中它時其基礎價值永久提升。",
   },
-  "charm-golden-clover": { en: "Golden Sprigatito" },
+  "charm-golden-clover": { en: "Shiny Sprigatito" },
   "golden-clover-desc": {
-    en: "Each Sprigatito has a 20% chance to be Golden — scoring it permanently raises Sprigatito's base value.", es: "Cada Sprigatito tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Poussacha a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Felori ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Sprigatito ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
-    ja: "ニャオハは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "나오하는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "新叶喵有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "新葉喵有20%機率變為黃金——命中它時其基礎價值永久提升。",
+    en: "Each Sprigatito has a 20% chance to be Shiny — scoring it permanently raises Sprigatito's base value.", es: "Cada Sprigatito tiene un 20% de probabilidad de ser Variocolor — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Poussacha a 20 % de chance d'être Chromatique — le marquer augmente définitivement sa valeur de base.", de: "Jedes Felori ist mit 20% Chance schillernd — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Sprigatito ha il 20% di probabilità di essere cromatico — completarlo ne aumenta permanentemente il valore base.",
+    ja: "ニャオハは20%の確率で色違いになる——成立させるとその基本価値が永久に上がる。", ko: "나오하는 20% 확률로 색이 다른 포켓몬이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "新叶喵有20%概率变为异色——命中它时其基础价值永久提升。", "zh-hant": "新葉喵有20%機率變為異色——命中它時其基礎價值永久提升。",
   },
-  "charm-golden-bell": { en: "Golden Chimecho" },
+  "charm-golden-bell": { en: "Shiny Chimecho" },
   "golden-bell-desc": {
-    en: "Each Chimecho has a 20% chance to be Golden — scoring it permanently raises Chimecho's base value.", es: "Cada Chimecho tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Éoko a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Palimpalim ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Chimecho ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
-    ja: "チリーンは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "치렁은 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "风铃铃有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "風鈴鈴有20%機率變為黃金——命中它時其基礎價值永久提升。",
+    en: "Each Chimecho has a 20% chance to be Shiny — scoring it permanently raises Chimecho's base value.", es: "Cada Chimecho tiene un 20% de probabilidad de ser Variocolor — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Éoko a 20 % de chance d'être Chromatique — le marquer augmente définitivement sa valeur de base.", de: "Jedes Palimpalim ist mit 20% Chance schillernd — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Chimecho ha il 20% di probabilità di essere cromatico — completarlo ne aumenta permanentemente il valore base.",
+    ja: "チリーンは20%の確率で色違いになる——成立させるとその基本価値が永久に上がる。", ko: "치렁은 20% 확률로 색이 다른 포켓몬이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "风铃铃有20%概率变为异色——命中它时其基础价值永久提升。", "zh-hant": "風鈴鈴有20%機率變為異色——命中它時其基礎價值永久提升。",
   },
-  "charm-golden-diamond": { en: "Golden Carbink" },
+  "charm-golden-diamond": { en: "Shiny Carbink" },
   "golden-diamond-desc": {
-    en: "Each Carbink has a 20% chance to be Golden — scoring it permanently raises Carbink's base value.", es: "Cada Carbink tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Strassie a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Rocara ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Carbink ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
-    ja: "メレシーは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "멜리시는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "小碎钻有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "小碎鑽有20%機率變為黃金——命中它時其基礎價值永久提升。",
+    en: "Each Carbink has a 20% chance to be Shiny — scoring it permanently raises Carbink's base value.", es: "Cada Carbink tiene un 20% de probabilidad de ser Variocolor — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Strassie a 20 % de chance d'être Chromatique — le marquer augmente définitivement sa valeur de base.", de: "Jedes Rocara ist mit 20% Chance schillernd — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Carbink ha il 20% di probabilità di essere cromatico — completarlo ne aumenta permanentemente il valore base.",
+    ja: "メレシーは20%の確率で色違いになる——成立させるとその基本価値が永久に上がる。", ko: "멜리시는 20% 확률로 색이 다른 포켓몬이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "小碎钻有20%概率变为异色——命中它时其基础价值永久提升。", "zh-hant": "小碎鑽有20%機率變為異色——命中它時其基礎價值永久提升。",
   },
-  "charm-golden-treasure": { en: "Golden Gholdengo" },
+  "charm-golden-treasure": { en: "Shiny Gholdengo" },
   "golden-treasure-desc": {
-    en: "Each Gholdengo has a 20% chance to be Golden — scoring it permanently raises Gholdengo's base value.", es: "Cada Gholdengo tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Gromago a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jedes Monetigo ist mit 20% Chance Golden — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Gholdengo ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
-    ja: "サーフゴーは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "타부자고는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "赛富豪有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "賽富豪有20%機率變為黃金——命中它時其基礎價值永久提升。",
+    en: "Each Gholdengo has a 20% chance to be Shiny — scoring it permanently raises Gholdengo's base value.", es: "Cada Gholdengo tiene un 20% de probabilidad de ser Variocolor — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Gromago a 20 % de chance d'être Chromatique — le marquer augmente définitivement sa valeur de base.", de: "Jedes Monetigo ist mit 20% Chance schillernd — es zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Gholdengo ha il 20% di probabilità di essere cromatico — completarlo ne aumenta permanentemente il valore base.",
+    ja: "サーフゴーは20%の確率で色違いになる——成立させるとその基本価値が永久に上がる。", ko: "타부자고는 20% 확률로 색이 다른 포켓몬이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "赛富豪有20%概率变为异色——命中它时其基础价值永久提升。", "zh-hant": "賽富豪有20%機率變為異色——命中它時其基礎價值永久提升。",
   },
-  "charm-golden-seven": { en: "Golden Seviper" },
+  "charm-golden-seven": { en: "Shiny Seviper" },
   "golden-seven-desc": {
-    en: "Each Seviper has a 20% chance to be Golden — scoring it permanently raises Seviper's base value.", es: "Cada Seviper tiene un 20% de probabilidad de ser Dorado — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Séviper a 20 % de chance d'être Doré — le marquer augmente définitivement sa valeur de base.", de: "Jeder Vipitis ist mit 20% Chance Golden — ihn zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Seviper ha il 20% di probabilità di essere Dorato — completarlo ne aumenta permanentemente il valore base.",
-    ja: "ハブネークは20%の確率でゴールデンになる——成立させるとその基本価値が永久に上がる。", ko: "세비퍼는 20% 확률로 골든이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "饭匙蛇有20%概率变为黄金——命中它时其基础价值永久提升。", "zh-hant": "飯匙蛇有20%機率變為黃金——命中它時其基礎價值永久提升。",
+    en: "Each Seviper has a 20% chance to be Shiny — scoring it permanently raises Seviper's base value.", es: "Cada Seviper tiene un 20% de probabilidad de ser Variocolor — puntuarlo aumenta permanentemente su valor base.", fr: "Chaque Séviper a 20 % de chance d'être Chromatique — le marquer augmente définitivement sa valeur de base.", de: "Jeder Vipitis ist mit 20% Chance schillernd — ihn zu treffen erhöht seinen Grundwert dauerhaft.", it: "Ogni Seviper ha il 20% di probabilità di essere cromatico — completarlo ne aumenta permanentemente il valore base.",
+    ja: "ハブネークは20%の確率で色違いになる——成立させるとその基本価値が永久に上がる。", ko: "세비퍼는 20% 확률로 색이 다른 포켓몬이 된다——당첨시키면 그 기본 가치가 영구히 오른다.", "zh-hans": "饭匙蛇有20%概率变为异色——命中它时其基础价值永久提升。", "zh-hant": "飯匙蛇有20%機率變為異色——命中它時其基礎價值永久提升。",
   },
   "charm-griseous-orb": { en: "Griseous Orb" },
   "griseous-orb-desc": {
     en: "Carbink, Gholdengo and Seviper have a 12% chance to be Chained — scoring them permanently raises that pattern's multiplier.", es: "Carbink, Gholdengo y Seviper tienen un 12% de probabilidad de ser Encadenados — puntuarlos aumenta permanentemente el multiplicador de ese patrón.", fr: "Strassie, Gromago et Séviper ont 12 % de chance d'être Enchaînés — les marquer augmente définitivement le multiplicateur du motif.", de: "Rocara, Monetigo und Vipitis sind mit 12% Chance Verkettet — sie zu treffen erhöht den Multiplikator dieses Musters dauerhaft.", it: "Carbink, Gholdengo e Seviper hanno il 12% di probabilità di essere Incatenati — completarli aumenta permanentemente il moltiplicatore di quella combinazione.",
     ja: "メレシー・サーフゴー・ハブネークは12%の確率でチェーンになる——成立させるとそのパターンの倍率が永久に上がる。", ko: "멜리시·타부자고·세비퍼는 12% 확률로 체인이 된다——당첨시키면 그 패턴의 배율이 영구히 오른다.", "zh-hans": "小碎钻、赛富豪、饭匙蛇有12%概率变为连锁——命中它们时该牌型倍率永久提升。", "zh-hant": "小碎鑽、賽富豪、飯匙蛇有12%機率變為連鎖——命中它們時該牌型倍率永久提升。",
+  },
+
+  // Second wave of charms — Focus Sash, Lagging Tail, Arceus Statue, Black
+  // Sludge, Metronome, Heal Powder, Zoom Lens, Guidebook, Star Piece, Odd
+  // Keystone, Bright Powder, Deep Sea Tooth, Point Card, Parcel.
+  "charm-focus-sash": { en: "Focus Sash" },
+  "focus-sash-desc": {
+    en: "When you are about to die, grants 2 extra rounds to pay the quota, then discards itself.", es: "Cuando estés a punto de morir, otorga 2 rondas extra para pagar la cuota y luego se descarta.", fr: "Quand vous êtes sur le point de mourir, offre 2 manches de plus pour payer la quote-part, puis se jette.", de: "Wenn du kurz vor dem Aus stehst, gewährt er 2 Extra-Runden zum Zahlen der Rate und wird dann abgelegt.", it: "Quando stai per perdere, concede 2 turni extra per pagare la rata, poi si scarta.",
+    ja: "倒れる寸前に、分割払いのための追加2ラウンドを与えてから捨てられる。", ko: "쓰러지기 직전에 분할금을 낼 수 있도록 2라운드를 추가로 얻은 뒤 버려진다.", "zh-hans": "濒死时额外获得2个回合支付配额，随后被丢弃。", "zh-hant": "瀕死時額外獲得2個回合支付配額，隨後被丟棄。",
+  },
+  "charm-lagging-tail": { en: "Lagging Tail" },
+  "lagging-tail-desc": {
+    en: "Charms with 'Triggers Randomly' activate twice as often.", es: "Los amuletos con 'Se activa al azar' se activan el doble de veces.", fr: "Les charmes avec « Déclenchement aléatoire » s'activent deux fois plus souvent.", de: "Amulette mit „Löst zufällig aus“ aktivieren sich doppelt so oft.", it: "Gli amuleti con 'Si attiva a caso' si attivano il doppio delle volte.",
+    ja: "「ランダム発動」を持つお守りの発動率が2倍になる。", ko: "'무작위 발동' 특성을 가진 아이템이 두 배로 자주 발동한다.", "zh-hans": "带有「随机触发」的护符触发频率翻倍。", "zh-hant": "帶有「隨機觸發」的護符觸發頻率翻倍。",
+  },
+  "charm-arceus-statue": { en: "Arceus Statue" },
+  "arceus-statue-desc": {
+    en: "Grants a guaranteed JACKPOT on your next pull, then discards itself.", es: "Garantiza un JACKPOT en tu próxima tirada y luego se descarta.", fr: "Garantit un JACKPOT au prochain tirage, puis se jette.", de: "Garantiert einen JACKPOT beim nächsten Zug und wird dann abgelegt.", it: "Garantisce un JACKPOT alla prossima tirata, poi si scarta.",
+    ja: "次のレバーでジャックポットを保証し、その後捨てられる。", ko: "다음 레버에서 잭팟을 보장한 뒤 버려진다.", "zh-hans": "下一次拉杆保底头奖，随后被丢弃。", "zh-hant": "下一次拉桿保底頭獎，隨後被丟棄。",
+  },
+  "charm-black-sludge": { en: "Black Sludge" },
+  "black-sludge-desc": {
+    en: "Whenever a charm is discarded (sold or consumed), every symbol permanently gains its own base value.", es: "Cuando se descarta un amuleto (vendido o consumido), cada símbolo gana permanentemente su propio valor base.", fr: "Quand un charme est jeté (vendu ou consommé), chaque symbole gagne définitivement sa propre valeur de base.", de: "Wann immer ein Amulett abgelegt wird (verkauft oder verbraucht), gewinnt jedes Symbol dauerhaft seinen eigenen Grundwert.", it: "Quando un amuleto viene scartato (venduto o consumato), ogni simbolo guadagna permanentemente il proprio valore base.",
+    ja: "お守りが捨てられるたび（売却・消費）、すべてのシンボルがその基本価値分だけ永続的に上がる。", ko: "아이템이 버려질 때마다(판매 또는 소모) 모든 심볼이 영구히 자신의 기본 가치만큼 오른다.", "zh-hans": "每当护符被丢弃（出售或消耗）时，所有图案永久获得其基础价值加成。", "zh-hant": "每當護符被丟棄（出售或消耗）時，所有圖案永久獲得其基礎價值加成。",
+  },
+  "charm-metronome": { en: "Metronome" },
+  "metronome-desc": {
+    en: "If the last 2 pulls had no patterns, the next pull gets Luck +5. +2 extra Luck for each consecutive activation after the first.", es: "Si las últimas 2 tiradas no tuvieron patrones, la siguiente recibe Suerte +5. +2 de Suerte extra por cada activación consecutiva tras la primera.", fr: "Si les 2 derniers tirages n'ont eu aucun motif, le suivant reçoit Chance +5. +2 de Chance par activation consécutive après la première.", de: "Hatten die letzten 2 Züge keine Muster, erhält der nächste +5 Glück. +2 extra Glück pro aufeinanderfolgender Auslösung nach der ersten.", it: "Se le ultime 2 tirate non hanno avuto combinazioni, la prossima riceve Fortuna +5. +2 Fortuna extra per ogni attivazione consecutiva dopo la prima.",
+    ja: "直近2回のレバーでパターンが成立しなかった場合、次のレバーに運+5。初回以降、連続発動ごとにさらに運+2。", ko: "최근 2회 레버에서 패턴이 없었다면 다음 레버에 행운 +5. 첫 발동 이후 연속 발동마다 행운 +2 추가.", "zh-hans": "若最近2次拉杆未触发图案，下一次拉杆获得幸运+5。首次之后每连续触发一次额外+2幸运。", "zh-hant": "若最近2次拉桿未觸發圖案，下一次拉桿獲得幸運+5。首次之後每連續觸發一次額外+2幸運。",
+  },
+  "charm-heal-powder": { en: "Heal Powder" },
+  "heal-powder-desc": {
+    en: "If only 1 pattern triggers on a pull, its symbols transform into the most valued symbol.", es: "Si solo 1 patrón acierta en una tirada, sus símbolos se transforman en el símbolo de mayor valor.", fr: "Si un seul motif tombe sur un tirage, ses symboles se transforment en le symbole le plus précieux.", de: "Löst bei einem Zug nur 1 Muster aus, verwandeln sich seine Symbole in das wertvollste Symbol.", it: "Se solo 1 combinazione esce in una tirata, i suoi simboli si trasformano nel simbolo di maggior valore.",
+    ja: "1回のレバーでパターンが1つだけ成立した場合、そのシンボルが最も価値の高いシンボルに変化する。", ko: "한 번의 레버에서 패턴이 1개만 당첨되면 그 심볼들이 가장 가치 높은 심볼로 변한다.", "zh-hans": "若一次拉杆只触发1个牌型，其图案将变为价值最高的图案。", "zh-hant": "若一次拉桿只觸發1個牌型，其圖案將變為價值最高的圖案。",
+  },
+  "charm-zoom-lens": { en: "Zoom Lens" },
+  "zoom-lens-desc": {
+    en: "Pattern multipliers +1 for every 15 tickets you own.", es: "Los multiplicadores de patrón reciben +1 por cada 15 tickets que tengas.", fr: "Multiplicateurs de motifs +1 pour chaque tranche de 15 tickets possédés.", de: "Muster-Multiplikatoren +1 für je 15 eigene Tickets.", it: "Moltiplicatori delle combinazioni +1 ogni 15 biglietti posseduti.",
+    ja: "所持チケット15枚ごとにパターンの倍率+1。", ko: "보유한 티켓 15장마다 패턴 배율 +1.", "zh-hans": "每拥有15张票，牌型倍率+1。", "zh-hant": "每擁有15張票，牌型倍率+1。",
+  },
+  "charm-guidebook": { en: "Guidebook" },
+  "guidebook-desc": {
+    en: "Whenever you finish a quota, the Symbols Multiplier rises by 1 per skipped round, plus 1.", es: "Cuando termines una cuota, el Multiplicador de Símbolos sube 1 por cada ronda saltada, más 1.", fr: "Quand une quote-part est terminée, le Multiplicateur de Symboles monte de 1 par manche sautée, plus 1.", de: "Beim Erfüllen einer Rate steigt der Symbol-Multiplikator um 1 pro übersprungener Runde, plus 1.", it: "Quando completi una rata, il Moltiplicatore Simboli sale di 1 per ogni turno saltato, più 1.",
+    ja: "分割払いを完了するたび、スキップしたラウンド1つにつき+1、さらに+1だけシンボル倍率が上がる。", ko: "분할금을 완료할 때마다 건너뛴 라운드당 1씩, 추가로 1만큼 심볼 배율이 오른다.", "zh-hans": "每完成一次配额，图案倍率按跳过的回合数每回合+1，并额外+1。", "zh-hant": "每完成一次配額，圖案倍率按跳過的回合數每回合+1，並額外+1。",
+  },
+  "charm-star-piece": { en: "Star Piece" },
+  "star-piece-desc": {
+    en: "If the last pull triggered no pattern, the next pull lands a HOR-XL on the center row.", es: "Si la última tirada no activó ningún patrón, la siguiente logra un HOR-XL en la fila central.", fr: "Si le dernier tirage n'a déclenché aucun motif, le suivant place un HOR-XL sur la rangée centrale.", de: "Löste der letzte Zug kein Muster aus, landet der nächste ein HOR-XL in der mittleren Reihe.", it: "Se l'ultima tirata non ha attivato combinazioni, la prossima ottiene un HOR-XL nella riga centrale.",
+    ja: "前のレバーでパターンが成立しなかった場合、次のレバーで中央行にHOR-XLが成立する。", ko: "이전 레버에서 패턴이 없었다면 다음 레버에서 중앙 행에 HOR-XL이 완성된다.", "zh-hans": "若上一次拉杆未触发图案，下一次拉杆将在中间行达成HOR-XL。", "zh-hant": "若上一次拉桿未觸發圖案，下一次拉桿將在中間行達成HOR-XL。",
+  },
+  "charm-odd-keystone": { en: "Odd Keystone" },
+  "odd-keystone-desc": {
+    en: "Triggers Randomly (35%): patterns trigger one extra time for this pull.", es: "Se activa al azar (35%): los patrones se activan una vez más en esta tirada.", fr: "Déclenchement aléatoire (35 %) : les motifs se déclenchent une fois de plus sur ce tirage.", de: "Löst zufällig aus (35%): Muster lösen bei diesem Zug einmal zusätzlich aus.", it: "Si attiva a caso (35%): le combinazioni si attivano una volta in più in questa tirata.",
+    ja: "ランダム発動（35%）：このレバーでパターンがもう1回成立する。", ko: "무작위 발동 (35%): 이번 레버에서 패턴이 한 번 더 당첨된다.", "zh-hans": "随机触发（35%）：本次拉杆的图案额外触发一次。", "zh-hant": "隨機觸發（35%）：本次拉桿的圖案額外觸發一次。",
+  },
+  "charm-bright-powder": { en: "Bright Powder" },
+  "bright-powder-desc": {
+    en: "Whenever 5 charms trigger during a round, the next pull gets Luck +7.", es: "Cuando 5 amuletos se activan durante una ronda, la siguiente tirada recibe Suerte +7.", fr: "Quand 5 charmes se déclenchent durant une manche, le tirage suivant reçoit Chance +7.", de: "Wenn sich in einer Runde 5 Amulette auslösen, erhält der nächste Zug +7 Glück.", it: "Quando 5 amuleti si attivano durante un turno, la prossima tirata riceve Fortuna +7.",
+    ja: "1ラウンド中にお守りが5回発動するたび、次のレバーに運+7。", ko: "한 라운드 동안 아이템이 5번 발동하면 다음 레버에 행운 +7.", "zh-hans": "一回合内触发5次护符效果时，下一次拉杆获得幸运+7。", "zh-hant": "一回合內觸發5次護符效果時，下一次拉桿獲得幸運+7。",
+  },
+  "charm-deep-sea-tooth": { en: "Deep Sea Tooth" },
+  "deep-sea-tooth-desc": {
+    en: "If no pattern with 5+ symbols has triggered in the last 3 pulls, the next pull lands an ABOVE or BELOW.", es: "Si ningún patrón de 5+ símbolos ha acertado en las últimas 3 tiradas, la siguiente logra un ABOVE o BELOW.", fr: "Si aucun motif de 5 symboles ou plus n'est tombé sur les 3 derniers tirages, le suivant place un ABOVE ou BELOW.", de: "Wenn in den letzten 3 Zügen kein Muster mit 5+ Symbolen auslöste, landet der nächste ein ABOVE oder BELOW.", it: "Se nessuna combinazione con 5+ simboli è uscita nelle ultime 3 tirate, la prossima ottiene un ABOVE o BELOW.",
+    ja: "直近3回のレバーで5シンボル以上のパターンが成立しなかった場合、次のレバーでABOVEかBELOWが成立する。", ko: "최근 3회 레버에서 5개 이상 심볼 패턴이 없었다면 다음 레버에서 ABOVE 또는 BELOW가 완성된다.", "zh-hans": "若最近3次拉杆未触发5个以上图案的牌型，下一次拉杆将达成ABOVE或BELOW。", "zh-hant": "若最近3次拉桿未觸發5個以上圖案的牌型，下一次拉桿將達成ABOVE或BELOW。",
+  },
+  "charm-point-card": { en: "Point Card" },
+  "point-card-desc": {
+    en: "Symbols Multiplier +1 for every reroll performed at the shop during the run.", es: "El Multiplicador de Símbolos recibe +1 por cada reroll realizado en la tienda durante la partida.", fr: "Multiplicateur de Symboles +1 pour chaque relance de la boutique durant la partie.", de: "Symbol-Multiplikator +1 für jeden Reroll im Shop während des Laufs.", it: "Moltiplicatore Simboli +1 per ogni reroll fatto nel negozio durante la run.",
+    ja: "このラン中にショップで行ったリロール1回ごとにシンボル倍率+1。", ko: "이번 런 동안 상점에서 리롤할 때마다 심볼 배율 +1.", "zh-hans": "本局中每次在商店重掷，图案倍率+1。", "zh-hant": "本局中每次在商店重擲，圖案倍率+1。",
+  },
+  "charm-parcel": { en: "Parcel" },
+  "parcel-desc": {
+    en: "Triggers Randomly (25%) on pulls with no patterns: every symbol permanently gains its own base value.", es: "Se activa al azar (25%) en tiradas sin patrones: cada símbolo gana permanentemente su propio valor base.", fr: "Déclenchement aléatoire (25 %) sur les tirages sans motif : chaque symbole gagne définitivement sa propre valeur de base.", de: "Löst zufällig aus (25%) bei Zügen ohne Muster: Jedes Symbol gewinnt dauerhaft seinen eigenen Grundwert.", it: "Si attiva a caso (25%) nelle tirate senza combinazioni: ogni simbolo guadagna permanentemente il proprio valore base.",
+    ja: "ランダム発動（25%）、パターンなしのレバー限定：すべてのシンボルがその基本価値分だけ永続的に上がる。", ko: "무작위 발동 (25%), 패턴 없는 레버 한정: 모든 심볼이 영구히 자신의 기본 가치만큼 오른다.", "zh-hans": "随机触发（25%），仅限无图案的拉杆：所有图案永久获得其基础价值加成。", "zh-hant": "隨機觸發（25%），僅限無圖案的拉桿：所有圖案永久獲得其基礎價值加成。",
+  },
+  "charm-poffin-case": { en: "Poffin Case" },
+  "poffin-case-desc": {
+    en: "Does not take tray space. Adds +1 charm slot. Offered only once per run.", es: "No ocupa espacio. Añade +1 hueco de amuleto. Solo se ofrece una vez por partida.", fr: "Ne prend pas de place. Ajoute +1 emplacement de charme. Proposé une seule fois par partie.", de: "Belegt keinen Platz. Gibt +1 Amulett-Platz. Nur einmal pro Lauf angeboten.", it: "Non occupa spazio. Aggiunge +1 spazio amuleto. Offerto una sola volta per run.",
+    ja: "トレー枠を使わない。お守り枠+1。1ランにつき1回だけ出現する。", ko: "트레이 공간을 쓰지 않는다. 부적 칸 +1. 런당 한 번만 등장한다.", "zh-hans": "不占用托盘。护符栏+1。每局仅出现一次。", "zh-hant": "不佔用托盤。護符欄+1。每局僅出現一次。",
+  },
+  "charm-douse-drive": { en: "Douse Drive" },
+  "douse-drive-desc": {
+    en: "Every 7 pulls, all patterns trigger one extra time.", es: "Cada 7 tiradas, todos los patrones se activan una vez más.", fr: "Tous les 7 tirages, tous les motifs se déclenchent une fois de plus.", de: "Alle 7 Züge lösen alle Muster einmal zusätzlich aus.", it: "Ogni 7 tirate, tutte le combinazioni si attivano una volta in più.",
+    ja: "7回ごとに、すべてのパターンがもう1回成立する。", ko: "7회마다 모든 패턴이 한 번 더 당첨된다.", "zh-hans": "每7次拉杆，所有牌型额外触发一次。", "zh-hant": "每7次拉桿，所有牌型額外觸發一次。",
+  },
+  "charm-shock-drive": { en: "Shock Drive" },
+  "shock-drive-desc": {
+    en: "Every 7 pulls, grants Luck +7 for that pull.", es: "Cada 7 tiradas, otorga Suerte +7 en esa tirada.", fr: "Tous les 7 tirages, donne Chance +7 sur ce tirage.", de: "Alle 7 Züge gibt es +7 Glück für diesen Zug.", it: "Ogni 7 tirate, dà Fortuna +7 in quella tirata.",
+    ja: "7回ごとに、そのレバーに運+7。", ko: "7회마다 그 레버에 행운 +7.", "zh-hans": "每7次拉杆，该次拉杆获得幸运+7。", "zh-hant": "每7次拉桿，該次拉桿獲得幸運+7。",
+  },
+  "charm-burn-drive": { en: "Burn Drive" },
+  "burn-drive-desc": {
+    en: "Every 7 pulls, ZIG and ZAG are guaranteed to appear.", es: "Cada 7 tiradas, ZIG y ZAG están garantizados.", fr: "Tous les 7 tirages, ZIG et ZAG sont garantis.", de: "Alle 7 Züge sind ZIG und ZAG garantiert.", it: "Ogni 7 tirate, ZIG e ZAG sono garantiti.",
+    ja: "7回ごとにZIGとZAGの成立が保証される。", ko: "7회마다 ZIG와 ZAG이 보장으로 등장한다.", "zh-hans": "每7次拉杆，必定出现ZIG与ZAG。", "zh-hant": "每7次拉桿，必定出現ZIG與ZAG。",
+  },
+  "charm-chill-drive": { en: "Chill Drive" },
+  "chill-drive-desc": {
+    en: "+2 pulls on every bought round.", es: "+2 tiradas en cada ronda comprada.", fr: "+2 tirages à chaque manche achetée.", de: "+2 Züge pro gekaufter Runde.", it: "+2 tirate per ogni turno acquistato.",
+    ja: "購入したラウンドは毎回レバー+2回になる。", ko: "구매한 라운드마다 레버 +2회.", "zh-hans": "每次购买的回合额外+2次拉杆。", "zh-hant": "每次購買的回合額外+2次拉桿。",
+  },
+  "charm-choice-scarf": { en: "Choice Scarf" },
+  "choice-scarf-desc": {
+    en: "If the previous 3 pulls had no patterns, every symbol permanently gains its base value.", es: "Si las 3 tiradas anteriores no tuvieron patrones, cada símbolo gana permanentemente su valor base.", fr: "Si les 3 derniers tirages n'ont eu aucun motif, chaque symbole gagne définitivement sa valeur de base.", de: "Hatten die letzten 3 Züge keine Muster, gewinnt jedes Symbol dauerhaft seinen Grundwert.", it: "Se le ultime 3 tirate non hanno avuto combinazioni, ogni simbolo guadagna permanentemente il suo valore base.",
+    ja: "直近3回でパターンが一度も成立しなかった場合、すべてのシンボルの価値が基本価値ぶん永続的に上がる。", ko: "최근 3회 레버에서 패턴이 없었다면 모든 심볼의 가치가 기본 가치만큼 영구히 오른다.", "zh-hans": "若之前3次拉杆均未触发图案，所有图案永久提升其基础价值。", "zh-hant": "若之前3次拉桿均未觸發圖案，所有圖案永久提升其基礎價值。",
+  },
+  "charm-modest-mint": { en: "Modest Mint" },
+  "modest-mint-desc": {
+    en: "At the end of every quota, gain 1 ticket for every X tickets held, where X is the quota number.", es: "Al final de cada cuota, ganas 1 ticket por cada X tickets que tengas, donde X es el número de cuota.", fr: "À la fin de chaque quote-part, gagnez 1 ticket pour X tickets possédés, où X est le numéro de la quote-part.", de: "Am Ende jeder Rate erhältst du 1 Ticket pro X Tickets im Besitz, wobei X die Raten-Nummer ist.", it: "Alla fine di ogni rata, ottieni 1 biglietto ogni X biglietti posseduti, dove X è il numero della rata.",
+    ja: "分割払い完了ごとに、所持チケットX枚につきチケット+1（Xはその分割払いの番号）。", ko: "분할금 완료 시마다 보유한 티켓 X장당 티켓 +1(X는 그 분할금의 번호).", "zh-hans": "每完成一次配额，每拥有X张票就获得1张票，X为当次配额编号。", "zh-hant": "每完成一次配額，每擁有X張票就獲得1張票，X為當次配額編號。",
+  },
+  "charm-bold-mint": { en: "Bold Mint" },
+  "bold-mint-desc": {
+    en: "Symbols Multiplier +1 level per 5 tickets held.", es: "+1 nivel de Multiplicador de símbolos por cada 5 tickets en mano.", fr: "Multiplicateur de symboles +1 niveau pour 5 tickets possédés.", de: "Symbol-Multiplikator +1 Stufe pro 5 Tickets im Besitz.", it: "Moltiplicatore simboli +1 livello ogni 5 biglietti posseduti.",
+    ja: "所持チケット5枚ごとにシンボル倍率レベル+1。", ko: "보유한 티켓 5장마다 심볼 배율 레벨 +1.", "zh-hans": "每拥有5张票，图案倍率等级+1。", "zh-hant": "每擁有5張票，圖案倍率等級+1。",
+  },
+  "charm-adamant-mint": { en: "Adamant Mint" },
+  "adamant-mint-desc": {
+    en: "On every pull, for each pattern beyond the 2nd, every symbol gains its base value. Resets at round end.", es: "En cada tirada, por cada patrón después del 2º, cada símbolo gana su valor base. Se reinicia al final de la ronda.", fr: "À chaque tirage, pour chaque motif au-delà du 2e, chaque symbole gagne sa valeur de base. Se réinitialise en fin de manche.", de: "Bei jedem Zug gewinnt pro Muster jenseits des 2. jedes Symbol seinen Grundwert. Wird am Rundenende zurückgesetzt.", it: "A ogni tirata, per ogni combinazione oltre la 2ª, ogni simbolo guadagna il suo valore base. Si azzera a fine turno.",
+    ja: "レバーごとに、2つ目を超えたパターン1つにつき全シンボルが基本価値ぶん上がる。ラウンド終了時にリセット。", ko: "레버마다 2번째를 넘는 패턴 1개당 모든 심볼이 기본 가치만큼 오른다. 라운드 종료 시 리셋.", "zh-hans": "每次拉杆，超出第2个后的每个牌型都会使所有图案获得其基础价值。回合结束时重置。", "zh-hant": "每次拉桿，超出第2個後的每個牌型都會使所有圖案獲得其基礎價值。回合結束時重置。",
+  },
+  "charm-sassy-mint": { en: "Sassy Mint" },
+  "sassy-mint-desc": {
+    en: "Whenever 5+ patterns trigger in a pull, double the value of all symbols until round end.", es: "Cuando 5+ patrones aciertan en una tirada, duplica el valor de todos los símbolos hasta el final de la ronda.", fr: "Quand 5 motifs ou plus tombent sur un tirage, double la valeur de tous les symboles jusqu'à la fin de la manche.", de: "Wenn bei einem Zug 5 oder mehr Muster auslösen, verdoppelt sich der Wert aller Symbole bis zum Rundenende.", it: "Quando 5 o più combinazioni escono in una tirata, raddoppia il valore di tutti i simboli fino a fine turno.",
+    ja: "1回のレバーで5つ以上のパターンが成立すると、ラウンド終了まで全シンボルの価値が2倍になる。", ko: "한 번의 레버에서 5개 이상 패턴이 당첨되면 라운드가 끝날 때까지 모든 심볼의 가치가 두 배가 된다.", "zh-hans": "一次拉杆触发5个以上牌型时，所有图案价值翻倍直到回合结束。", "zh-hant": "一次拉桿觸發5個以上牌型時，所有圖案價值加倍直到回合結束。",
+  },
+  "charm-electric-seed": { en: "Electric Seed" },
+  "electric-seed-desc": {
+    en: "Whenever a ×4+ pattern lands, every pattern gains its base multiplier until round end.", es: "Cuando cae un patrón ×4+ , cada patrón gana su multiplicador base hasta el final de la ronda.", fr: "Quand un motif ×4+ tombe, chaque motif gagne son multiplicateur de base jusqu'à la fin de la manche.", de: "Wenn ein ×4+-Muster landet, gewinnt jedes Muster seinen Grund-Multiplikator bis zum Rundenende.", it: "Quando cade una combinazione ×4+, ogni combinazione guadagna il suo moltiplicatore base fino a fine turno.",
+    ja: "×4以上のパターンが成立するたび、ラウンド終了まで全パターンの倍率が基本倍率ぶん上がる。", ko: "×4 이상 패턴이 당첨될 때마다 라운드가 끝날 때까지 모든 패턴의 배율이 기본 배율만큼 오른다.", "zh-hans": "每当打出×4以上的牌型，所有牌型获得其基础倍率直到回合结束。", "zh-hant": "每當打出×4以上的牌型，所有牌型獲得其基礎倍率直到回合結束。",
+  },
+  "charm-psychic-seed": { en: "Psychic Seed" },
+  "psychic-seed-desc": {
+    en: "Whenever a ×5+ pattern lands, double the multiplier of every pattern until round end.", es: "Cuando cae un patrón ×5+, duplica el multiplicador de todos los patrones hasta el final de la ronda.", fr: "Quand un motif ×5+ tombe, double le multiplicateur de tous les motifs jusqu'à la fin de la manche.", de: "Wenn ein ×5+-Muster landet, verdoppelt sich der Multiplikator aller Muster bis zum Rundenende.", it: "Quando cade una combinazione ×5+, raddoppia il moltiplicatore di tutte le combinazioni fino a fine turno.",
+    ja: "×5以上のパターンが成立するたび、ラウンド終了まで全パターンの倍率が2倍になる。", ko: "×5 이상 패턴이 당첨될 때마다 라운드가 끝날 때까지 모든 패턴의 배율이 두 배가 된다.", "zh-hans": "每当打出×5以上的牌型，所有牌型倍率翻倍直到回合结束。", "zh-hant": "每當打出×5以上的牌型，所有牌型倍率加倍直到回合結束。",
+  },
+  "charm-misty-seed": { en: "Misty Seed" },
+  "misty-seed-desc": {
+    en: "When EYE lands alone, double the multiplier of every pattern permanently.", es: "Cuando EYE cae solo, duplica permanentemente el multiplicador de todos los patrones.", fr: "Quand EYE tombe seul, double définitivement le multiplicateur de tous les motifs.", de: "Wenn EYE allein landet, verdoppelt sich der Multiplikator aller Muster dauerhaft.", it: "Quando EYE esce da solo, raddoppia permanentemente il moltiplicatore di tutte le combinazioni.",
+    ja: "EYEが単独で成立すると、全パターンの倍率が永続的に2倍になる。", ko: "EYE가 단독으로 당첨되면 모든 패턴의 배율이 영구히 두 배가 된다.", "zh-hans": "当EYE单独触发时，所有牌型倍率永久翻倍。", "zh-hant": "當EYE單獨觸發時，所有牌型倍率永久加倍。",
+  },
+  "charm-grassy-seed": { en: "Grassy Seed" },
+  "grassy-seed-desc": {
+    en: "At the end of every quota, +1 to Symbols or Patterns Multiplier, alternating.", es: "Al final de cada cuota, +1 al Multiplicador de Símbolos o de Patrones, alternando.", fr: "À la fin de chaque quote-part, +1 au Multiplicateur de Symboles ou de Motifs, en alternance.", de: "Am Ende jeder Rate +1 auf Symbol- oder Muster-Multiplikator, abwechselnd.", it: "Alla fine di ogni rata, +1 al Moltiplicatore Simboli o Combinazioni, alternando.",
+    ja: "分割払い完了ごとに、シンボル倍率とパターン倍率に交互に+1。", ko: "분할금 완료 시마다 심볼 배율과 패턴 배율에 번갈아 +1.", "zh-hans": "每完成一次配额，图案倍率与牌型倍率交替+1。", "zh-hant": "每完成一次配額，圖案倍率與牌型倍率交替+1。",
+  },
+  "charm-leftovers": { en: "Leftovers" },
+  "leftovers-desc": {
+    en: "Exeggcute and Cherubi patterns trigger one extra time. Discards itself after 10 rounds.", es: "Los patrones de Exeggcute y Cherubi se activan una vez más. Se descarta tras 10 rondas.", fr: "Les motifs Noeunoeuf et Ceribou se déclenchent une fois de plus. Se jette après 10 manches.", de: "Owei- und Kikugi-Muster lösen einmal zusätzlich aus. Legt sich nach 10 Runden ab.", it: "Le combinazioni di Exeggcute e Cherubi si attivano una volta in più. Si scarta dopo 10 turni.",
+    ja: "タマタマとチェリンボのパターンがもう1回成立する。10ラウンド後に捨てられる。", ko: "아라리와 체리버 패턴이 한 번 더 당첨된다. 10라운드 뒤 버려진다.", "zh-hans": "蛋蛋与樱花宝的牌型额外触发一次。10回合后自行丢弃。", "zh-hant": "蛋蛋與櫻花寶的牌型額外觸發一次。10回合後自行丟棄。",
+  },
+  "charm-poison-barb": { en: "Poison Barb" },
+  "poison-barb-desc": {
+    en: "If you see 7 Sevipers on a pull, they all turn into Shiny Sevipers.", es: "Si ves 7 Seviper en una tirada, todos se vuelven Seviper variocolor.", fr: "Si tu vois 7 Séviper sur un tirage, ils deviennent tous des Séviper chromatiques.", de: "Wenn du bei einem Zug 7 Vipitis siehst, werden sie alle zu schillernden Vipitis.", it: "Se vedi 7 Seviper in una tirata, diventano tutti Seviper cromatici.",
+    ja: "1回のレバーでハブネークが7体出ると、すべてが色違いになる。", ko: "한 번의 레버에서 세비퍼가 7마리 나오면 모두 색이 다른 포켓몬이 된다.", "zh-hans": "一次拉杆出现7只饭匙蛇时，全部变为异色饭匙蛇。", "zh-hant": "一次拉桿出現7隻飯匙蛇時，全部變為異色飯匙蛇。",
+  },
+  "charm-twisted-spoon": { en: "Twisted Spoon" },
+  "twisted-spoon-desc": {
+    en: "When only one pattern of Carbink or Gholdengo triggers, it triggers 2 more times; the last pays double.", es: "Cuando solo un patrón de Carbink o Gholdengo acierta, se activa 2 veces más; la última paga el doble.", fr: "Quand un seul motif Strassie ou Gromago tombe, il se déclenche 2 fois de plus ; le dernier paie le double.", de: "Wenn nur ein Rocara- oder Monetigo-Muster auslöst, löst es 2-mal zusätzlich aus; das letzte zahlt doppelt.", it: "Quando solo una combinazione di Carbink o Gholdengo esce, si attiva altre 2 volte; l'ultima paga il doppio.",
+    ja: "メレシーかサーフゴーのパターンが1つだけ成立したとき、さらに2回成立する。最後の1回は配当が2倍になる。", ko: "멜리시 또는 타부자고 패턴이 1개만 당첨되면 2번 더 당첨되며 마지막은 두 배를 지불한다.", "zh-hans": "当小碎钻或赛富豪的单个牌型触发时，额外再触发2次，最后一次派彩翻倍。", "zh-hant": "當小碎鑽或賽富豪的單個牌型觸發時，額外再觸發2次，最後一次派彩加倍。",
+  },
+  "charm-red-scarf": { en: "Red Scarf" },
+  "red-scarf-desc": {
+    en: "Triggers Randomly (20%): Luck +5 for this pull. Discards after 12 activations.", es: "Se activa al azar (20%): Suerte +5 en esta tirada. Se descarta tras 12 activaciones.", fr: "Déclenchement aléatoire (20 %) : Chance +5 sur ce tirage. Se jette après 12 activations.", de: "Löst zufällig aus (20%): +5 Glück für diesen Zug. Legt sich nach 12 Auslösungen ab.", it: "Si attiva a caso (20%): Fortuna +5 in questa tirata. Si scarta dopo 12 attivazioni.",
+    ja: "ランダム発動（20%）：このレバーに運+5。12回発動で捨てられる。", ko: "무작위 발동 (20%): 이번 레버에 행운 +5. 12번 발동 뒤 버려진다.", "zh-hans": "随机触发（20%）：本次拉杆幸运+5。触发12次后丢弃。", "zh-hant": "隨機觸發（20%）：本次拉桿幸運+5。觸發12次後丟棄。",
+  },
+  "charm-blue-scarf": { en: "Blue Scarf" },
+  "blue-scarf-desc": {
+    en: "Triggers Randomly (15%): Luck +7 for this pull. Discards after 9 activations.", es: "Se activa al azar (15%): Suerte +7 en esta tirada. Se descarta tras 9 activaciones.", fr: "Déclenchement aléatoire (15 %) : Chance +7 sur ce tirage. Se jette après 9 activations.", de: "Löst zufällig aus (15%): +7 Glück für diesen Zug. Legt sich nach 9 Auslösungen ab.", it: "Si attiva a caso (15%): Fortuna +7 in questa tirata. Si scarta dopo 9 attivazioni.",
+    ja: "ランダム発動（15%）：このレバーに運+7。9回発動で捨てられる。", ko: "무작위 발동 (15%): 이번 레버에 행운 +7. 9번 발동 뒤 버려진다.", "zh-hans": "随机触发（15%）：本次拉杆幸运+7。触发9次后丢弃。", "zh-hant": "隨機觸發（15%）：本次拉桿幸運+7。觸發9次後丟棄。",
+  },
+  "charm-pink-scarf": { en: "Pink Scarf" },
+  "pink-scarf-desc": {
+    en: "Triggers Randomly (10%): Luck +0 for this pull. Grows +2 per reroll this quota, until the quota ends.", es: "Se activa al azar (10%): Suerte +0 en esta tirada. Crece +2 por reroll en esta cuota, hasta que termine.", fr: "Déclenchement aléatoire (10 %) : Chance +0 sur ce tirage. Gagne +2 par relance de cette quote-part, jusqu'à sa fin.", de: "Löst zufällig aus (10%): +0 Glück für diesen Zug. Wächst +2 pro Reroll dieser Rate, bis sie endet.", it: "Si attiva a caso (10%): Fortuna +0 in questa tirata. Cresce +2 per ogni reroll di questa rata, fino alla sua fine.",
+    ja: "ランダム発動（10%）：このレバーに運+0。この分割払い中のリロール1回ごとに+2、分割払い終了まで。", ko: "무작위 발동 (10%): 이번 레버에 행운 +0. 이 분할금 중 리롤 1회당 +2, 분할금이 끝날 때까지.", "zh-hans": "随机触发（10%）：本次拉杆幸运+0。本配额内每次重掷+2，直到配额结束。", "zh-hant": "隨機觸發（10%）：本次拉桿幸運+0。本配額內每次重擲+2，直到配額結束。",
+  },
+  "charm-green-scarf": { en: "Green Scarf" },
+  "green-scarf-desc": {
+    en: "Triggers Randomly (10%): Luck +0 for this pull. Each ×3+ pattern on this pull grows it +3 until the quota ends.", es: "Se activa al azar (10%): Suerte +0 en esta tirada. Cada patrón ×3+ en esta tirada lo hace crecer +3 hasta que termine la cuota.", fr: "Déclenchement aléatoire (10 %) : Chance +0 sur ce tirage. Chaque motif ×3+ sur ce tirage le fait grandir de +3 jusqu'à la fin de la quote-part.", de: "Löst zufällig aus (10%): +0 Glück für diesen Zug. Jedes ×3+-Muster in diesem Zug lässt ihn bis zum Ratenende um +3 wachsen.", it: "Si attiva a caso (10%): Fortuna +0 in questa tirata. Ogni combinazione ×3+ in questa tirata la fa crescere di +3 fino a fine rata.",
+    ja: "ランダム発動（10%）：このレバーに運+0。このレバーで×3以上のパターン1つにつき、分割払い終了まで+3成長する。", ko: "무작위 발동 (10%): 이번 레버에 행운 +0. 이 레버에서 ×3 이상 패턴 1개당 분할금이 끝날 때까지 +3 성장한다.", "zh-hans": "随机触发（10%）：本次拉杆幸运+0。本次拉杆中每出现一个×3以上的牌型，+3直到配额结束。", "zh-hant": "隨機觸發（10%）：本次拉桿幸運+0。本次拉桿中每出現一個×3以上的牌型，+3直到配額結束。",
+  },
+  "charm-yellow-scarf": { en: "Yellow Scarf" },
+  "yellow-scarf-desc": {
+    en: "Triggers Randomly (10%): Luck +0 for this pull. Grows +4 per round skipped on the previous quota, until the quota ends.", es: "Se activa al azar (10%): Suerte +0 en esta tirada. Crece +4 por ronda saltada en la cuota anterior, hasta que termine la cuota.", fr: "Déclenchement aléatoire (10 %) : Chance +0 sur ce tirage. Grandit de +4 par manche sautée sur la quote-part précédente, jusqu'à la fin de la quote-part.", de: "Löst zufällig aus (10%): +0 Glück für diesen Zug. Wächst +4 pro übersprungener Runde der vorherigen Rate, bis diese Rate endet.", it: "Si attiva a caso (10%): Fortuna +0 in questa tirata. Cresce +4 per ogni turno saltato nella rata precedente, fino a fine rata.",
+    ja: "ランダム発動（10%）：このレバーに運+0。前の分割払いでスキップしたラウンド1つにつき+4、分割払い終了まで。", ko: "무작위 발동 (10%): 이번 레버에 행운 +0. 이전 분할금에서 건너뛴 라운드 1개당 +4, 분할금이 끝날 때까지.", "zh-hans": "随机触发（10%）：本次拉杆幸运+0。上次配额每跳过一回合+4，直到配额结束。", "zh-hant": "隨機觸發（10%）：本次拉桿幸運+0。上次配額每跳過一回合+4，直到配額結束。",
+  },
+  "Triggers Randomly": {
+    en: "Triggers Randomly", es: "Se activa al azar", fr: "Déclenchement aléatoire", de: "Löst zufällig aus", it: "Si attiva a caso",
+    ja: "ランダム発動", ko: "무작위 발동", "zh-hans": "随机触发", "zh-hant": "隨機觸發",
+  },
+  "The Focus Sash shatters — two extra rounds to pay the quota!": {
+    en: "The Focus Sash shatters — two extra rounds to pay the quota!", es: "¡La Banda Focus se rompe: dos rondas extra para pagar la cuota!", fr: "La Ceinture Pro se brise — deux manches de plus pour payer la quote-part !", de: "Der Fokusgurt zersplittert — zwei Extra-Runden, um die Rate zu zahlen!", it: "Il Focalnastro va in frantumi — due turni extra per pagare la rata!",
+    ja: "きあいのタスキが砕け散る——分割払いのために2ラウンド追加！", ko: "기합의띠가 산산조각난다——분할금을 낼 수 있도록 2라운드 추가!", "zh-hans": "气势披带碎裂了——额外获得2个回合支付配额！", "zh-hant": "氣勢披帶碎裂了——額外獲得2個回合支付配額！",
+  },
+  "The Arceus Statue glows — the reels obey.": {
+    en: "The Arceus Statue glows — the reels obey.", es: "La Estatua de Arceus brilla: los rodillos obedecen.", fr: "La Statue d'Arceus rayonne — les rouleaux obéissent.", de: "Die Arceus-Statue leuchtet — die Walzen gehorchen.", it: "La Statua di Arceus risplende — i rulli obbediscono.",
+    ja: "アルセウス像が輝き、リールが従う。", ko: "아르세우스 조각상이 빛나며 릴이 복종한다.", "zh-hans": "阿尔宙斯像发光了——转盘听从号令。", "zh-hant": "阿爾宙斯像發光了——轉盤聽從號令。",
+  },
+  "The Parcel bursts — every symbol gains its base value!": {
+    en: "The Parcel bursts — every symbol gains its base value!", es: "¡El Paquete estalla: cada símbolo gana su valor base!", fr: "Le Colis éclate — chaque symbole gagne sa valeur de base !", de: "Das Paket platzt auf — jedes Symbol gewinnt seinen Grundwert!", it: "Il Pacco esplode — ogni simbolo guadagna il suo valore base!",
+    ja: "おとどけものがはじける——すべてのシンボルが基本価値分アップ！", ko: "소포가 터진다——모든 심볼이 기본 가치만큼 오른다!", "zh-hans": "包裹炸开了——每个图案获得其基础价值加成！", "zh-hant": "包裹炸開了——每個圖案獲得其基礎價值加成！",
   },
   "The Focus Band shatters! Quota wiped — seven pulls on the house.": {
     en: "The Focus Band shatters! Quota wiped — seven pulls on the house.", es: "¡La Banda Focus se rompe! Cuota borrada: siete tiradas por la casa.", fr: "Le Bandeau Focus se brise ! Quote-part effacée — sept tirages offerts.", de: "Das Focus-Band zersplittert! Rate gelöscht — sieben Züge gehen auf das Haus.", it: "La Fascia Concentrazione va in frantumi! Rata cancellata — sette slate offerte.",
@@ -2453,6 +2657,14 @@ const ui = {
   "The Cleanse Tag hums — every symbol is worth more!": {
     en: "The Cleanse Tag hums — every symbol is worth more!", es: "El amuleto purificador vibra: ¡todos los símbolos valen más!", fr: "Le talisman purifiant vibre — tous les symboles valent plus !", de: "Der Reinigungstalisman summt — alle Symbole sind mehr wert!", it: "L'amuleto purificante vibra: tutti i simboli valgono di più!",
     ja: "おふだが低く鳴る——すべてのシンボルの価値が上がる！", ko: "부적이 울린다——모든 심볼의 가치가 올라간다!", "zh-hans": "洁净护符嗡嗡作响——所有图案都更值钱了！", "zh-hant": "潔淨護符嗡嗡作響——所有圖案都更值錢了！",
+  },
+  "Restart": {
+    en: "Restart", es: "Reiniciar", fr: "Recommencer", de: "Neustart", it: "Ricomincia",
+    ja: "やり直す", ko: "다시 시작", "zh-hans": "重新开始", "zh-hant": "重新開始",
+  },
+  "Restart the run? All progress will be lost.": {
+    en: "Restart the run? All progress will be lost.", es: "¿Reiniciar la partida? Se perderá todo el progreso.", fr: "Recommencer la partie ? Toute progression sera perdue.", de: "Lauf neustarten? Jeglicher Fortschritt geht verloren.", it: "Ricominciare la run? Tutti i progressi andranno persi.",
+    ja: "ランをやり直しますか？進行状況はすべて失われます。", ko: "런을 다시 시작할까요? 모든 진행 상황이 사라집니다.", "zh-hans": "重新开始本局？所有进度将丢失。", "zh-hant": "重新開始本局？所有進度將丟失。",
   },
 };
 

@@ -75,32 +75,27 @@ const COLOR_MAP = {
 
 const CHANGELOG = [
   {
-    date: "2026-08-24",
-    title: "PokéSlots ATM & round costs",
+    date: "2026-08-25",
+    title: "PokéSlots: drives, mints, seeds & scarves",
     items: [
-      "Round entries now cost coins: 3 pulls = 10% of the quota, 7 pulls = 20% (shortfall goes to debt)",
-      "Partial ATM payments count toward the current quota — the quota card shows what's still owed",
-      "ATM MAX deposits just enough to finish the quota, or everything except one more round's fee",
+      "24 new charms: Poffin Case, drives, Choice Scarf, mints, terrain seeds, scarves & staples",
+      "Symbols/Patterns multipliers now shown under the boards (Bold Mint, Grassy Seed & Zoom Lens feed them)",
     ],
   },
   {
-    date: "2026-08-24",
-    title: "PokéSlots rework",
+    date: "2026-08-25",
+    title: "PokéSlots: exponential quotas + 14 new charms",
     items: [
-      "Every round starts with a choice: buy 3 pulls (cheap, fatter tickets) or 7 pulls",
-      "Quotas now start at 100₽ and climb forever — clear the whole 5000₽ debt to escape",
-      "Finish a quota early to bank your spare pulls as tickets and dodge interest",
-      "Symbols are now named after the Pokémon themselves (Exeggcute, Cherubi...)",
+      "14 new charms: Focus Sash, Arceus Statue, Black Sludge, Metronome, Guidebook, Odd Keystone & more",
     ],
   },
   {
-    date: "2026-08-24",
+    date: "2026-08-25",
     title: "PokéSlots",
     items: [
-      "New CloverPit-inspired slot machine: 7 Pokémon symbols, 11 patterns, jackpots",
-      "Beat the quota every round or pay 8% interest on what you owe",
-      "Spend tickets in the Rotom Phone shop on charms and permanent upgrades",
-      "Clear the whole debt to escape the basement",
+      "New slot machine game: 7 Pokémon symbols, 11 patterns, jackpots and more.",
+      "Beat each quota and reach the end game.",
+      "Spend tickets in the Rotom Phone shop on items and permanent upgrades.",
     ],
   },
   {
