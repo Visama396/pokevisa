@@ -63,6 +63,18 @@ export const SYMBOLS = [
     id: "seven", pokemonId: 336, baseValue: 7, weight: 75, emoji: "7",
     names: { en: "Seviper", es: "Seviper", fr: "Séviper", de: "Vipitis", it: "Seviper", ja: "ハブネーク", ko: "세비퍼", "zh-hans": "饭匙蛇", "zh-hant": "飯匙蛇" },
   },
+  // Ditto: wildcard symbol that counts as any other symbol in pattern matching
+  // (max 1 per pattern). baseValue 0 → hidden from the symbols chart.
+  {
+    id: "ditto", pokemonId: 132, baseValue: 0, weight: 31, emoji: "🫠", hideInChart: true,
+    names: { en: "Ditto", es: "Ditto", fr: "Métamorph", de: "Ditto", it: "Ditto", ja: "メタモン", ko: "메타몽", "zh-hans": "百变怪", "zh-hant": "百變怪" },
+  },
+  // Giratina: danger symbol. Appears only after clearing Quota 666 (cycle 4+).
+  // HOR or DIAG of Giratinas = instant loss. Max 3 per pull. baseValue 0.
+  {
+    id: "giratina", pokemonId: 487, baseValue: 0, weight: 16, emoji: "👻", hideInChart: true,
+    names: { en: "Giratina", es: "Giratina", fr: "Giratina", de: "Giratina", it: "Giratina", ja: "ギラティナ", ko: "기라티나", "zh-hans": "骑拉帝纳", "zh-hant": "騎拉帝納" },
+  },
 ];
 
 export const SYMBOL_BY_ID = Object.fromEntries(SYMBOLS.map((s) => [s.id, s]));
@@ -441,6 +453,9 @@ export const YELLOW_SCARF_STEP = 4;
 export const LEFTOVERS_ROUNDS = 10;
 // Poison Barb: this many Sevipers on the grid all turn Shiny.
 export const POISON_BARB_SEVENS = 7;
+// Giratina: max allowed on a single grid; only spawns after clearing Quota 666.
+export const GIRATINA_MAX_PER_PULL = 3;
+export const GIRATINA_UNLOCK_CYCLE = 4; // cycle >= this → Giratina can appear
 // The Symbols Multiplier (global payout dial, shown under the boards):
 // x1.5 per level — shop upgrades + Bold Mint + Grassy Seed levels.
 export const SYMBOLS_MULT_STEP = 1.5;
@@ -719,6 +734,48 @@ export const CHARMS = {
     scarf: { luck: 0, chance: 0.1, source: "skipped", step: YELLOW_SCARF_STEP },
     trait: "random",
   },
+  // --- Fourth wave: Giratina-hunting charms --------------------------------
+  // dragon-fang: when a Giratina cell appears on the grid, +10 Luck on the
+  // very next spin of the same round (consumed once, re-armed per Giratina).
+  "dragon-fang": {
+    cost: 2, file: "dragon-fang.png", emoji: "🐉",
+    dragonFang: true,
+  },
+  // red-card: if a Giratina HOR or DIAG is going to trigger, transform its
+  // cells into the grid's majority real symbol; 50% chance of self-discarding.
+  "red-card": {
+    cost: 1, file: "red-card.png", emoji: "🟥",
+    redCard: true,
+  },
+  // comet-shard: +2 to the Patterns Multiplier (stacks additively with other
+  // pattern-mult bonuses) and +3% spawn weight for Giratina.
+  "comet-shard": {
+    cost: 3, file: "comet-shard.png", emoji: "☄️",
+    cometShard: true, cometShardGiratinaPct: 0.03,
+  },
+  // dragon-skull: when a Giratina cell appears on the grid, permanently
+  // double the pattern multiplier for ABOVE and BELOW.
+  "dragon-skull": {
+    cost: 3, file: "dragon-skull.png", emoji: "💀",
+    dragonSkull: true,
+  },
+  // pearl-string: Triggers Randomly (35%). Same as Red Card but chance-based.
+  "pearl-string": {
+    cost: 1, file: "pearl-string.png", emoji: "🪩",
+    pearlString: true, trait: "random",
+  },
+  // dark-stone: +1.5% Giratina spawn weight. When a Giratina cell appears,
+  // gain bonus pulls: +3, +2, +1, +0 then stays at +0; resets at round end.
+  "dark-stone": {
+    cost: 2, file: "dark-stone.png", emoji: "🌑",
+    darkStone: true, darkStoneGiratinaPct: 0.015,
+  },
+  // god-stone: when a Giratina cell appears on the grid, Symbols Multiplier
+  // ×2 until the end of the round.
+  "god-stone": {
+    cost: 2, file: "god-stone.png", emoji: "🪨",
+    godStone: true,
+  },
 };
 
 // Modifier chances per cell, rolled every spin (see rollModifiers).
@@ -824,6 +881,8 @@ export function patternMult(state, type) {
     const bonus = CHARMS[charmId].patternBonus?.[type];
     if (bonus) mult += bonus;
   }
+  // Comet Shard: flat +2 to every pattern multiplier.
+  if (state.charms.includes("comet-shard")) mult += 2;
   if (state.charms.includes("zoom-lens")) {
     mult += Math.floor((state.tickets || 0) / ZOOM_LENS_TICKETS);
   }
@@ -845,7 +904,10 @@ export function symbolsMultLevel(state) {
   return level;
 }
 export function symbolsMult(state) {
-  return Math.pow(SYMBOLS_MULT_STEP, symbolsMultLevel(state));
+  let mult = Math.pow(SYMBOLS_MULT_STEP, symbolsMultLevel(state));
+  // God Stone: ×2 until end of round when Giratina appeared.
+  if (state.godStoneActive) mult *= 2;
+  return mult;
 }
 
 // Global payout multiplier applied to every pull's raw payout: the Symbols
@@ -874,7 +936,17 @@ export function rollWeights(state) {
   const removed = new Set(state.charms.flatMap((c) => CHARMS[c].removeSymbols || []));
   return SYMBOLS.map((s) => {
     if (removed.has(s.id)) return 0;
+    // Giratina only appears after clearing Quota 666 (cycle >= 4).
+    if (s.id === "giratina" && (state.cycle || 1) < GIRATINA_UNLOCK_CYCLE) return 0;
     let weight = s.weight;
+    // Comet Shard / Dark Stone increase Giratina's spawn weight additively.
+    if (s.id === "giratina") {
+      for (const c of state.charms) {
+        const charm = CHARMS[c];
+        if (charm.cometShardGiratinaPct) weight += charm.cometShardGiratinaPct * weight;
+        if (charm.darkStoneGiratinaPct) weight += charm.darkStoneGiratinaPct * weight;
+      }
+    }
     for (const c of state.charms) {
       const mult = CHARMS[c].symbolWeightMult?.[s.id];
       if (mult) weight *= mult;
@@ -918,6 +990,18 @@ export function rollGrid(state) {
     const offIdx = grid.map((sym, i) => (sym === majority ? -1 : i)).filter((i) => i >= 0);
     if (offIdx.length > 0 && counts[majority] > 1) {
       grid[offIdx[Math.floor(Math.random() * offIdx.length)]] = majority;
+    }
+  }
+  // Giratina cap: at most GIRATINA_MAX_PER_PULL Giratinas per grid. Extras
+  // are replaced with a random non-Giratina weighted pick.
+  const giratinaIdxs = [];
+  for (let i = 0; i < grid.length; i++) {
+    if (grid[i] === "giratina") giratinaIdxs.push(i);
+  }
+  if (giratinaIdxs.length > GIRATINA_MAX_PER_PULL) {
+    const nonGWeights = weights.map((w, i) => SYMBOLS[i].id === "giratina" ? 0 : w);
+    for (let j = GIRATINA_MAX_PER_PULL; j < giratinaIdxs.length; j++) {
+      grid[giratinaIdxs[j]] = weightedPick(nonGWeights);
     }
   }
   return grid;
@@ -988,11 +1072,27 @@ export function forceGridShape(state, shape, grid, symbol) {
 // Payout per scored instance = symbol value x cell count x pattern multiplier,
 // then global multipliers from Amulet Coin / Luck Incense apply to the total.
 export function evaluateGrid(state, grid) {
+  // A pattern instance scores when every cell shows the same symbol, or when
+  // at most 1 Ditto fills in for a single real symbol (max 1 Ditto per pattern).
   const matched = [];
   for (const inst of PATTERN_INSTANCES) {
-    const sym = grid[inst.cells[0]];
-    if (inst.cells.every((cell) => grid[cell] === sym)) {
-      matched.push({ ...inst, symbol: sym });
+    let dittoCount = 0;
+    let realSym = null;
+    let consistent = true;
+    for (const cell of inst.cells) {
+      const s = grid[cell];
+      if (s === "ditto") {
+        dittoCount++;
+      } else if (realSym === null) {
+        realSym = s;
+      } else if (s !== realSym) {
+        consistent = false;
+        break;
+      }
+    }
+    // Match if: at most 1 ditto, all real cells agree, at least 1 real symbol.
+    if (consistent && dittoCount <= 1 && realSym !== null) {
+      matched.push({ ...inst, symbol: realSym });
     }
   }
   // Largest patterns first: a pattern is swallowed by an already-scored
@@ -1014,6 +1114,11 @@ export function evaluateGrid(state, grid) {
     if (m.type !== "JACKPOT") scoredAreas.push(new Set(m.cells));
   }
 
+  // Giratina instant loss: a HOR or DIAG that scores as Giratina ends the run.
+  const giratinaLoss = scored.some(
+    (m) => m.symbol === "giratina" && (m.type === "HOR" || m.type === "DIAG")
+  );
+
   let raw = 0;
   for (const m of scored) {
     raw += symbolValue(state, m.symbol) * m.cells.length * patternMult(state, m.type);
@@ -1021,7 +1126,7 @@ export function evaluateGrid(state, grid) {
   const payout = Math.floor(raw * payoutMult(state));
 
   const jackpot = scored.some((m) => m.type === "JACKPOT");
-  return { scored, payout, jackpot };
+  return { scored, payout, jackpot, giratinaLoss };
 }
 
 // ---------------------------------------------------------------------------

@@ -2106,6 +2106,18 @@ const ui = {
     en: "How to play", es: "Cómo jugar", fr: "Comment jouer", de: "Spielanleitung", it: "Come si gioca",
     ja: "遊び方", ko: "플레이 방법", "zh-hans": "玩法说明", "zh-hant": "玩法說明",
   },
+  "Charm Codex": {
+    en: "Charm Codex", es: "Códice de Amuletos", fr: "Codex des Talismans", de: "Talisman-Kodex", it: "Codice Amuleti",
+    ja: "おふだ事典", ko: "부적 사전", "zh-hans": "护符图鉴", "zh-hant": "護符圖鑑",
+  },
+  "Search": {
+    en: "Search", es: "Buscar", fr: "Rechercher", de: "Suchen", it: "Cerca",
+    ja: "検索", ko: "검색", "zh-hans": "搜索", "zh-hant": "搜尋",
+  },
+  "No results": {
+    en: "No results", es: "Sin resultados", fr: "Aucun résultat", de: "Keine Ergebnisse", it: "Nessun risultato",
+    ja: "結果なし", ko: "결과 없음", "zh-hans": "无结果", "zh-hant": "無結果",
+  },
   "Clear a quota early for a bonus: 7% of the quota + 4 tickets, plus 1 extra ticket per round still left. Paying right on the deadline earns no bonus.": {
     en: "Clear a quota early for a bonus: 7% of the quota + 4 tickets, plus 1 extra ticket per round still left. Paying right on the deadline earns no bonus.",
     es: "Liquida una cuota antes de tiempo para una bonificación: 7% de la cuota + 4 tickets, más 1 ticket extra por cada ronda restante. Pagar justo en el plazo final no da bonificación.",
@@ -2497,8 +2509,8 @@ const ui = {
   },
   "charm-odd-keystone": { en: "Odd Keystone" },
   "odd-keystone-desc": {
-    en: "Triggers Randomly (35%): patterns trigger one extra time for this pull.", es: "Se activa al azar (35%): los patrones se activan una vez más en esta tirada.", fr: "Déclenchement aléatoire (35 %) : les motifs se déclenchent une fois de plus sur ce tirage.", de: "Löst zufällig aus (35%): Muster lösen bei diesem Zug einmal zusätzlich aus.", it: "Si attiva a caso (35%): le combinazioni si attivano una volta in più in questa tirata.",
-    ja: "ランダム発動（35%）：このレバーでパターンがもう1回成立する。", ko: "무작위 발동 (35%): 이번 레버에서 패턴이 한 번 더 당첨된다.", "zh-hans": "随机触发（35%）：本次拉杆的图案额外触发一次。", "zh-hant": "隨機觸發（35%）：本次拉桿的圖案額外觸發一次。",
+    en: "Patterns trigger one extra time for this pull.", es: "Los patrones se activan una vez más en esta tirada.", fr: "Les motifs se déclenchent une fois de plus sur ce tirage.", de: "Muster lösen bei diesem Zug einmal zusätzlich aus.", it: "Le combinazioni si attivano una volta in più in questa tirata.",
+    ja: "このレバーでパターンがもう1回成立する。", ko: "이번 레버에서 패턴이 한 번 더 당첨된다.", "zh-hans": "本次拉杆的图案额外触发一次。", "zh-hant": "本次拉桿的圖案額外觸發一次。",
   },
   "charm-bright-powder": { en: "Bright Powder" },
   "bright-powder-desc": {
@@ -2517,8 +2529,8 @@ const ui = {
   },
   "charm-parcel": { en: "Parcel" },
   "parcel-desc": {
-    en: "Triggers Randomly (25%) on pulls with no patterns: every symbol permanently gains its own base value.", es: "Se activa al azar (25%) en tiradas sin patrones: cada símbolo gana permanentemente su propio valor base.", fr: "Déclenchement aléatoire (25 %) sur les tirages sans motif : chaque symbole gagne définitivement sa propre valeur de base.", de: "Löst zufällig aus (25%) bei Zügen ohne Muster: Jedes Symbol gewinnt dauerhaft seinen eigenen Grundwert.", it: "Si attiva a caso (25%) nelle tirate senza combinazioni: ogni simbolo guadagna permanentemente il proprio valore base.",
-    ja: "ランダム発動（25%）、パターンなしのレバー限定：すべてのシンボルがその基本価値分だけ永続的に上がる。", ko: "무작위 발동 (25%), 패턴 없는 레버 한정: 모든 심볼이 영구히 자신의 기본 가치만큼 오른다.", "zh-hans": "随机触发（25%），仅限无图案的拉杆：所有图案永久获得其基础价值加成。", "zh-hant": "隨機觸發（25%），僅限無圖案的拉桿：所有圖案永久獲得其基礎價值加成。",
+    en: "On pulls with no patterns, every symbol permanently gains its own base value.", es: "En tiradas sin patrones, cada símbolo gana permanentemente su propio valor base.", fr: "Sur les tirages sans motif, chaque symbole gagne définitivement sa propre valeur de base.", de: "Bei Zügen ohne Muster gewinnt jedes Symbol dauerhaft seinen eigenen Grundwert.", it: "Nelle tirate senza combinazioni, ogni simbolo guadagna permanentemente il proprio valore base.",
+    ja: "パターンなしのレバー限定：すべてのシンボルがその基本価値分だけ永続的に上がる。", ko: "패턴 없는 레버 한정: 모든 심볼이 영구히 자신의 기본 가치만큼 오른다.", "zh-hans": "仅限无图案的拉杆：所有图案永久获得其基础价值加成。", "zh-hant": "僅限無圖案的拉桿：所有圖案永久獲得其基礎價值加成。",
   },
   "charm-poffin-case": { en: "Poffin Case" },
   "poffin-case-desc": {
@@ -2607,28 +2619,63 @@ const ui = {
   },
   "charm-red-scarf": { en: "Red Scarf" },
   "red-scarf-desc": {
-    en: "Triggers Randomly (20%): Luck +5 for this pull. Discards after 12 activations.", es: "Se activa al azar (20%): Suerte +5 en esta tirada. Se descarta tras 12 activaciones.", fr: "Déclenchement aléatoire (20 %) : Chance +5 sur ce tirage. Se jette après 12 activations.", de: "Löst zufällig aus (20%): +5 Glück für diesen Zug. Legt sich nach 12 Auslösungen ab.", it: "Si attiva a caso (20%): Fortuna +5 in questa tirata. Si scarta dopo 12 attivazioni.",
-    ja: "ランダム発動（20%）：このレバーに運+5。12回発動で捨てられる。", ko: "무작위 발동 (20%): 이번 레버에 행운 +5. 12번 발동 뒤 버려진다.", "zh-hans": "随机触发（20%）：本次拉杆幸运+5。触发12次后丢弃。", "zh-hant": "隨機觸發（20%）：本次拉桿幸運+5。觸發12次後丟棄。",
+    en: "Luck +5 for this pull. Discards after 12 activations.", es: "Suerte +5 en esta tirada. Se descarta tras 12 activaciones.", fr: "Chance +5 sur ce tirage. Se jette après 12 activations.", de: "+5 Glück für diesen Zug. Legt sich nach 12 Auslösungen ab.", it: "Fortuna +5 in questa tirata. Si scarta dopo 12 attivazioni.",
+    ja: "このレバーに運+5。12回発動で捨てられる。", ko: "이번 레버에 행운 +5. 12번 발동 뒤 버려진다.", "zh-hans": "本次拉杆幸运+5。触发12次后丢弃。", "zh-hant": "本次拉桿幸運+5。觸發12次後丟棄。",
   },
   "charm-blue-scarf": { en: "Blue Scarf" },
   "blue-scarf-desc": {
-    en: "Triggers Randomly (15%): Luck +7 for this pull. Discards after 9 activations.", es: "Se activa al azar (15%): Suerte +7 en esta tirada. Se descarta tras 9 activaciones.", fr: "Déclenchement aléatoire (15 %) : Chance +7 sur ce tirage. Se jette après 9 activations.", de: "Löst zufällig aus (15%): +7 Glück für diesen Zug. Legt sich nach 9 Auslösungen ab.", it: "Si attiva a caso (15%): Fortuna +7 in questa tirata. Si scarta dopo 9 attivazioni.",
-    ja: "ランダム発動（15%）：このレバーに運+7。9回発動で捨てられる。", ko: "무작위 발동 (15%): 이번 레버에 행운 +7. 9번 발동 뒤 버려진다.", "zh-hans": "随机触发（15%）：本次拉杆幸运+7。触发9次后丢弃。", "zh-hant": "隨機觸發（15%）：本次拉桿幸運+7。觸發9次後丟棄。",
+    en: "Luck +7 for this pull. Discards after 9 activations.", es: "Suerte +7 en esta tirada. Se descarta tras 9 activaciones.", fr: "Chance +7 sur ce tirage. Se jette après 9 activations.", de: "+7 Glück für diesen Zug. Legt sich nach 9 Auslösungen ab.", it: "Fortuna +7 in questa tirata. Si scarta dopo 9 attivazioni.",
+    ja: "このレバーに運+7。9回発動で捨てられる。", ko: "이번 레버에 행운 +7. 9번 발동 뒤 버려진다.", "zh-hans": "本次拉杆幸运+7。触发9次后丢弃。", "zh-hant": "本次拉桿幸運+7。觸發9次後丟棄。",
   },
   "charm-pink-scarf": { en: "Pink Scarf" },
   "pink-scarf-desc": {
-    en: "Triggers Randomly (10%): Luck +0 for this pull. Grows +2 per reroll this quota, until the quota ends.", es: "Se activa al azar (10%): Suerte +0 en esta tirada. Crece +2 por reroll en esta cuota, hasta que termine.", fr: "Déclenchement aléatoire (10 %) : Chance +0 sur ce tirage. Gagne +2 par relance de cette quote-part, jusqu'à sa fin.", de: "Löst zufällig aus (10%): +0 Glück für diesen Zug. Wächst +2 pro Reroll dieser Rate, bis sie endet.", it: "Si attiva a caso (10%): Fortuna +0 in questa tirata. Cresce +2 per ogni reroll di questa rata, fino alla sua fine.",
-    ja: "ランダム発動（10%）：このレバーに運+0。この分割払い中のリロール1回ごとに+2、分割払い終了まで。", ko: "무작위 발동 (10%): 이번 레버에 행운 +0. 이 분할금 중 리롤 1회당 +2, 분할금이 끝날 때까지.", "zh-hans": "随机触发（10%）：本次拉杆幸运+0。本配额内每次重掷+2，直到配额结束。", "zh-hant": "隨機觸發（10%）：本次拉桿幸運+0。本配額內每次重擲+2，直到配額結束。",
+    en: "Luck +0 for this pull. Grows +2 per reroll this quota, until the quota ends.", es: "Suerte +0 en esta tirada. Crece +2 por reroll en esta cuota, hasta que termine.", fr: "Chance +0 sur ce tirage. Gagne +2 par relance de cette quote-part, jusqu'à sa fin.", de: "+0 Glück für diesen Zug. Wächst +2 pro Reroll dieser Rate, bis sie endet.", it: "Fortuna +0 in questa tirata. Cresce +2 per ogni reroll di questa rata, fino alla sua fine.",
+    ja: "このレバーに運+0。この分割払い中のリロール1回ごとに+2、分割払い終了まで。", ko: "이번 레버에 행운 +0. 이 분할금 중 리롤 1회당 +2, 분할금이 끝날 때까지.", "zh-hans": "本次拉杆幸运+0。本配额内每次重掷+2，直到配额结束。", "zh-hant": "本次拉桿幸運+0。本配額內每次重擲+2，直到配額結束。",
   },
   "charm-green-scarf": { en: "Green Scarf" },
   "green-scarf-desc": {
-    en: "Triggers Randomly (10%): Luck +0 for this pull. Each ×3+ pattern on this pull grows it +3 until the quota ends.", es: "Se activa al azar (10%): Suerte +0 en esta tirada. Cada patrón ×3+ en esta tirada lo hace crecer +3 hasta que termine la cuota.", fr: "Déclenchement aléatoire (10 %) : Chance +0 sur ce tirage. Chaque motif ×3+ sur ce tirage le fait grandir de +3 jusqu'à la fin de la quote-part.", de: "Löst zufällig aus (10%): +0 Glück für diesen Zug. Jedes ×3+-Muster in diesem Zug lässt ihn bis zum Ratenende um +3 wachsen.", it: "Si attiva a caso (10%): Fortuna +0 in questa tirata. Ogni combinazione ×3+ in questa tirata la fa crescere di +3 fino a fine rata.",
-    ja: "ランダム発動（10%）：このレバーに運+0。このレバーで×3以上のパターン1つにつき、分割払い終了まで+3成長する。", ko: "무작위 발동 (10%): 이번 레버에 행운 +0. 이 레버에서 ×3 이상 패턴 1개당 분할금이 끝날 때까지 +3 성장한다.", "zh-hans": "随机触发（10%）：本次拉杆幸运+0。本次拉杆中每出现一个×3以上的牌型，+3直到配额结束。", "zh-hant": "隨機觸發（10%）：本次拉桿幸運+0。本次拉桿中每出現一個×3以上的牌型，+3直到配額結束。",
+    en: "Bonus of Luck +0. Each +3 Pattern triggered increases the bonus +3 until the end of the Quota.", es: "Bono de Suerte +0. Cada patrón +3 activado aumenta el bono +3 hasta el final de la cuota.", fr: "Bonus de Chance +0. Chaque motif +3 déclenché augmente le bonus de +3 jusqu'à la fin de la quote-part.", de: "Glücks-Bonus +0. Jedes ausgelöste +3-Muster erhöht den Bonus um +3 bis zum Ende der Rate.", it: "Bonus Fortuna +0. Ogni combinazione +3 attivata aumenta il bonus di +3 fino alla fine della rata.",
+    ja: "運ボーナス+0。発動した+3パターン1つにつき、分割払い終了までボーナス+3。", ko: "행운 보너스 +0. 발동한 +3 패턴 1개당 분할금 종료까지 보너스 +3.", "zh-hans": "幸运加成+0。每触发一个+3牌型，加成+3直到配额结束。", "zh-hant": "幸運加成+0。每觸發一個+3牌型，加成+3直到配額結束。",
   },
   "charm-yellow-scarf": { en: "Yellow Scarf" },
   "yellow-scarf-desc": {
-    en: "Triggers Randomly (10%): Luck +0 for this pull. Grows +4 per round skipped on the previous quota, until the quota ends.", es: "Se activa al azar (10%): Suerte +0 en esta tirada. Crece +4 por ronda saltada en la cuota anterior, hasta que termine la cuota.", fr: "Déclenchement aléatoire (10 %) : Chance +0 sur ce tirage. Grandit de +4 par manche sautée sur la quote-part précédente, jusqu'à la fin de la quote-part.", de: "Löst zufällig aus (10%): +0 Glück für diesen Zug. Wächst +4 pro übersprungener Runde der vorherigen Rate, bis diese Rate endet.", it: "Si attiva a caso (10%): Fortuna +0 in questa tirata. Cresce +4 per ogni turno saltato nella rata precedente, fino a fine rata.",
-    ja: "ランダム発動（10%）：このレバーに運+0。前の分割払いでスキップしたラウンド1つにつき+4、分割払い終了まで。", ko: "무작위 발동 (10%): 이번 레버에 행운 +0. 이전 분할금에서 건너뛴 라운드 1개당 +4, 분할금이 끝날 때까지.", "zh-hans": "随机触发（10%）：本次拉杆幸运+0。上次配额每跳过一回合+4，直到配额结束。", "zh-hant": "隨機觸發（10%）：本次拉桿幸運+0。上次配額每跳過一回合+4，直到配額結束。",
+    en: "Luck +0 for this pull. Grows +4 per round skipped on the previous quota, until the quota ends.", es: "Suerte +0 en esta tirada. Crece +4 por ronda saltada en la cuota anterior, hasta que termine la cuota.", fr: "Chance +0 sur ce tirage. Grandit de +4 par manche sautée sur la quote-part précédente, jusqu'à la fin de la quote-part.", de: "+0 Glück für diesen Zug. Wächst +4 pro übersprungener Runde der vorherigen Rate, bis diese Rate endet.", it: "Fortuna +0 in questa tirata. Cresce +4 per ogni turno saltato nella rata precedente, fino a fine rata.",
+    ja: "このレバーに運+0。前の分割払いでスキップしたラウンド1つにつき+4、分割払い終了まで。", ko: "이번 레버에 행운 +0. 이전 분할금에서 건너뛴 라운드 1개당 +4, 분할금이 끝날 때까지.", "zh-hans": "本次拉杆幸运+0。上次配额每跳过一回合+4，直到配额结束。", "zh-hant": "本次拉桿幸運+0。上次配額每跳過一回合+4，直到配額結束。",
+  },
+  "charm-dragon-fang": { en: "Dragon Fang" },
+  "dragon-fang-desc": {
+    en: "Whenever a Giratina appears on the grid, +10 Luck on the next spin of the same round.", es: "Cuando aparece un Giratina en la cuadrícula, +10 Suerte en la siguiente tirada de la misma ronda.", fr: "Quand un Giratina apparaît sur la grille, +10 Chance sur le prochain tirage de la même manche.", de: "Erscheint Giratina auf dem Spielfeld, +10 Glück beim nächsten Zug derselben Runde.", it: "Quando Giratina apparece sulla griglia, +10 Fortuna nella prossima tirata dello stesso turno.",
+    ja: "フィールドにギラティナが出现した時、同じラウンドの次のレバーに運+10。", ko: "그리드에 기라티나가 나타나면 같은 라운드의 다음 레버에 행운 +10.", "zh-hans": "网格上出现骑拉帝纳时，本回合下一次拉杆幸运+10。", "zh-hant": "網格上出現騎拉帝納時，本回合下一次拉桿幸運+10。",
+  },
+  "charm-red-card": { en: "Red Card" },
+  "red-card-desc": {
+    en: "If a Giratina pattern is going to trigger, transform it into normal symbols. Then 50% chance of discarding itself.", es: "Si un patrón Giratina va a activarse, lo transforma en símbolos normales. Luego 50% de probabilidad de descartarse.", fr: "Si un motif Giratina est sur le point de se déclencher, le transforme en symboles normaux. Puis 50 % de chance de s'auto-détruire.", de: "Wenn ein Giratina-Muster auslösen würde, verwandelt es es in normale Symbole. Danach 50 % Chance, sich selbst zu verbrauchen.", it: "Se un pattern Giratina sta per attivarsi, lo trasforma in simboli normali. Poi 50% di possibilità di scartarsi.",
+    ja: "ギラティナのパターンが発動する場合、通常のシンボルに変換。その後50%の確率で自身を捨てる。", ko: "기라티나 패턴이 발동하려 하면 일반 심볼로 변환. 그 후 50% 확률로 자기 자신을 버린다.", "zh-hans": "如果骑拉帝纳牌型即将触发，将其变为普通图案。之后有50%几率自身被弃置。", "zh-hant": "如果騎拉帝納牌型即將觸發，將其變為普通圖案。之後有50%機率自身被棄置。",
+  },
+  "charm-comet-shard": { en: "Comet Shard" },
+  "comet-shard-desc": {
+    en: "Patterns Multiplier +2 and +3% chance of seeing a Giratina.", es: "Multiplicador de Patrones +2 y +3% de probabilidad de ver un Giratina.", fr: "Multiplicateur de Motifs +2 et +3 % de chances de voir un Giratina.", de: "Muster-Multiplikator +2 und +3 % chance, Giratina zu sehen.", it: "Moltiplicatore Pattern +2 e +3% di probabilità di vedere Giratina.",
+    ja: "パターン倍率+2、ギラティナが出現する確率+3%。", ko: "패턴 배율 +2, 기라티나가 등장할 확률 +3%.", "zh-hans": "牌型倍率+2，见到骑拉帝纳的几率+3%。", "zh-hant": "牌型倍率+2，見到騎拉帝納的機率+3%。",
+  },
+  "charm-dragon-skull": { en: "Dragon Skull" },
+  "dragon-skull-desc": {
+    en: "When you see a Giratina on the grid, permanently double the pattern multiplier for ABOVE and BELOW.", es: "Cuando ves un Giratina en la cuadrícula, duplica permanentemente el multiplicador de patrones para ARRIBA y ABAJO.", fr: "Quand un Giratina apparaît sur la grille, double définitivement le multiplicateur de motifs pour AU-DESSUS et EN-DESSOUS.", de: "Erscheint Giratina auf dem Spielfeld, verdoppelt dauerhaft den Muster-Multiplikator für OBEN und UNTEN.", it: "Quando vedi Giratina sulla griglia, raddoppia permanentemente il moltiplicatore dei pattern SOPRA e SOTTO.",
+    ja: "フィールドにギラティナが出現した時、ABOVEとBELOWのパターン倍率を永久に倍増。", ko: "그리드에 기라티나가 나타나면 ABOVE와 BELOW의 패턴 배율을 영구적으로 2배.", "zh-hans": "网格上出现骑拉帝纳时，永久加倍ABOVE和BELOW的牌型倍率。", "zh-hant": "網格上出現騎拉帝納時，永久加倍ABOVE和BELOW的牌型倍率。",
+  },
+  "charm-pearl-string": { en: "Pearl String" },
+  "pearl-string-desc": {
+    en: "Triggers Randomly (35%). If a Giratina pattern is going to trigger, transform it into normal symbols.", es: "Se activa al azar (35%). Si un patrón Giratina va a activarse, lo transforma en símbolos normales.", fr: "Déclenchement aléatoire (35 %). Si un motif Giratina est sur le point de se déclencher, le transforme en symboles normaux.", de: "Löst zufällig aus (35 %). Wenn ein Giratina-Muster auslösen würde, verwandelt es es in normale Symbole.", it: "Si attiva a caso (35%). Se un pattern Giratina sta per attivarsi, lo trasforma in simboli normali.",
+    ja: "ランダム発動（35%）。ギラティナのパターンが発動する場合、通常のシンボルに変換。", ko: "무작위 발동 (35%). 기라티나 패턴이 발동하려 하면 일반 심볼로 변환.", "zh-hans": "随机触发（35%）。如果骑拉帝纳牌型即将触发，将其变为普通图案。", "zh-hant": "隨機觸發（35%）。如果騎拉帝納牌型即將觸發，將其變為普通圖案。",
+  },
+  "charm-dark-stone": { en: "Dark Stone" },
+  "dark-stone-desc": {
+    en: "+1.5% chance of seeing a Giratina. When you see one, gain +3, +2, +1, +0 bonus spins per round (resets at round end).", es: "+1,5% de probabilidad de ver un Giratina. Cuando ves uno, ganas +3, +2, +1, +0 giros extra por ronda (se reinicia al final).", fr: "+1,5 % de chances de voir un Giratina. Quand tu en vois un, gagnes +3, +2, +1, +0 tours bonus par manche (réinitialisé en fin de manche).", de: "+1,5 % chance, Giratina zu sehen. Bei Sicht: +3, +2, +1, +0 Bonus-Züge pro Runde (setzt sich am Rundenende zurück).", it: "+1,5% di probabilità di vedere Giratina. Quando ne vedi uno, ottieni +3, +2, +1, +0 tiri extra per turno (si resetta a fine turno).",
+    ja: "ギラティナが出現する確率+1.5%。出現時、ラウンドごとに+3、+2、+1、+0のボーナスレバーを獲得（ラウンド終了時にリセット）。", ko: "기라티나 등장 확률 +1.5%. 기라티나를 보면 라운드당 +3, +2, +1, +0 보너스 레버 획득 (라운드 종료 시 리셋).", "zh-hans": "见到骑拉帝纳的几率+1.5%。见到时获得+3、+2、+1、+0额外拉杆（每回合结束重置）。", "zh-hant": "見到騎拉帝納的機率+1.5%。見到時獲得+3、+2、+1、+0額外拉桿（每回合結束重置）。",
+  },
+  "charm-god-stone": { en: "God Stone" },
+  "god-stone-desc": {
+    en: "When you see a Giratina on the grid, Symbols Multiplier ×2 until the end of the round.", es: "Cuando ves un Giratina en la cuadrícula, Multiplicador de Símbolos ×2 hasta el final de la ronda.", fr: "Quand un Giratina apparaît sur la grille, Multiplicateur de Symboles ×2 jusqu'à la fin de la manche.", de: "Erscheint Giratina auf dem Spielfeld, Symbole-Multiplikator ×2 bis Rundenende.", it: "Quando vedi Giratina sulla griglia, Moltiplicatore Simboli ×2 fino alla fine del turno.",
+    ja: "フィールドにギラティナが出現した時、ラウンド終了までシンボル倍率×2。", ko: "그리드에 기라티나가 나타나면 라운드 종료까지 심볼 배율 ×2.", "zh-hans": "网格上出现骑拉帝纳时，本回合图案倍率×2。", "zh-hant": "網格上出現騎拉帝納時，本回合圖案倍率×2。",
   },
   "Triggers Randomly": {
     en: "Triggers Randomly", es: "Se activa al azar", fr: "Déclenchement aléatoire", de: "Löst zufällig aus", it: "Si attiva a caso",
@@ -2657,6 +2704,10 @@ const ui = {
   "The Cleanse Tag hums — every symbol is worth more!": {
     en: "The Cleanse Tag hums — every symbol is worth more!", es: "El amuleto purificador vibra: ¡todos los símbolos valen más!", fr: "Le talisman purifiant vibre — tous les symboles valent plus !", de: "Der Reinigungstalisman summt — alle Symbole sind mehr wert!", it: "L'amuleto purificante vibra: tutti i simboli valgono di più!",
     ja: "おふだが低く鳴る——すべてのシンボルの価値が上がる！", ko: "부적이 울린다——모든 심볼의 가치가 올라간다!", "zh-hans": "洁净护符嗡嗡作响——所有图案都更值钱了！", "zh-hant": "潔淨護符嗡嗡作響——所有圖案都更值錢了！",
+  },
+  "Giratina pulled you to the Distortion World!": {
+    en: "Giratina dragged you into the Distortion World — round earnings lost!", es: "¡Giratina te ha encerrado en el Mundo Distorsión — ¡ganancias de la ronda perdidas!", fr: "Giratina t'a entraîné dans le Monde Distorsion — gains de la manche perdus !", de: "Giratina hat dich in die Verdrehte Welt gezerrt — Rundenverdienst verloren!", it: "Giratina ti ha trascinato nel Mondo Distorsione — guadagni del turno persi!",
+    ja: "ギラティナが扭曲世界に引きずり込んだ——ラウンド中の収入が消えた！", ko: "기라티나가 왜곡의 세계로 끌고 갔다——라운드 수익이 사라졌다!", "zh-hans": "骑拉帝纳把你拉进了反转世界——本回合收益清零！", "zh-hant": "騎拉帝納把你拉進了反轉世界——本回合收益清零！",
   },
   "Restart": {
     en: "Restart", es: "Reiniciar", fr: "Recommencer", de: "Neustart", it: "Ricomincia",

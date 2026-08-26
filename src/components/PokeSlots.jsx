@@ -69,6 +69,8 @@ import {
   YELLOW_SCARF_STEP,
   LEFTOVERS_ROUNDS,
   POISON_BARB_SEVENS,
+  GIRATINA_UNLOCK_CYCLE,
+  CHARM_IDS,
 } from "../lib/pokeslots";
 
 // PokéSlots — CloverPit-inspired slot machine roguelite. The run rules live in
@@ -180,6 +182,13 @@ const CHARM_NAME_KEYS = {
   "pink-scarf": "charm-pink-scarf",
   "green-scarf": "charm-green-scarf",
   "yellow-scarf": "charm-yellow-scarf",
+  "dragon-fang": "charm-dragon-fang",
+  "red-card": "charm-red-card",
+  "comet-shard": "charm-comet-shard",
+  "dragon-skull": "charm-dragon-skull",
+  "pearl-string": "charm-pearl-string",
+  "dark-stone": "charm-dark-stone",
+  "god-stone": "charm-god-stone",
 };
 
 function CharmIcon({ charmId, className }) {
@@ -298,7 +307,8 @@ export default function PokeSlots() {
   // Patterns boards ("symbol:<id>" / "pattern:<type>" → true) so the player
   // can see exactly what just got better behind the shop modal.
   const [flashes, setFlashes] = useState({});
-  const [modal, setModal] = useState(null); // null | shop | atm | deadline | over | won | help
+  const [modal, setModal] = useState(null); // null | shop | atm | deadline | over | won | help | codex
+  const [codexSearch, setCodexSearch] = useState("");
   const [payAmount, setPayAmount] = useState(0);
   const [phoneMsg, setPhoneMsg] = useState(PHONE_ROUND_MSGS[0]);
   // Records come from localStorage, so they load after mount — reading them in
@@ -534,12 +544,17 @@ export default function PokeSlots() {
     }
     const scarfLuck = Object.values(scarves).reduce((a, b) => a + b, 0);
 
+    // Dragon Fang: +10 Luck when Giratina appeared on the previous pull.
+    const dragonFangTrigger = cur.dragonFangPending && cur.charms.includes("dragon-fang");
+    if (dragonFangTrigger) triggerCount += 1;
+
     const luckGain =
       (cur.luck || 0) +
       (amuletTrigger ? AMULET_COIN_LUCK : 0) +
       (spellTrigger ? SPELL_TAG_LUCK : 0) +
       (shockTrigger ? SHOCK_DRIVE_LUCK : 0) +
-      scarfLuck;
+      scarfLuck +
+      (dragonFangTrigger ? 10 : 0);
 
     // rollGrid reads luck from its state argument; the stored run state keeps
     // luck at 0 so nothing re-consumes it later.
@@ -623,6 +638,7 @@ export default function PokeSlots() {
       scarfFires,
       scarfFired: Object.keys(scarves).length > 0 ? scarves : null,
       luckyEggPending,
+      dragonFangPending: false,
     };
     // Persist immediately so a tab closed mid-spin can't replay a free pull.
     persistRun(runRef.current);
@@ -634,13 +650,16 @@ export default function PokeSlots() {
     if (amuletTrigger) addPopup({ x: 50, y: 26, text: `🪙 +1 PULL`, kind: "tickets" });
     if (spellTrigger) addPopup({ x: 50, y: 26, text: `👻 +${SPELL_TAG_LUCK} LUCK`, kind: "pattern" });
     if (shockTrigger) addPopup({ x: 50, y: 30, text: `⚡ +${SHOCK_DRIVE_LUCK} LUCK`, kind: "pattern" });
+    if (dragonFangTrigger) addPopup({ x: 50, y: 34, text: "🐉 +10 LUCK", kind: "pattern" });
     if (scarfLuck > 0) addPopup({ x: 50, y: 34, text: `🧣 +${scarfLuck} LUCK`, kind: "pattern" });
     if (sludgeFed) addPopup({ x: 50, y: 52, text: "🟣 +BASE", kind: "pattern" });
 
+    // Blur-cycle uses only symbols the player can actually see at this cycle.
+    const blurSyms = SYMBOLS.filter((s) => s.id !== "giratina" || (runRef.current.cycle || 1) >= GIRATINA_UNLOCK_CYCLE);
     let stopped = 0;
     const shuffle = setInterval(() => {
       // Stopped columns already show their final symbols; the rest blur-cycle.
-      setDisplayGrid(finalGrid.map((sym, i) => (i % GRID_COLS < stopped ? sym : SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].id)));
+      setDisplayGrid(finalGrid.map((sym, i) => (i % GRID_COLS < stopped ? sym : blurSyms[Math.floor(Math.random() * blurSyms.length)].id)));
     }, 70);
 
     for (let c = 1; c <= GRID_COLS; c++) {
@@ -680,8 +699,40 @@ export default function PokeSlots() {
         setDisplayGrid(healed);
       }
     }
+
+    // Red Card / Pearl String: if a Giratina HOR or DIAG is about to trigger,
+    // transform its cells into the most common real symbol and re-evaluate.
+    let redCardDiscard = false;
+    if (res.giratinaLoss) {
+      let transformed = false;
+      if (cur.charms.includes("red-card")) {
+        transformed = true;
+      } else if (cur.charms.includes("pearl-string") && Math.random() < randomTriggerChance(cur, 0.35)) {
+        transformed = true;
+      }
+      if (transformed) {
+        const counts = {};
+        for (const s of grid) { if (s !== "giratina") counts[s] = (counts[s] || 0) + 1; }
+        const majority = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || "lemon";
+        for (const m of res.scored) {
+          if (m.symbol === "giratina" && (m.type === "HOR" || m.type === "DIAG")) {
+            for (const cell of m.cells) grid[cell] = majority;
+          }
+        }
+        res = evaluateGrid(cur, grid);
+        setDisplayGrid(grid);
+        if (cur.charms.includes("red-card") && Math.random() < 0.5) redCardDiscard = true;
+      }
+    }
+
     const next = { ...cur, grid };
-    next.coins += res.payout;
+    if (redCardDiscard) {
+      const draft = { charms: next.charms, permLevels: next.permLevels };
+      discardCharm(draft, "red-card");
+      next.charms = draft.charms;
+      next.permLevels = draft.permLevels;
+    }
+    next.roundEarnings = (next.roundEarnings || 0) + res.payout;
     next.stats = { ...next.stats };
     next.stats.totalEarned += res.payout;
     next.stats.pullsUsed += 1;
@@ -696,7 +747,7 @@ export default function PokeSlots() {
       Math.random() < randomTriggerChance(next, ODD_KEYSTONE_CHANCE)
     ) {
       keystoneTrigger = true;
-      next.coins += res.payout;
+      next.roundEarnings = (next.roundEarnings || 0) + res.payout;
       next.stats.totalEarned += res.payout;
       if (res.payout * 2 > next.stats.biggestWin) next.stats.biggestWin = res.payout * 2;
     }
@@ -704,7 +755,7 @@ export default function PokeSlots() {
     let douseTrigger = false;
     if (next.charms.includes("douse-drive") && next.stats.pullsUsed % DRIVE_EVERY_PULLS === 0 && res.payout > 0) {
       douseTrigger = true;
-      next.coins += res.payout;
+      next.roundEarnings = (next.roundEarnings || 0) + res.payout;
       next.stats.totalEarned += res.payout;
       if (res.payout * 2 > next.stats.biggestWin) next.stats.biggestWin = res.payout * 2;
     }
@@ -719,7 +770,7 @@ export default function PokeSlots() {
       }
       if (extraRaw > 0) {
         leftoversExtra = Math.floor(extraRaw * payoutMult(next));
-        next.coins += leftoversExtra;
+        next.roundEarnings = (next.roundEarnings || 0) + leftoversExtra;
         next.stats.totalEarned += leftoversExtra;
         if (res.payout + leftoversExtra > next.stats.biggestWin) {
           next.stats.biggestWin = res.payout + leftoversExtra;
@@ -736,7 +787,7 @@ export default function PokeSlots() {
       res.payout > 0
     ) {
       spoonTrigger = true;
-      next.coins += res.payout * 3;
+      next.roundEarnings = (next.roundEarnings || 0) + res.payout * 3;
       next.stats.totalEarned += res.payout * 3;
       if (res.payout * 4 > next.stats.biggestWin) next.stats.biggestWin = res.payout * 4;
     }
@@ -744,7 +795,7 @@ export default function PokeSlots() {
     let pokedollBonus = 0;
     if (next.charms.includes("pokedoll") && res.scored.length >= 3) {
       pokedollBonus = depositInterest(cur);
-      next.coins += pokedollBonus;
+      next.roundEarnings = (next.roundEarnings || 0) + pokedollBonus;
       next.stats.totalEarned += pokedollBonus;
     }
     // Cleanse Tag: a pull that lands 5+ patterns adds another +1 to every
@@ -983,6 +1034,48 @@ export default function PokeSlots() {
       }
     }
 
+    // Giratina: a HOR or DIAG of Giratinas wipes all round earnings.
+    if (res.giratinaLoss) {
+      const lost = next.roundEarnings || 0;
+      next.roundEarnings = 0;
+      addPopup({ x: 50, y: 40, text: "👻💀", kind: "pattern" });
+      if (lost > 0) addPopup({ x: 50, y: 50, text: `-${fmt(lost)} ₽`, kind: "coins" });
+      pushMsg(tr("Giratina pulled you to the Distortion World!"));
+      setRun(next);
+      runRef.current = next;
+    }
+
+    // --- "Giratina appears on the grid" charms ---
+    const hasGiratina = grid.some((s) => s === "giratina");
+    if (hasGiratina) {
+      // Dragon Fang: +10 Luck on the next spin of this round.
+      if (next.charms.includes("dragon-fang")) {
+        next.dragonFangPending = true;
+        addPopup({ x: 50, y: 20, text: "🐉 +10 LUCK", kind: "pattern" });
+      }
+      // Dragon Skull: permanently double ABOVE and BELOW pattern multipliers.
+      if (next.charms.includes("dragon-skull")) {
+        next.permPatternLevels = { ...(next.permPatternLevels || {}) };
+        next.permPatternLevels.ABOVE = (next.permPatternLevels.ABOVE || 0) + BASE_PATTERN_MULT.ABOVE;
+        next.permPatternLevels.BELOW = (next.permPatternLevels.BELOW || 0) + BASE_PATTERN_MULT.BELOW;
+        addPopup({ x: 50, y: 54, text: "💀 ABOVE/BELOW ×2", kind: "pattern" });
+      }
+      // Dark Stone: bonus spins (+3, +2, +1, +0), resets at round end.
+      if (next.charms.includes("dark-stone")) {
+        const stage = next.darkStoneStage ?? 3;
+        if (stage > 0) {
+          next.pullsLeft = (next.pullsLeft || 0) + stage;
+          addPopup({ x: 50, y: 58, text: `🌑 +${stage} SPINS`, kind: "tickets" });
+        }
+        next.darkStoneStage = Math.max(0, stage - 1);
+      }
+      // God Stone: Symbols Mult ×2 until end of round.
+      if (next.charms.includes("god-stone")) {
+        next.godStoneActive = true;
+        addPopup({ x: 50, y: 62, text: "🪨 ×2 SYMBOLS", kind: "pattern" });
+      }
+    }
+
     if (next.pullsLeft <= 0) {
       // Round over. If the quota still has rounds left, return to the pull
       // picker; on the last round the deadline comes due instead.
@@ -994,9 +1087,19 @@ export default function PokeSlots() {
         // committed to the run immediately, otherwise the deadline payment
         // below would be checked against a wallet that doesn't include it.
         const interest = depositInterest(now);
-        const base = interest > 0 ? { ...now, coins: now.coins + interest } : now;
-        if (interest > 0) {
-          addPopup({ x: 50, y: 30, text: `🏦 +${fmt(interest)} ₽`, kind: "coins" });
+        const baseRaw = interest > 0 ? { ...now, coins: now.coins + interest } : now;
+        // Grant round-end earnings + tickets (earned during the round).
+        const roundEarn = baseRaw.roundEarnings || 0;
+        const baseDraft = roundEarn > 0
+          ? { ...baseRaw, coins: baseRaw.coins + roundEarn, roundEarnings: 0 }
+          : baseRaw;
+        const base = baseDraft.pendingTickets
+          ? { ...baseDraft, tickets: (baseDraft.tickets || 0) + baseDraft.pendingTickets, pendingTickets: 0 }
+          : baseDraft;
+        if (interest > 0 || roundEarn > 0 || baseDraft.pendingTickets) {
+          if (interest > 0) addPopup({ x: 50, y: 30, text: `🏦 +${fmt(interest)} ₽`, kind: "coins" });
+          if (roundEarn > 0) addPopup({ x: 50, y: 38, text: `🎰 +${fmt(roundEarn)} ₽`, kind: "coins" });
+          if (baseDraft.pendingTickets) addPopup({ x: 50, y: 46, text: `🎟️ +${baseDraft.pendingTickets}`, kind: "tickets" });
           commit(base);
         }
         if (base.roundsLeft > 0) {
@@ -1101,13 +1204,15 @@ export default function PokeSlots() {
       sassyDoubles: 0,
       electricBoost: 0,
       psychicDoubles: 0,
+      darkStoneStage: 3,
+      godStoneActive: false,
     };
     if (cur.coins >= coinCost) {
       commit({
         ...cur,
         coins: cur.coins - coinCost,
         pullsLeft: pulls,
-        tickets: cur.tickets + (ROUND_MODES[m].tickets || 0),
+        pendingTickets: (ROUND_MODES[m].tickets || 0),
         lastMode: m,
         awaitingChoice: false,
         roundsLeft: cur.roundsLeft - 1,
@@ -1624,7 +1729,8 @@ export default function PokeSlots() {
       <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-[225px_minmax(0,1fr)_225px] gap-4 items-start">
         {/* Symbols board */}
         <Board title={tr("Symbols")}>
-          {SYMBOLS.map((s, i) => {
+          {SYMBOLS.filter((s) => !s.hideInChart).map((s) => {
+            const i = SYMBOLS.indexOf(s);
             const lit = !!flashes[`symbol:${s.id}`];
             return (
               <div
@@ -1752,6 +1858,19 @@ export default function PokeSlots() {
               <TooltipTrigger
                 render={
                   <button
+                    onClick={() => setModal("codex")}
+                    className="size-9 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors"
+                  >
+                    📖
+                  </button>
+                }
+              />
+              <TooltipContent>{tr("Charm Codex")}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
                     onClick={() => setModal("help")}
                     className="size-9 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors"
                   >
@@ -1818,6 +1937,7 @@ export default function PokeSlots() {
                     return <span className="font-semibold text-fuchsia-400">{tr("Triggers Randomly")} ({pct}%)</span>;
                   })()}
                   <span className="opacity-80">{tr(`${c}-desc`)}</span>
+                  {c === "green-scarf" && <span className="text-[11px] text-emerald-400 font-semibold">Luck +{run.greenScarfBonus || 0}</span>}
                 </TooltipContent>
               </Tooltip>
             ))}
@@ -2089,6 +2209,45 @@ export default function PokeSlots() {
           </ul>
         </Overlay>
       )}
+
+      {modal === "codex" && (() => {
+        const q = (codexSearch || "").toLowerCase();
+        const filtered = CHARM_IDS.filter((c) => {
+          if (!q) return true;
+          return tr(CHARM_NAME_KEYS[c]).toLowerCase().includes(q) || tr(`${c}-desc`).toLowerCase().includes(q);
+        });
+        return (
+          <Overlay title={tr("Charm Codex")} onClose={() => { setModal(null); setCodexSearch(""); }}>
+            <input
+              type="text"
+              value={codexSearch}
+              onChange={(e) => setCodexSearch(e.target.value)}
+              placeholder={tr("Search") + "…"}
+              className="w-full mb-3 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-sky-500"
+              autoFocus
+            />
+            <div className="space-y-2">
+              {filtered.map((c) => {
+                const charm = CHARMS[c];
+                return (
+                  <div key={c} className="flex items-start gap-2 rounded-lg border border-slate-700/60 bg-slate-800/40 px-3 py-2">
+                    <CharmIcon charmId={c} className="size-6 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm">{tr(CHARM_NAME_KEYS[c])}</span>
+                        <span className="text-[11px] text-yellow-400">{charm.cost} 🎫</span>
+                        {charm.trait === "random" && <span className="text-[10px] font-semibold text-fuchsia-400">⚡ {tr("Triggers Randomly")}</span>}
+                      </div>
+                      <p className="text-xs text-slate-400 leading-snug">{tr(`${c}-desc`)}</p>
+                    </div>
+                  </div>
+                );
+              })}
+              {filtered.length === 0 && <p className="text-center text-sm text-slate-500 py-4">{tr("No results")}</p>}
+            </div>
+          </Overlay>
+        );
+      })()}
 
       {modal === "over" && (
         <Overlay title={tr("GAME OVER")}>
