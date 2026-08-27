@@ -2588,8 +2588,8 @@ const ui = {
   },
   "charm-electric-seed": { en: "Electric Seed" },
   "electric-seed-desc": {
-    en: "Whenever a ×4+ pattern lands, every pattern gains its base multiplier until round end.", es: "Cuando cae un patrón ×4+ , cada patrón gana su multiplicador base hasta el final de la ronda.", fr: "Quand un motif ×4+ tombe, chaque motif gagne son multiplicateur de base jusqu'à la fin de la manche.", de: "Wenn ein ×4+-Muster landet, gewinnt jedes Muster seinen Grund-Multiplikator bis zum Rundenende.", it: "Quando cade una combinazione ×4+, ogni combinazione guadagna il suo moltiplicatore base fino a fine turno.",
-    ja: "×4以上のパターンが成立するたび、ラウンド終了まで全パターンの倍率が基本倍率ぶん上がる。", ko: "×4 이상 패턴이 당첨될 때마다 라운드가 끝날 때까지 모든 패턴의 배율이 기본 배율만큼 오른다.", "zh-hans": "每当打出×4以上的牌型，所有牌型获得其基础倍率直到回合结束。", "zh-hant": "每當打出×4以上的牌型，所有牌型獲得其基礎倍率直到回合結束。",
+    en: "Whenever a +4 Pattern lands, every pattern gains its base multiplier until round end.", es: "Cuando cae un Patrón +4, cada patrón gana su multiplicador base hasta el final de la ronda.", fr: "Quand un Motif +4 tombe, chaque motif gagne son multiplicateur de base jusqu'à la fin de la manche.", de: "Wenn ein +4-Muster landet, gewinnt jedes Muster seinen Grund-Multiplikator bis zum Rundenende.", it: "Quando cade una Combinazione +4, ogni combinazione guadagna il suo moltiplicatore base fino a fine turno.",
+    ja: "+4パターンが成立するたび、ラウンド終了まで全パターンの倍率が基本倍率ぶん上がる。", ko: "+4 패턴이 당첨될 때마다 라운드가 끝날 때까지 모든 패턴의 배율이 기본 배율만큼 오른다.", "zh-hans": "每当打出+4图案，所有牌型获得其基础倍率直到回合结束。", "zh-hant": "每當打出+4圖案，所有牌型獲得其基礎倍率直到回合結束。",
   },
   "charm-psychic-seed": { en: "Psychic Seed" },
   "psychic-seed-desc": {
@@ -2684,6 +2684,14 @@ const ui = {
   "Triggers Randomly": {
     en: "Triggers Randomly", es: "Se activa al azar", fr: "Déclenchement aléatoire", de: "Löst zufällig aus", it: "Si attiva a caso",
     ja: "ランダム発動", ko: "무작위 발동", "zh-hans": "随机触发", "zh-hant": "隨機觸發",
+  },
+  "rounds left": {
+    en: "rounds left", es: "rondas restantes", fr: "manches restantes", de: "Runden übrig", it: "turni rimasti",
+    ja: "ラウンド残り", ko: "라운드 남음", "zh-hans": "回合剩余", "zh-hant": "回合剩餘",
+  },
+  "pulls left": {
+    en: "pulls left", es: "tiradas restantes", fr: "tirages restants", de: "Züge übrig", it: "tirate rimaste",
+    ja: "残り回数", ko: "남은 횟수", "zh-hans": "剩余次数", "zh-hant": "剩餘次數",
   },
   "The Focus Sash shatters — two extra rounds to pay the quota!": {
     en: "The Focus Sash shatters — two extra rounds to pay the quota!", es: "¡La Banda Focus se rompe: dos rondas extra para pagar la cuota!", fr: "La Ceinture Pro se brise — deux manches de plus pour payer la quote-part !", de: "Der Fokusgurt zersplittert — zwei Extra-Runden, um die Rate zu zahlen!", it: "Il Focalnastro va in frantumi — due turni extra per pagare la rata!",

@@ -215,15 +215,22 @@ function CharmIcon({ charmId, className }) {
 
 function SymbolFace({ symId, spinning, won, small, golden, chain, morphTo }) {
   const [failed, setFailed] = useState(false);
-  const [morphed, setMorphed] = useState(false);
+  // morphStage: 0 = idle, 1 = flash Ditto sprite, 2 = morphed to target
+  const [morphStage, setMorphStage] = useState(0);
   const sym = SYMBOL_BY_ID[symId];
-  // Ditto morph: flash Ditto briefly then swap to the target symbol
+  // Ditto morph: random → Ditto sprite → target symbol (two 120ms steps)
   useEffect(() => {
-    if (morphTo && !morphed) {
-      const t = setTimeout(() => setMorphed(true), 120);
+    if (morphTo && morphStage === 0) {
+      const t = setTimeout(() => setMorphStage(1), 120);
       return () => clearTimeout(t);
     }
-  }, [morphTo, morphed]);
+  }, [morphTo, morphStage]);
+  useEffect(() => {
+    if (morphStage === 1) {
+      const t = setTimeout(() => setMorphStage(2), 600);
+      return () => clearTimeout(t);
+    }
+  }, [morphStage]);
   const cls = small
     ? "flex items-center justify-center w-full h-full"
     : // Modifier cells keep their normal border — only the ✨/🔗 corner badges
@@ -239,10 +246,10 @@ function SymbolFace({ symId, spinning, won, small, golden, chain, morphTo }) {
     </>
   );
   if (failed) return <div className={cls}>{badges}<span className={small ? "text-lg" : "text-2xl sm:text-3xl"}>{sym.emoji}</span></div>;
-  // During a Ditto morph, show the Ditto sprite first, then swap to the
-  // target symbol with a hue-shift animation.
-  const showMorph = morphTo && !morphed;
-  const imgSymId = showMorph ? symId : (morphTo && morphed ? morphTo : symId);
+  // Stage 0: show original symId (the random placeholder)
+  // Stage 1: flash the Ditto sprite
+  // Stage 2: morph into the target symbol
+  const imgSymId = !morphTo ? symId : morphStage === 0 ? symId : morphStage === 1 ? "ditto" : morphTo;
   const imgSym = SYMBOL_BY_ID[imgSymId];
   if (!imgSym) return <div className={cls}>{badges}</div>;
   return (
@@ -255,7 +262,7 @@ function SymbolFace({ symId, spinning, won, small, golden, chain, morphTo }) {
         onError={() => setFailed(true)}
         className={`object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] ${
           spinning ? "animate-reel-blur" : ""
-        } ${morphTo && morphed ? "animate-ditto-morph" : ""} ${
+        } ${morphTo && morphStage > 0 ? "animate-ditto-morph" : ""} ${
           small ? "max-w-full max-h-full" : "w-[78%] h-[78%]"
         }`}
       />
@@ -1397,6 +1404,16 @@ export default function PokeSlots() {
           addPopup({ x: 50, y: 30, text: `🏦 +${fmt(interest)} ₽`, kind: "coins" });
         }
       }
+      // Quota clear bonus: coins + tickets (same as the payment path below).
+      const debtBonus = quotaClearBonus(cur);
+      if (debtBonus.coins > 0) {
+        next.coins += debtBonus.coins;
+        addPopup({ x: 50, y: 44, text: `+${fmt(debtBonus.coins)} ₽`, kind: "coins" });
+      }
+      if (debtBonus.tickets > 0) {
+        next.tickets = cur.tickets + debtBonus.tickets;
+        addPopup({ x: 50, y: 58, text: `+${fmt(debtBonus.tickets)} 🎫`, kind: "tickets" });
+      }
       addPopup({ x: 50, y: 40, text: "🏆", kind: "pattern" });
       pushMsg(tr("Debt cleared! One more charm slot — and a much bigger debt."));
       setOffers(generateShopOffers(next));
@@ -1412,7 +1429,7 @@ export default function PokeSlots() {
     // A payment clears the quota when it's the forced deadline (already
     // validated above) or when the cycle's accumulated payments cross it —
     // mid-cycle ATM deposits included. Clearing early pays out the
-    // quotaClearBonus (7% of the quota + 4 tickets + 1 per round left) and
+    // quotaClearBonus (7% of the quota + 4 tickets + 2 per round left) and
     // starts a fresh cycle.
     const cleared = deadline || quotaPaid >= quota;
     if (focusSave) {
@@ -2064,6 +2081,9 @@ export default function PokeSlots() {
                   <span className="opacity-80">{tr(`${c}-desc`)}</span>
                   {c === "green-scarf" && <span className="text-[11px] text-emerald-400 font-semibold">Luck +{run.greenScarfBonus || 0}</span>}
                   {c === "point-card" && <span className="text-[11px] text-yellow-300 font-semibold">{tr("Symbols Multiplier")} +{run.rerolls || 0}</span>}
+                  {c === "leftovers" && <span className="text-[11px] text-orange-300 font-semibold">{LEFTOVERS_ROUNDS - (run.leftoversRounds || 0)} {tr("rounds left")}</span>}
+                  {c === "burn-drive" && <span className="text-[11px] text-orange-400 font-semibold">{DRIVE_EVERY_PULLS - ((run.stats?.pullsUsed || 0) % DRIVE_EVERY_PULLS)} {tr("pulls left")}</span>}
+                  {c === "choice-specs" && <span className="text-[11px] text-purple-400 font-semibold">{Math.max(0, CHOICE_STREAK - (run.emptyStreak || 0))} {tr("pulls left")}</span>}
                 </TooltipContent>
               </Tooltip>
                 </div>

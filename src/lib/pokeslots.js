@@ -66,13 +66,13 @@ export const SYMBOLS = [
   // Ditto: wildcard symbol that counts as any other symbol in pattern matching
   // (max 1 per pattern). baseValue 0 → hidden from the symbols chart.
   {
-    id: "ditto", pokemonId: 132, baseValue: 0, weight: 31, emoji: "🫠", hideInChart: true,
+    id: "ditto", pokemonId: 132, baseValue: 0, weight: 20, emoji: "🫠", hideInChart: true,
     names: { en: "Ditto", es: "Ditto", fr: "Métamorph", de: "Ditto", it: "Ditto", ja: "メタモン", ko: "메타몽", "zh-hans": "百变怪", "zh-hant": "百變怪" },
   },
   // Giratina: danger symbol. Appears only after clearing Quota 666 (cycle 4+).
   // HOR or DIAG of Giratinas = instant loss. Max 3 per pull. baseValue 0.
   {
-    id: "giratina", pokemonId: 487, baseValue: 0, weight: 16, emoji: "👻", hideInChart: true,
+    id: "giratina", pokemonId: 487, baseValue: 0, weight: 10, emoji: "👻", hideInChart: true,
     names: { en: "Giratina", es: "Giratina", fr: "Giratina", de: "Giratina", it: "Giratina", ja: "ギラティナ", ko: "기라티나", "zh-hans": "骑拉帝纳", "zh-hant": "騎拉帝納" },
   },
 ];
@@ -390,10 +390,10 @@ export function roundCost(state, mode) {
 export const QUOTA_CLEAR_BONUS_PCT = 0.07;
 export const QUOTA_CLEAR_BASE_TICKETS = 4;
 export function quotaClearBonus(state) {
-  if ((state.roundsLeft || 0) <= 0) return { coins: 0, tickets: 0 };
+  const roundsLeft = state.roundsLeft || 0;
   return {
-    coins: Math.floor(currentQuota(state) * QUOTA_CLEAR_BONUS_PCT),
-    tickets: QUOTA_CLEAR_BASE_TICKETS * state.roundsLeft,
+    coins: roundsLeft > 0 ? Math.floor(currentQuota(state) * QUOTA_CLEAR_BONUS_PCT) : 0,
+    tickets: QUOTA_CLEAR_BASE_TICKETS + 2 * roundsLeft,
   };
 }
 
@@ -488,7 +488,7 @@ export const CHARMS = {
     payoutMult: 1.3,
   },
   "wide-lens": {
-    cost: 7, file: "wide-lens.png", emoji: "🔍",
+    cost: 5, file: "wide-lens.png", emoji: "🔍",
     // Carbink / Gholdengo / Seviper drop ~60% more often
     symbolWeightMult: { diamond: 1.6, treasure: 1.6, seven: 1.6 },
   },
@@ -1166,10 +1166,14 @@ function pickRandom(arr, n) {
 }
 
 // Shop offers are charms only (pattern/global/symbol upgrades were removed).
+// Giratina-related charms only appear in the shop after Giratina is unlocked.
+const GIRATINA_CHARMS = ["dragon-fang", "dragon-skull", "dark-stone", "god-stone"];
+
 export function generateShopOffers(state) {
   // The Poffin Case never shows up again once bought (even if sold).
   const unowned = CHARM_IDS.filter(
     (id) => !state.charms.includes(id) && !(id === "poffin-case" && state.poffinCaseBought)
+      && !((state.cycle || 1) < GIRATINA_UNLOCK_CYCLE && GIRATINA_CHARMS.includes(id))
   );
   return pickRandom(unowned, 3).map((id) => ({
     kind: "charm",
