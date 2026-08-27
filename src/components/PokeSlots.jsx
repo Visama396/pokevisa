@@ -1377,11 +1377,13 @@ export default function PokeSlots() {
     // A save zeroes the wallet instead of subtracting the payment.
     let next = { ...cur, coins: focusSave ? 0 : cur.coins - paid, debt, charms: draft.charms, permLevels: draft.permLevels, quotaPaid, deposited };
 
-    // Debt paid in full — the run does NOT end: Team Rocket instantly grants
-    // a bigger loan (nextDebt, ×DEBT_GROWTH per debt) and the charm tray
-    // gains +1 slot (charmSlots reads debtsCleared). A fresh quota cycle
-    // starts so the run keeps flowing endlessly.
-    if (debt <= 0) {
+    // Debt paid in full AND quota met — the run does NOT end: Team Rocket
+    // instantly grants a bigger loan (nextDebt, ×DEBT_GROWTH per debt) and
+    // the charm tray gains +1 slot (charmSlots reads debtsCleared).  A fresh
+    // quota cycle starts so the run keeps flowing endlessly.  When debt is
+    // zero but the quota isn't met yet, skip this block so the player can't
+    // bank-cycle without actually paying their quota.
+    if (debt <= 0 && quotaPaid >= quota) {
       next.debtsCleared = (cur.debtsCleared || 0) + 1;
       next.debt = nextDebt(next.debtsCleared);
       next.cycle = cur.cycle + 1;
@@ -2226,6 +2228,17 @@ export default function PokeSlots() {
               JACKPOT!
             </div>
             <div className="mt-2 text-xl font-bold text-yellow-300">{tr("FULL HOUSE!")}</div>
+          </div>
+        </div>
+      )}
+
+      {giraRelease && (
+        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
+          <div className="animate-gira-release text-center">
+            <img src="/slots/sym-487.png" className="w-28 h-28 mx-auto drop-shadow-[0_0_40px_rgba(139,0,255,0.8)]" alt="" />
+            <div className="mt-3 text-2xl font-black text-purple-300 drop-shadow-[0_0_20px_rgba(139,0,255,0.6)]">
+              GIRATINA
+            </div>
           </div>
         </div>
       )}

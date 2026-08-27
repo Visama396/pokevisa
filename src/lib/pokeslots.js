@@ -413,7 +413,7 @@ export function atmMaxDeposit(state) {
     .map((mode) => roundCost(state, mode))
     .sort((a, b) => b - a);
   const reserve = costs.find((cost) => cost < coins) || 0;
-  return coins - reserve;
+  return Math.min(coins - reserve, state.debt, remaining);
 }
 
 // ---------------------------------------------------------------------------
