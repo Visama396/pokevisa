@@ -457,8 +457,8 @@ export const POISON_BARB_SEVENS = 7;
 export const GIRATINA_MAX_PER_PULL = 3;
 export const GIRATINA_UNLOCK_CYCLE = 4; // cycle >= this → Giratina can appear
 // The Symbols Multiplier (global payout dial, shown under the boards):
-// x1.5 per level — shop upgrades + Bold Mint + Grassy Seed levels.
-export const SYMBOLS_MULT_STEP = 1.5;
+// +1 per level — shop upgrades + Bold Mint + Grassy Seed levels.
+export const SYMBOLS_MULT_STEP = 1;
 
 export const CHARMS = {
   "silk-scarf": {
@@ -904,7 +904,7 @@ export function symbolsMultLevel(state) {
   return level;
 }
 export function symbolsMult(state) {
-  let mult = Math.pow(SYMBOLS_MULT_STEP, symbolsMultLevel(state));
+  let mult = 1 + symbolsMultLevel(state);
   // God Stone: ×2 until end of round when Giratina appeared.
   if (state.godStoneActive) mult *= 2;
   return mult;
@@ -1126,7 +1126,17 @@ export function evaluateGrid(state, grid) {
   const payout = Math.floor(raw * payoutMult(state));
 
   const jackpot = scored.some((m) => m.type === "JACKPOT");
-  return { scored, payout, jackpot, giratinaLoss };
+
+  // Track Ditto cells that contributed to a scored pattern (used for the
+  // post-spin reveal animation in PokeSlots.jsx).
+  const dittoCells = [];
+  for (let i = 0; i < grid.length; i++) {
+    if (grid[i] !== "ditto") continue;
+    const parent = scored.find((m) => m.cells.includes(i));
+    if (parent) dittoCells.push({ cell: i, symbol: parent.symbol });
+  }
+
+  return { scored, payout, jackpot, giratinaLoss, dittoCells };
 }
 
 // ---------------------------------------------------------------------------

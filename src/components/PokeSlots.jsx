@@ -81,7 +81,11 @@ import {
 // never depend on stale closures, and no setState updater performs side
 // effects, keeping behaviour identical under StrictMode.
 
-const fmt = (n) => Math.floor(n).toLocaleString("en-US");
+const fmt = (n) => {
+  const v = Math.floor(n);
+  if (v >= 1e10) return v.toExponential(2);
+  return v.toLocaleString("en-US");
+};
 // Charm item sprites are self-hosted copies of the PokeAPI item sprites
 // (public/slots/items/) — no third-party requests during a run.
 const ITEM_SPRITES = "/slots/items";
@@ -209,9 +213,17 @@ function CharmIcon({ charmId, className }) {
   );
 }
 
-function SymbolFace({ symId, spinning, won, small, golden, chain }) {
+function SymbolFace({ symId, spinning, won, small, golden, chain, morphTo }) {
   const [failed, setFailed] = useState(false);
+  const [morphed, setMorphed] = useState(false);
   const sym = SYMBOL_BY_ID[symId];
+  // Ditto morph: flash Ditto briefly then swap to the target symbol
+  useEffect(() => {
+    if (morphTo && !morphed) {
+      const t = setTimeout(() => setMorphed(true), 120);
+      return () => clearTimeout(t);
+    }
+  }, [morphTo, morphed]);
   const cls = small
     ? "flex items-center justify-center w-full h-full"
     : // Modifier cells keep their normal border — only the ✨/🔗 corner badges
@@ -227,17 +239,25 @@ function SymbolFace({ symId, spinning, won, small, golden, chain }) {
     </>
   );
   if (failed) return <div className={cls}>{badges}<span className={small ? "text-lg" : "text-2xl sm:text-3xl"}>{sym.emoji}</span></div>;
+  // During a Ditto morph, show the Ditto sprite first, then swap to the
+  // target symbol with a hue-shift animation.
+  const showMorph = morphTo && !morphed;
+  const imgSymId = showMorph ? symId : (morphTo && morphed ? morphTo : symId);
+  const imgSym = SYMBOL_BY_ID[imgSymId];
+  if (!imgSym) return <div className={cls}>{badges}</div>;
   return (
     <div className={cls}>
       {badges}
       <img
-        src={symbolSprite(symId)}
-        alt={symId}
+        src={symbolSprite(imgSymId)}
+        alt={imgSymId}
         draggable="false"
         onError={() => setFailed(true)}
         className={`object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] ${
           spinning ? "animate-reel-blur" : ""
-        } ${small ? "max-w-full max-h-full" : "w-[78%] h-[78%]"}`}
+        } ${morphTo && morphed ? "animate-ditto-morph" : ""} ${
+          small ? "max-w-full max-h-full" : "w-[78%] h-[78%]"
+        }`}
       />
     </div>
   );
@@ -296,13 +316,20 @@ export default function PokeSlots() {
 
   const [run, setRun] = useState(createRunState);
   const [offers, setOffers] = useState(() => generateShopOffers(run));
-  const [phase, setPhase] = useState("idle"); // idle | spinning | ended
+  const [phase, setPhase] = useState("idle"); // idle | spinning | ditto-reveal | ended
   const [displayGrid, setDisplayGrid] = useState(run.grid);
   const [stoppedCols, setStoppedCols] = useState(GRID_COLS);
+  const [revealingDittos, setRevealingDittos] = useState(new Map());
   const [winCells, setWinCells] = useState(new Set());
   const [scoredTypes, setScoredTypes] = useState(new Set());
   const [popups, setPopups] = useState([]);
+  const [firedCharms, setFiredCharms] = useState(new Set());
+  const [trayPopups, setTrayPopups] = useState([]); // { id, charmId, text } — floating item-icon popups over the charm tray
+  const [giraRelease, setGiraRelease] = useState(false);
   const [jackpotBanner, setJackpotBanner] = useState(false);
+  // Stable Ditto→random mappings computed once per spin so non-pattern Dittos
+  // don't flicker through different random symbols every 70ms during the reel.
+  const dittoMapRef = useRef(new Map());
   // Upgrade purchases briefly light up the matching row on the Symbols /
   // Patterns boards ("symbol:<id>" / "pattern:<type>" → true) so the player
   // can see exactly what just got better behind the shop modal.
@@ -625,6 +652,7 @@ export default function PokeSlots() {
       scarfFires,
       scarfFired: Object.keys(scarves).length > 0 ? scarves : null,
       luckyEggPending,
+      dragonFangPending: false,
     }));
     runRef.current = {
       ...cur,
@@ -646,20 +674,47 @@ export default function PokeSlots() {
     setStoppedCols(0);
     setWinCells(new Set());
     setScoredTypes(new Set());
+    setFiredCharms(new Set());
+    setTrayPopups([]);
     playSfx("slot-spin.mp3");
-    if (amuletTrigger) addPopup({ x: 50, y: 26, text: `🪙 +1 PULL`, kind: "tickets" });
-    if (spellTrigger) addPopup({ x: 50, y: 26, text: `👻 +${SPELL_TAG_LUCK} LUCK`, kind: "pattern" });
-    if (shockTrigger) addPopup({ x: 50, y: 30, text: `⚡ +${SHOCK_DRIVE_LUCK} LUCK`, kind: "pattern" });
-    if (dragonFangTrigger) addPopup({ x: 50, y: 34, text: "🐉 +10 LUCK", kind: "pattern" });
-    if (scarfLuck > 0) addPopup({ x: 50, y: 34, text: `🧣 +${scarfLuck} LUCK`, kind: "pattern" });
     if (sludgeFed) addPopup({ x: 50, y: 52, text: "🟣 +BASE", kind: "pattern" });
+    // Track which charms fired this pull for the tray highlight + icon popups.
+    const pullFired = new Set();
+    const tray = [];
+    let trayId = 0;
+    const addTrayPopup = (charmId, text) => { pullFired.add(charmId); tray.push({ id: trayId++, charmId, text }); };
+    if (amuletTrigger) addTrayPopup("amulet-coin", "+1 PULL");
+    if (spellTrigger) addTrayPopup("spell-tag", `+${SPELL_TAG_LUCK} LUCK`);
+    if (shockTrigger) addTrayPopup("shock-drive", `+${SHOCK_DRIVE_LUCK} LUCK`);
+    if (dragonFangTrigger) addTrayPopup("dragon-fang", "+10 LUCK");
+    for (const [k, v] of Object.entries(scarves)) addTrayPopup(k, `+${v} LUCK`);
+    setFiredCharms(pullFired);
+    setTrayPopups(tray);
+    later(() => setTrayPopups([]), 1500);
 
     // Blur-cycle uses only symbols the player can actually see at this cycle.
-    const blurSyms = SYMBOLS.filter((s) => s.id !== "giratina" || (runRef.current.cycle || 1) >= GIRATINA_UNLOCK_CYCLE);
+    // Ditto is excluded from the spin animation — it only appears after the
+    // reels stop, via a reveal animation that morphs it into its target symbol.
+    const blurSyms = SYMBOLS.filter((s) => s.id !== "ditto" && (s.id !== "giratina" || (runRef.current.cycle || 1) >= GIRATINA_UNLOCK_CYCLE));
+    // Pre-compute stable random replacements for every Ditto cell so they don't
+    // flicker through a new random symbol on each blur tick.
+    const stableDitto = new Map();
+    for (let i = 0; i < finalGrid.length; i++) {
+      if (finalGrid[i] === "ditto") {
+        stableDitto.set(i, blurSyms[Math.floor(Math.random() * blurSyms.length)].id);
+      }
+    }
+    dittoMapRef.current = stableDitto;
     let stopped = 0;
     const shuffle = setInterval(() => {
-      // Stopped columns already show their final symbols; the rest blur-cycle.
-      setDisplayGrid(finalGrid.map((sym, i) => (i % GRID_COLS < stopped ? sym : blurSyms[Math.floor(Math.random() * blurSyms.length)].id)));
+      // Stopped columns show their final symbols (Ditto masked as a stable
+      // random symbol so it never flickers); the rest blur-cycle.
+      setDisplayGrid(finalGrid.map((sym, i) => {
+        if (i % GRID_COLS < stopped) {
+          return sym === "ditto" ? stableDitto.get(i) : sym;
+        }
+        return blurSyms[Math.floor(Math.random() * blurSyms.length)].id;
+      }));
     }, 70);
 
     for (let c = 1; c <= GRID_COLS; c++) {
@@ -671,8 +726,38 @@ export default function PokeSlots() {
 
     later(() => {
       clearInterval(shuffle);
-      setDisplayGrid(finalGrid);
-      resolvePull(finalGrid, { triggers: triggerCount, scarves });
+
+      // Evaluate once to find which Dittos helped a pattern.
+      const res = evaluateGrid(runRef.current, finalGrid);
+      const dittoMap = new Map();
+      for (const d of res.dittoCells) dittoMap.set(d.cell, d.symbol);
+
+      // Replace ALL Ditto cells in the displayed grid with the stable random
+      // symbols computed at spin start (dittoMapRef). Pattern Dittos will show
+      // a reveal morph to their target; non-pattern Dittos keep the same
+      // random symbol they had during the blur — no visible flash.
+      const display = [...finalGrid];
+      const stableMap = dittoMapRef.current;
+      for (let i = 0; i < display.length; i++) {
+        if (display[i] === "ditto") {
+          display[i] = stableMap.get(i) || "cherry";
+        }
+      }
+      setDisplayGrid(display);
+
+      if (dittoMap.size > 0) {
+        setRevealingDittos(dittoMap);
+        setPhase("ditto-reveal");
+        later(() => {
+          setRevealingDittos(new Map());
+          const revealed = [...display];
+          for (const [cell, sym] of dittoMap) revealed[cell] = sym;
+          setDisplayGrid(revealed);
+          resolvePull(revealed, { triggers: triggerCount, scarves });
+        }, 550);
+      } else {
+        resolvePull(display, { triggers: triggerCount, scarves });
+      }
     }, 420 + (GRID_COLS - 1) * 170 + 260);
   };
 
@@ -791,9 +876,9 @@ export default function PokeSlots() {
       next.stats.totalEarned += res.payout * 3;
       if (res.payout * 4 > next.stats.biggestWin) next.stats.biggestWin = res.payout * 4;
     }
-    // Pokédoll: 3+ patterns in one pull pay out the current deposit interest.
+    // Pokédoll: a +3 pattern in one pull pays out the current deposit interest.
     let pokedollBonus = 0;
-    if (next.charms.includes("pokedoll") && res.scored.length >= 3) {
+    if (next.charms.includes("pokedoll") && res.scored.some((m) => BASE_PATTERN_MULT[m.type] >= 3)) {
       pokedollBonus = depositInterest(cur);
       next.roundEarnings = (next.roundEarnings || 0) + pokedollBonus;
       next.stats.totalEarned += pokedollBonus;
@@ -991,21 +1076,29 @@ export default function PokeSlots() {
       later(() => setJackpotBanner(false), 2200);
       pushMsg(tr("JACKPOT?! ...Enjoy it while it lasts."));
     }
-    if (keystoneTrigger) addPopup({ x: 50, y: 34, text: "🪨 ×2!", kind: "coins" });
-    if (douseTrigger) addPopup({ x: 50, y: 30, text: "💧 ×2!", kind: "coins" });
-    if (spoonTrigger) addPopup({ x: 50, y: 38, text: "🥄 ×4!", kind: "coins" });
-    if (leftoversExtra > 0) addPopup({ x: 50, y: 66, text: `🍱 +${fmt(leftoversExtra)} ₽`, kind: "coins" });
-    if (healPowderTrigger) addPopup({ x: 50, y: 56, text: "💊", kind: "pattern" });
-    if (parcelTrigger) addPopup({ x: 50, y: 62, text: "📦 +BASE", kind: "pattern" });
-    if (metronomeLuck > 0) addPopup({ x: 50, y: 26, text: `🎵 +${metronomeLuck} LUCK`, kind: "pattern" });
-    if (brightPowderTrigger) addPopup({ x: 50, y: 20, text: `✨ +${BRIGHT_POWDER_LUCK} LUCK`, kind: "pattern" });
-    if (choiceScarfTrigger) addPopup({ x: 50, y: 44, text: "🧣 +BASE", kind: "pattern" });
-    if (choiceSpecsTrigger) addPopup({ x: 50, y: 48, text: "🕶️ +BASE", kind: "pattern" });
-    if (adamantGain > 0) addPopup({ x: 50, y: 52, text: `🌿 +${adamantGain} BASE`, kind: "pattern" });
-    if (sassyTrigger) addPopup({ x: 50, y: 56, text: "☘️ ×2 SYMBOLS", kind: "pattern" });
-    if (electricTrigger) addPopup({ x: 50, y: 60, text: "⚡ +BASE PATTERNS", kind: "pattern" });
-    if (psychicTrigger) addPopup({ x: 50, y: 64, text: "🔮 ×2 PATTERNS", kind: "pattern" });
-    if (mistyTrigger) addPopup({ x: 50, y: 68, text: "🌫️ ×2 FOREVER", kind: "pattern" });
+    // ResolvePull tray popups — item-icon popups for charms that fire during scoring.
+    const rpTray = [];
+    let rpId = 100;
+    const addRp = (charmId, text) => rpTray.push({ id: rpId++, charmId, text });
+    if (keystoneTrigger) addRp("odd-keystone", "×2!");
+    if (douseTrigger) addRp("douse-drive", "×2!");
+    if (spoonTrigger) addRp("twisted-spoon", "×4!");
+    if (healPowderTrigger) addRp("heal-powder", "");
+    if (parcelTrigger) addRp("parcel", "+BASE");
+    if (metronomeLuck > 0) addRp("metronome", `+${metronomeLuck} LUCK`);
+    if (brightPowderTrigger) addRp("bright-powder", `+${BRIGHT_POWDER_LUCK} LUCK`);
+    if (choiceScarfTrigger) addRp("choice-scarf", "+BASE");
+    if (choiceSpecsTrigger) addRp("choice-specs", "+BASE");
+    if (adamantGain > 0) addRp("adamant-mint", `+${adamantGain} BASE`);
+    if (sassyTrigger) addRp("sassy-mint", "×2 SYMBOLS");
+    if (electricTrigger) addRp("electric-seed", "+BASE PATTERNS");
+    if (psychicTrigger) addRp("psychic-seed", "×2 PATTERNS");
+    if (mistyTrigger) addRp("misty-seed", "×2 FOREVER");
+    if (pokedollBonus > 0) addRp("pokedoll", `+${fmt(pokedollBonus)} ₽`);
+    if (rpTray.length > 0) {
+      setTrayPopups((prev) => [...prev, ...rpTray]);
+      later(() => setTrayPopups((prev) => prev.filter((p) => !rpTray.some((r) => r.id === p.id))), 1500);
+    }
     const totalPayout =
       res.payout +
       (keystoneTrigger ? res.payout : 0) +
@@ -1307,6 +1400,11 @@ export default function PokeSlots() {
       addPopup({ x: 50, y: 40, text: "🏆", kind: "pattern" });
       pushMsg(tr("Debt cleared! One more charm slot — and a much bigger debt."));
       setOffers(generateShopOffers(next));
+      if (next.cycle >= GIRATINA_UNLOCK_CYCLE && (cur.cycle || 1) < GIRATINA_UNLOCK_CYCLE) {
+        setGiraRelease(true);
+        later(() => setGiraRelease(false), 2600);
+        pushMsg(tr("The Distortion World trembles — Giratina awakens!"));
+      }
       commit(next);
       return;
     }
@@ -1339,6 +1437,11 @@ export default function PokeSlots() {
       if (sludgeFed) addPopup({ x: 50, y: 52, text: "🟣 +BASE", kind: "pattern" });
       pushMsg(tr("The Focus Band shatters! Quota wiped — seven pulls on the house."));
       setOffers(generateShopOffers(next));
+      if (next.cycle >= GIRATINA_UNLOCK_CYCLE && (cur.cycle || 1) < GIRATINA_UNLOCK_CYCLE) {
+        setGiraRelease(true);
+        later(() => setGiraRelease(false), 2600);
+        pushMsg(tr("The Distortion World trembles — Giratina awakens!"));
+      }
       commit(next);
       return;
     }
@@ -1389,6 +1492,11 @@ export default function PokeSlots() {
       next.awaitingChoice = true; // back to the pull picker for the new quota
       setOffers(generateShopOffers(next));
       pushMsg(tr(PHONE_ROUND_MSGS[next.cycle % PHONE_ROUND_MSGS.length]));
+      if (next.cycle >= GIRATINA_UNLOCK_CYCLE && (cur.cycle || 1) < GIRATINA_UNLOCK_CYCLE) {
+        setGiraRelease(true);
+        later(() => setGiraRelease(false), 2600);
+        pushMsg(tr("The Distortion World trembles — Giratina awakens!"));
+      }
     }
     commit(next);
     // A fresh cycle sends the player back to the pull picker; if they spent
@@ -1451,7 +1559,6 @@ export default function PokeSlots() {
   const buyOffer = (offer) => {
     const cur = runRef.current;
     if (phase !== "idle" || cur.tickets < offer.cost) return;
-    playSfx("cash-register-purchase.mp3");
     const next = { ...cur, tickets: cur.tickets - offer.cost };
     if (offer.kind === "charm") {
       // Tray capacity grows with cleared debts and the Poffin Case (charmSlots)
@@ -1459,6 +1566,7 @@ export default function PokeSlots() {
       // no space, so it doesn't count against the capacity.
       const occupying = next.charms.filter((c) => c !== "poffin-case").length;
       if (!CHARMS[offer.id] || occupying >= charmSlots(next)) return;
+      playSfx("cash-register-purchase.mp3");
       next.charms = [...next.charms, offer.id];
       // Poffin Case: +1 charm slot (charmSlots reads it), offered only once.
       if (offer.id === "poffin-case") next.poffinCaseBought = true;
@@ -1471,6 +1579,7 @@ export default function PokeSlots() {
         addPopup({ x: 50, y: 52, text: `🃏 +${cur.rerolls}`, kind: "pattern" });
       }
     } else {
+      playSfx("cash-register-purchase.mp3");
       next.upgrades = { ...next.upgrades };
       if (offer.target === "global") {
         next.upgrades.global = (next.upgrades.global || 0) + 1;
@@ -1779,6 +1888,7 @@ export default function PokeSlots() {
                     won={winCells.has(i)}
                     golden={!spinning && goldenCells.has(i)}
                     chain={!spinning && chainCells.has(i)}
+                    morphTo={revealingDittos.has(i) ? revealingDittos.get(i) : null}
                   />
                 </div>
               ))}
@@ -1911,17 +2021,32 @@ export default function PokeSlots() {
 
           {/* Charms tray */}
           <div className="mt-3 flex items-center gap-2 flex-wrap min-h-9">
-            <span className="text-[10px] uppercase tracking-wide text-slate-500 mr-1">{tr("Charms")}</span>
+            <span className="text-[10px] uppercase tracking-wide text-slate-500 mr-1">{tr("Charms")} ({run.charms.filter((c) => c !== "poffin-case").length}/{charmSlots(run)})</span>
             {run.charms.length === 0 && <span className="text-[11px] text-slate-600">—</span>}
-            {run.charms.map((c) => (
-              <Tooltip key={c}>
-                <TooltipTrigger
-                  render={
-                    <div className="rounded-md border border-slate-700 bg-slate-800/70 px-1.5 py-1 cursor-default">
-                      <CharmIcon charmId={c} className="size-5" />
+            {run.charms.map((c) => {
+              const popups = trayPopups.filter((p) => p.charmId === c);
+              return (
+                <div key={c} className="relative">
+                  {popups.length > 0 && (
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center gap-0.5 animate-tray-float">
+                      {popups.map((p) => (
+                        <div key={p.id} className="flex items-center gap-1 rounded-full bg-slate-900/90 border border-yellow-500/60 px-1.5 py-0.5 shadow-lg shadow-yellow-500/20">
+                          <CharmIcon charmId={c} className="size-3.5" />
+                          {p.text && <span className="text-[10px] font-bold text-yellow-300 whitespace-nowrap">{p.text}</span>}
+                        </div>
+                      ))}
                     </div>
-                  }
-                />
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <div className={`rounded-md border bg-slate-800/70 px-1.5 py-1 cursor-default ${
+                          firedCharms.has(c) ? "border-yellow-400 animate-charm-fire" : "border-slate-700"
+                        }`}>
+                          <CharmIcon charmId={c} className="size-5" />
+                        </div>
+                      }
+                    />
                 <TooltipContent side="bottom" className="max-w-56 flex-col items-stretch gap-0.5">
                   <span className="font-bold">{tr(CHARM_NAME_KEYS[c])}</span>
                   {CHARMS[c].trait === "random" && (() => {
@@ -1938,9 +2063,12 @@ export default function PokeSlots() {
                   })()}
                   <span className="opacity-80">{tr(`${c}-desc`)}</span>
                   {c === "green-scarf" && <span className="text-[11px] text-emerald-400 font-semibold">Luck +{run.greenScarfBonus || 0}</span>}
+                  {c === "point-card" && <span className="text-[11px] text-yellow-300 font-semibold">{tr("Symbols Multiplier")} +{run.rerolls || 0}</span>}
                 </TooltipContent>
               </Tooltip>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -2325,6 +2453,8 @@ export default function PokeSlots() {
 
   function OfferCard({ offer }) {
     const affordable = run.tickets >= offer.cost;
+    const occupying = run.charms.filter((c) => c !== "poffin-case").length;
+    const trayFull = offer.kind === "charm" && offer.id !== "poffin-case" && occupying >= charmSlots(run);
     let icon, name, desc;
     if (offer.kind === "charm") {
       name = tr(CHARM_NAME_KEYS[offer.id]);
@@ -2355,19 +2485,23 @@ export default function PokeSlots() {
         );
       }
     }
+    const disabled = !affordable || trayFull;
     return (
       <button
         onClick={() => buyOffer(offer)}
-        disabled={!affordable}
+        disabled={disabled}
         className={`flex items-start gap-2 rounded-xl border p-3 text-left transition-colors ${
-          affordable
-            ? "border-slate-600 bg-slate-800/70 hover:border-sky-400 hover:bg-sky-500/10"
-            : "border-slate-800 bg-slate-900 opacity-50 cursor-not-allowed"
+          disabled
+            ? "border-slate-800 bg-slate-900 opacity-50 cursor-not-allowed"
+            : "border-slate-600 bg-slate-800/70 hover:border-sky-400 hover:bg-sky-500/10"
         }`}
       >
         <div className="shrink-0 size-10 flex items-center justify-center">{icon}</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold leading-tight">{name}</div>
+          {offer.kind === "charm" && trayFull && (
+            <div className="text-[11px] font-semibold text-red-400">{tr("Tray full")} ({occupying}/{charmSlots(run)})</div>
+          )}
           {offer.kind === "charm" && CHARMS[offer.id].trait === "random" && (() => {
             const pct = CHARMS[offer.id].scarf
               ? Math.round(CHARMS[offer.id].scarf.chance * 100)

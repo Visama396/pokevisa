@@ -2019,6 +2019,10 @@ const ui = {
     en: "Click a charm to sell it", es: "Haz clic en un amuleto para venderlo", fr: "Clique sur un grigri pour le vendre", de: "Klicke einen Glücksbringer an, um ihn zu verkaufen", it: "Clicca un amuleto per venderlo",
     ja: "おまもりをクリックすると売れる", ko: "부적을 클릭하면 판매된다", "zh-hans": "点击护符即可出售", "zh-hant": "點擊護符即可出售",
   },
+  "Tray full": {
+    en: "Tray full", es: "Bandeja llena", fr: "Plateau plein", de: "Tablett voll", it: "Vassoio pieno",
+    ja: "トレイ満杯", ko: "트레이 가득 참", "zh-hans": "托盘已满", "zh-hant": "托盤已滿",
+  },
   "QUOTA DEADLINE!": {
     en: "QUOTA DEADLINE!", es: "¡FECHA LÍMITE DE LA CUOTA!", fr: "DATE LIMITE DE LA QUOTE-PART !", de: "RATE FÄLLIG!", it: "SCADENZA DELLA RATA!",
     ja: "分割払いの期限！", ko: "분할금 기한!", "zh-hans": "配额截止！", "zh-hant": "配額截止！",
@@ -2405,8 +2409,8 @@ const ui = {
   },
   "charm-pokedoll": { en: "Poké Doll" },
   "pokedoll-desc": {
-    en: "When 3+ patterns hit in one pull, earn coins equal to your current interest.", es: "Cuando 3 o más patrones aciertan en una tirada, ganas monedas iguales a tu interés actual.", fr: "Quand 3 motifs ou plus tombent sur un tirage, gagne des pièces égales à tes intérêts actuels.", de: "Treffen bei einem Zug 3 oder mehr Muster, verdienst du Münzen in Höhe deiner aktuellen Zinsen.", it: "Quando 3 o più combinazioni escono in una tirata, guadagni monete pari ai tuoi interessi attuali.",
-    ja: "スピンでパターンが3つ以上成立すると、現在の利息分のコインを得る。", ko: "한 번의 레버에서 패턴이 3개 이상 당첨되면 현재 이자만큼의 코인을 얻는다.", "zh-hans": "一次拉杆命中3个以上牌型时，获得等于当前利息的金币。", "zh-hant": "一次拉桿命中3個以上牌型時，獲得等於當前利息的金幣。",
+    en: "When a +3 Pattern triggers, earn money equal to your current Interest.", es: "Cuando se activa un Patrón +3, ganas dinero igual a tu Interés actual.", fr: "Quand un Motif +3 se déclenche, gagne de l'argent égal à ton Intérêt actuel.", de: "Wenn ein +3-Muster auslöst, verdienst du Geld in Höhe deiner aktuellen Zinsen.", it: "Quando si attiva una Combinazione +3, guadagni denaro pari ai tuoi interessi attuali.",
+    ja: "+3パターンが発動すると、現在の利息分のコインを得る。", ko: "+3 패턴이 발동되면 현재 이자만큼의 코인을 얻는다.", "zh-hans": "+3图案触发时，获得等于当前利息的金币。", "zh-hant": "+3圖案觸發時，獲得等於當前利息的金幣。",
   },
   "charm-cleanse-tag": { en: "Cleanse Tag" },
   "cleanse-tag-desc": {
@@ -2589,8 +2593,8 @@ const ui = {
   },
   "charm-psychic-seed": { en: "Psychic Seed" },
   "psychic-seed-desc": {
-    en: "Whenever a ×5+ pattern lands, double the multiplier of every pattern until round end.", es: "Cuando cae un patrón ×5+, duplica el multiplicador de todos los patrones hasta el final de la ronda.", fr: "Quand un motif ×5+ tombe, double le multiplicateur de tous les motifs jusqu'à la fin de la manche.", de: "Wenn ein ×5+-Muster landet, verdoppelt sich der Multiplikator aller Muster bis zum Rundenende.", it: "Quando cade una combinazione ×5+, raddoppia il moltiplicatore di tutte le combinazioni fino a fine turno.",
-    ja: "×5以上のパターンが成立するたび、ラウンド終了まで全パターンの倍率が2倍になる。", ko: "×5 이상 패턴이 당첨될 때마다 라운드가 끝날 때까지 모든 패턴의 배율이 두 배가 된다.", "zh-hans": "每当打出×5以上的牌型，所有牌型倍率翻倍直到回合结束。", "zh-hant": "每當打出×5以上的牌型，所有牌型倍率加倍直到回合結束。",
+    en: "Whenever a +5 Pattern triggers, double the multiplier of every pattern until round end.", es: "Cuando se activa un Patrón +5, duplica el multiplicador de todos los patrones hasta el final de la ronda.", fr: "Quand un Motif +5 se déclenche, double le multiplicateur de tous les motifs jusqu'à la fin de la manche.", de: "Wenn ein +5-Muster auslöst, verdoppelt sich der Multiplikator aller Muster bis zum Rundenende.", it: "Quando si attiva una Combinazione +5, raddoppia il moltiplicatore di tutte le combinazioni fino a fine turno.",
+    ja: "+5パターンが発動するたび、ラウンド終了まで全パターンの倍率が2倍になる。", ko: "+5 패턴이 발동될 때마다 라운드가 끝날 때까지 모든 패턴의 배율이 두 배가 된다.", "zh-hans": "每当+5图案触发，所有牌型倍率翻倍直到回合结束。", "zh-hant": "每當+5圖案觸發，所有牌型倍率加倍直到回合結束。",
   },
   "charm-misty-seed": { en: "Misty Seed" },
   "misty-seed-desc": {
@@ -2634,8 +2638,8 @@ const ui = {
   },
   "charm-green-scarf": { en: "Green Scarf" },
   "green-scarf-desc": {
-    en: "Bonus of Luck +0. Each +3 Pattern triggered increases the bonus +3 until the end of the Quota.", es: "Bono de Suerte +0. Cada patrón +3 activado aumenta el bono +3 hasta el final de la cuota.", fr: "Bonus de Chance +0. Chaque motif +3 déclenché augmente le bonus de +3 jusqu'à la fin de la quote-part.", de: "Glücks-Bonus +0. Jedes ausgelöste +3-Muster erhöht den Bonus um +3 bis zum Ende der Rate.", it: "Bonus Fortuna +0. Ogni combinazione +3 attivata aumenta il bonus di +3 fino alla fine della rata.",
-    ja: "運ボーナス+0。発動した+3パターン1つにつき、分割払い終了までボーナス+3。", ko: "행운 보너스 +0. 발동한 +3 패턴 1개당 분할금 종료까지 보너스 +3.", "zh-hans": "幸运加成+0。每触发一个+3牌型，加成+3直到配额结束。", "zh-hant": "幸運加成+0。每觸發一個+3牌型，加成+3直到配額結束。",
+    en: "Grants Luck equal to the bonus. When it fires, each +3 Pattern scored increases the bonus +3 until the end of the Quota.", es: "Otorga Suerte igual al bono. Cuando se activa, cada Patrón +3 anotado aumenta el bono +3 hasta el final de la cuota.", fr: "Accorde une Chance égale au bonus. Quand il se déclenche, chaque Motif +3 marqué augmente le bonus de +3 jusqu'à la fin de la quote-part.", de: "Verleiht Glück gleich dem Bonus. Wenn er auslöst, erhöht jedes erzielte +3-Muster den Bonus um +3 bis zum Ende der Rate.", it: "Concede Fortuna pari al bonus. Quando si attiva, ogni Combinazione +3 segnata aumenta il bonus di +3 fino a fine rata.",
+    ja: "ボーナス分の運を付与。発動時、成立した+3パターン1つにつき分割払い終了までボーナス+3。", ko: "보너스만큼 행운을 부여. 발동 시 당첨된 +3 패턴 1개당 분할금 종료까지 보너스 +3.", "zh-hans": "赋予等同于加成的幸运。触发时，每命中一个+3图案，加成+3直到配额结束。", "zh-hant": "賦予等同於加成的幸運。觸發時，每命中一個+3圖案，加成+3直到配額結束。",
   },
   "charm-yellow-scarf": { en: "Yellow Scarf" },
   "yellow-scarf-desc": {

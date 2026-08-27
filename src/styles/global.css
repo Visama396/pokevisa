@@ -195,3 +195,50 @@
 .animate-jackpot {
   animation: jackpot-pop 0.9s cubic-bezier(0.22, 1.2, 0.36, 1) both;
 }
+
+/* PokéSlots Ditto reveal: a Ditto cell that helped form a pattern flashes
+   briefly, then morphs into the symbol it substituted. */
+@keyframes ditto-morph {
+  0%   { filter: hue-rotate(0deg) brightness(1); }
+  35%  { filter: hue-rotate(260deg) brightness(1.6); }
+  70%  { filter: hue-rotate(180deg) brightness(1.3); transform: scale(1.1); }
+  100% { filter: hue-rotate(0deg) brightness(1); transform: scale(1); }
+}
+.animate-ditto-morph {
+  animation: ditto-morph 0.5s ease-out forwards;
+}
+
+/* PokéSlots charm trigger: a brief glow ring + bounce on a charm icon
+   when that charm fires during a pull. */
+@keyframes charm-fire {
+  0%   { box-shadow: 0 0 0 0 rgba(250,204,21,0.8); transform: scale(1); }
+  30%  { box-shadow: 0 0 12px 4px rgba(250,204,21,0.6); transform: scale(1.2); }
+  100% { box-shadow: 0 0 0 0 rgba(250,204,21,0); transform: scale(1); }
+}
+.animate-charm-fire {
+  animation: charm-fire 0.8s ease-out forwards;
+}
+
+/* PokéSlots tray popup: item-icon floats up from the triggered charm and fades. */
+@keyframes tray-float {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  75%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+}
+.animate-tray-float {
+  animation: tray-float 1.4s ease-out forwards;
+}
+
+/* PokéSlots Giratina release: a dark pulse + shake when Quota 666 unlocks
+   the Distortion World. */
+@keyframes gira-release {
+  0%   { opacity: 0; transform: scale(0.6); filter: brightness(0.4); }
+  20%  { opacity: 1; transform: scale(1.15) rotate(-2deg); filter: brightness(1.4) hue-rotate(270deg); }
+  40%  { transform: scale(0.95) rotate(1deg); filter: brightness(0.8) hue-rotate(180deg); }
+  60%  { transform: scale(1.05) rotate(-1deg); filter: brightness(1.2) hue-rotate(270deg); }
+  100% { opacity: 0; transform: scale(1); filter: brightness(1) hue-rotate(0deg); }
+}
+.animate-gira-release {
+  animation: gira-release 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
