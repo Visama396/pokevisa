@@ -2413,9 +2413,10 @@ const ui = {
     ja: "+3パターンが発動すると、現在の利息分のコインを得る。", ko: "+3 패턴이 발동되면 현재 이자만큼의 코인을 얻는다.", "zh-hans": "+3图案触发时，获得等于当前利息的金币。", "zh-hant": "+3圖案觸發時，獲得等於當前利息的金幣。",
   },
   "charm-cleanse-tag": { en: "Cleanse Tag" },
+  "charm-trait-cleanse-tag": { en: "Symbols Multiplier +1", es: "Multiplicador de Símbolos +1", fr: "Multiplicateur de Symboles +1", de: "Symbol-Multiplikator +1", it: "Moltiplicatore Simboli +1", ja: "シンボル倍率+1", ko: "심볼 배율 +1", "zh-hans": "图案倍率+1", "zh-hant": "圖案倍率+1" },
   "cleanse-tag-desc": {
-    en: "All symbols are worth +1, and +1 more whenever 5+ patterns hit in one pull.", es: "Todos los símbolos valen +1, y +1 más cuando 5 o más patrones aciertan en una tirada.", fr: "Tous les symboles valent +1, et encore +1 quand 5 motifs ou plus tombent sur un tirage.", de: "Alle Symbole sind +1 wert, und nochmals +1, wenn bei einem Zug 5 oder mehr Muster treffen.", it: "Tutti i simboli valgono +1, e altri +1 quando 5 o più combinazioni escono in una tirata.",
-    ja: "すべてのシンボルの価値+1。さらにスピンで5つ以上成立するたびに+1。", ko: "모든 심볼의 가치 +1. 한 번의 레버에서 패턴이 5개 이상 당첨될 때마다 추가로 +1.", "zh-hans": "所有图案价值+1，且每当一次拉杆命中5个以上牌型时再+1。", "zh-hant": "所有圖案價值+1，且每當一次拉桿命中5個以上牌型時再+1。",
+    en: "Symbols Multiplier adds 1 whenever 5 or more Patterns trigger in a pull.", es: "El Multiplicador de Símbolos suma 1 cuando 5 o más Patrones se activan en una tirada.", fr: "Le Multiplicateur de Symboles ajoute 1 chaque fois que 5 Patterns ou plus se déclenchent dans un tirage.", de: "Symbol-Multiplikator erhöht sich um 1, wenn bei einem Zug 5 oder mehr Muster auslösen.", it: "Il Moltiplicatore Simboli aggiunge 1 ogni volta che 5 o più Pattern si attivano in una tirata.",
+    ja: "スピンで5つ以上のパターンが成立するたびにシンボル倍率が+1される。", ko: "한 번의 레버에서 패턴이 5개 이상 발동할 때마다 심볼 배율이 +1된다.", "zh-hans": "每当一次拉杆触发5个以上图案时，图案倍率+1。", "zh-hant": "每當一次拉桿觸發5個以上圖案時，圖案倍率+1。",
   },
   "charm-spell-tag": { en: "Spell Tag" },
   "spell-tag-desc": {
@@ -2523,8 +2524,8 @@ const ui = {
   },
   "charm-deep-sea-tooth": { en: "Deep Sea Tooth" },
   "deep-sea-tooth-desc": {
-    en: "If no pattern with 5+ symbols has triggered in the last 3 pulls, the next pull lands an ABOVE or BELOW.", es: "Si ningún patrón de 5+ símbolos ha acertado en las últimas 3 tiradas, la siguiente logra un ABOVE o BELOW.", fr: "Si aucun motif de 5 symboles ou plus n'est tombé sur les 3 derniers tirages, le suivant place un ABOVE ou BELOW.", de: "Wenn in den letzten 3 Zügen kein Muster mit 5+ Symbolen auslöste, landet der nächste ein ABOVE oder BELOW.", it: "Se nessuna combinazione con 5+ simboli è uscita nelle ultime 3 tirate, la prossima ottiene un ABOVE o BELOW.",
-    ja: "直近3回のレバーで5シンボル以上のパターンが成立しなかった場合、次のレバーでABOVEかBELOWが成立する。", ko: "최근 3회 레버에서 5개 이상 심볼 패턴이 없었다면 다음 레버에서 ABOVE 또는 BELOW가 완성된다.", "zh-hans": "若最近3次拉杆未触发5个以上图案的牌型，下一次拉杆将达成ABOVE或BELOW。", "zh-hant": "若最近3次拉桿未觸發5個以上圖案的牌型，下一次拉桿將達成ABOVE或BELOW。",
+    en: "If no +5 Pattern triggered in the last 3 pulls, the next pull triggers an ABOVE or BELOW.", es: "Si ningún Patrón +5 se activó en las últimas 3 tiradas, la siguiente logra un ABOVE o BELOW.", fr: "Si aucun +5 Pattern ne s'est déclenché sur les 3 derniers tirages, le suivant place un ABOVE ou BELOW.", de: "Wenn in den letzten 3 Zügen kein +5 Pattern auslöste, landet der nächste ein ABOVE oder BELOW.", it: "Se nessun +5 Pattern si è attivato nelle ultime 3 tirate, la prossima ottiene un ABOVE o BELOW.",
+    ja: "直近3回のレバーで+5パターンが発動しなかった場合、次のレバーでABOVEかBELOWが発動する。", ko: "최근 3회 레버에서 +5 패턴이 발동하지 않았다면 다음 레버에서 ABOVE 또는 BELOW가 발동한다.", "zh-hans": "若最近3次拉杆未触发+5图案，下一次拉杆将达成ABOVE或BELOW。", "zh-hant": "若最近3次拉桿未觸發+5圖案，下一次拉桿將達成ABOVE或BELOW。",
   },
   "charm-point-card": { en: "Point Card" },
   "point-card-desc": {

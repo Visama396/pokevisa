@@ -1601,6 +1601,9 @@ export default function PokeSlots() {
         next.upgrades = { ...next.upgrades, global: (next.upgrades.global || 0) + cur.rerolls };
         addPopup({ x: 50, y: 52, text: `🃏 +${cur.rerolls}`, kind: "pattern" });
       }
+      // Deep Sea Tooth: reset drought counter so it doesn't fire from
+      // pre-purchase pulls.
+      if (offer.id === "deep-sea-tooth") next.bigDrought = 0;
     } else {
       playSfx("cash-register-purchase.mp3");
       next.upgrades = { ...next.upgrades };
@@ -2084,6 +2087,7 @@ export default function PokeSlots() {
                             : null;
                     return <span className="font-semibold text-fuchsia-400">{tr("Triggers Randomly")} ({pct}%)</span>;
                   })()}
+                  {CHARMS[c].traitLabel && <span className="font-semibold text-sky-400">{tr(`charm-trait-${c}`)}</span>}
                   <span className="opacity-80">{tr(`${c}-desc`)}</span>
                   {c === "green-scarf" && run.greenScarfBonus > 0 && <span className="text-[11px] text-emerald-400 font-semibold">Luck +{run.greenScarfBonus}</span>}
                   {c === "point-card" && <span className="text-[11px] text-yellow-300 font-semibold">{tr("Symbols Multiplier")} +{run.rerolls || 0}</span>}
@@ -2540,6 +2544,7 @@ export default function PokeSlots() {
                     : null;
             return <div className="text-[11px] font-semibold text-fuchsia-400">{tr("Triggers Randomly")} ({pct}%)</div>;
           })()}
+          {offer.kind === "charm" && CHARMS[offer.id].traitLabel && <div className="text-[11px] font-semibold text-sky-400">{tr(`charm-trait-${offer.id}`)}</div>}
           <div className="text-[11px] text-slate-400 leading-snug">{desc}</div>
         </div>
         <div className={`shrink-0 text-sm font-black ${affordable ? "text-sky-300" : "text-slate-600"}`}>{offer.cost}🎫</div>

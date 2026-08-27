@@ -525,6 +525,7 @@ export const CHARMS = {
   "cleanse-tag": {
     cost: 3, file: "cleanse-tag.png", emoji: "🏷️",
     cleanseTag: true, // every symbol is worth +1; +1 more per 5-pattern pull
+    traitLabel: "Symbols Multiplier +1",
   },
   "spell-tag": {
     cost: 3, file: "spell-tag.png", emoji: "👻",
@@ -1167,7 +1168,7 @@ function pickRandom(arr, n) {
 
 // Shop offers are charms only (pattern/global/symbol upgrades were removed).
 // Giratina-related charms only appear in the shop after Giratina is unlocked.
-const GIRATINA_CHARMS = ["dragon-fang", "dragon-skull", "dark-stone", "god-stone"];
+const GIRATINA_CHARMS = ["dragon-fang", "dragon-skull", "dark-stone", "god-stone", "red-card", "comet-shard"];
 
 export function generateShopOffers(state) {
   // The Poffin Case never shows up again once bought (even if sold).
