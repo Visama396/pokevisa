@@ -62,9 +62,8 @@ import {
   CHOICE_STREAK,
   ADAMANT_MINT_FREE_PATTERNS,
   SASSY_MINT_PATTERNS,
-  ELECTRIC_SEED_MIN_MULT,
-  PSYCHIC_SEED_MIN_MULT,
-  GREEN_SCARF_PATTERN_MULT,
+  ELECTRIC_SEED_MIN_CELLS,
+  PSYCHIC_SEED_MIN_CELLS,
   GREEN_SCARF_STEP,
   YELLOW_SCARF_STEP,
   LEFTOVERS_ROUNDS,
@@ -552,11 +551,11 @@ export default function PokeSlots() {
     const shockTrigger = driveHit && cur.charms.includes("shock-drive");
     if (shockTrigger) triggerCount += 1;
 
-    // Contest scarves ("Triggers Randomly", doubled by Lagging Tail): Luck
-    // for THIS pull. Pink grows with this quota's rerolls, Green with its
-    // stored bonus (fed by +3 patterns when it fires), Yellow with the rounds
-    // skipped on the previous quota. Red/Blue wear out after N activations
-    // and discard themselves (feeding Black Sludge).
+    // Contest scarves ("Triggers Randomly", doubled by Lagging Tail):
+    // Red/Blue give fixed Luck when they fire (chance-based) and wear out
+    // after N activations (feeding Black Sludge).  Green's bonus Luck is
+    // always applied; its 10% trigger only grows the pool (+3 per +3 pattern
+    // scored on the triggered pull).
     const scarves = {};
     const scarfFires = { ...(cur.scarfFires || {}) };
     for (const c of cur.charms) {
@@ -564,7 +563,6 @@ export default function PokeSlots() {
       if (!cfg || Math.random() >= randomTriggerChance(cur, cfg.chance)) continue;
       let luck = cfg.luck;
       if (cfg.source === "rerolls") luck += (cur.rerollsThisCycle || 0) * cfg.step;
-      if (cfg.source === "patterns") luck += cur.greenScarfBonus || 0;
       if (cfg.source === "skipped") luck += cur.yellowScarfBonus || 0;
       scarves[c] = luck;
       triggerCount += 1;
@@ -582,12 +580,16 @@ export default function PokeSlots() {
     const dragonFangTrigger = cur.dragonFangPending && cur.charms.includes("dragon-fang");
     if (dragonFangTrigger) triggerCount += 1;
 
+    // Green Scarf bonus Luck is always applied regardless of the 10% trigger.
+    const greenScarfLuck = cur.charms.includes("green-scarf") ? (cur.greenScarfBonus || 0) : 0;
+
     const luckGain =
       (cur.luck || 0) +
       (amuletTrigger ? AMULET_COIN_LUCK : 0) +
       (spellTrigger ? SPELL_TAG_LUCK : 0) +
       (shockTrigger ? SHOCK_DRIVE_LUCK : 0) +
       scarfLuck +
+      greenScarfLuck +
       (dragonFangTrigger ? 10 : 0);
 
     // rollGrid reads luck from its state argument; the stored run state keeps
@@ -694,7 +696,10 @@ export default function PokeSlots() {
     if (spellTrigger) addTrayPopup("spell-tag", `+${SPELL_TAG_LUCK} LUCK`);
     if (shockTrigger) addTrayPopup("shock-drive", `+${SHOCK_DRIVE_LUCK} LUCK`);
     if (dragonFangTrigger) addTrayPopup("dragon-fang", "+10 LUCK");
-    for (const [k, v] of Object.entries(scarves)) addTrayPopup(k, `+${v} LUCK`);
+    for (const [k, v] of Object.entries(scarves)) {
+      if (k === "green-scarf") continue; // green-scarf Luck is always applied
+      addTrayPopup(k, `+${v} LUCK`);
+    }
     setFiredCharms(pullFired);
     setTrayPopups(tray);
     later(() => setTrayPopups([]), 1500);
@@ -885,7 +890,7 @@ export default function PokeSlots() {
     }
     // Pokédoll: a +3 pattern in one pull pays out the current deposit interest.
     let pokedollBonus = 0;
-    if (next.charms.includes("pokedoll") && res.scored.some((m) => BASE_PATTERN_MULT[m.type] >= 3)) {
+    if (next.charms.includes("pokedoll") && res.scored.some((m) => m.cells.length >= 3)) {
       pokedollBonus = depositInterest(cur);
       next.roundEarnings = (next.roundEarnings || 0) + pokedollBonus;
       next.stats.totalEarned += pokedollBonus;
@@ -1007,12 +1012,13 @@ export default function PokeSlots() {
       next.sassyDoubles = (cur.sassyDoubles || 0) + 1;
     }
     // Terrain seeds: Electric (+base mult to all patterns, round-scoped) on a
-    // x4+ pattern, Psychic (double all patterns, round-scoped) on a x5+,
-    // Misty (double all patterns, PERMANENT) when EYE scores alone.
+    // +4 pattern (4+ cells), Psychic (double all patterns, round-scoped) on a
+    // +5 pattern (5+ cells), Misty (double all patterns, PERMANENT) when EYE
+    // scores alone.
     let electricTrigger = false;
     if (
       next.charms.includes("electric-seed") &&
-      res.scored.some((m) => BASE_PATTERN_MULT[m.type] >= ELECTRIC_SEED_MIN_MULT)
+      res.scored.some((m) => m.cells.length >= ELECTRIC_SEED_MIN_CELLS)
     ) {
       electricTrigger = true;
       next.electricBoost = (cur.electricBoost || 0) + 1;
@@ -1020,7 +1026,7 @@ export default function PokeSlots() {
     let psychicTrigger = false;
     if (
       next.charms.includes("psychic-seed") &&
-      res.scored.some((m) => BASE_PATTERN_MULT[m.type] >= PSYCHIC_SEED_MIN_MULT)
+      res.scored.some((m) => m.cells.length >= PSYCHIC_SEED_MIN_CELLS)
     ) {
       psychicTrigger = true;
       next.psychicDoubles = (cur.psychicDoubles || 0) + 1;
@@ -1065,10 +1071,10 @@ export default function PokeSlots() {
       next.brightPowderFired = true;
       next.luck = (next.luck || 0) + BRIGHT_POWDER_LUCK;
     }
-    // Green Scarf: each x3+ pattern on the pull where it fired feeds its
+    // Green Scarf: each +3 pattern (3+ cells) on the pull where it fired feeds its
     // quota-scoped Luck bonus (+3 each).
     if (pullInfo.scarves && "green-scarf" in pullInfo.scarves) {
-      const plus3 = res.scored.filter((m) => BASE_PATTERN_MULT[m.type] >= GREEN_SCARF_PATTERN_MULT).length;
+      const plus3 = res.scored.filter((m) => m.cells.length >= 3).length;
       if (plus3 > 0) next.greenScarfBonus = (cur.greenScarfBonus || 0) + plus3 * GREEN_SCARF_STEP;
     }
 
@@ -2079,7 +2085,7 @@ export default function PokeSlots() {
                     return <span className="font-semibold text-fuchsia-400">{tr("Triggers Randomly")} ({pct}%)</span>;
                   })()}
                   <span className="opacity-80">{tr(`${c}-desc`)}</span>
-                  {c === "green-scarf" && <span className="text-[11px] text-emerald-400 font-semibold">Luck +{run.greenScarfBonus || 0}</span>}
+                  {c === "green-scarf" && run.greenScarfBonus > 0 && <span className="text-[11px] text-emerald-400 font-semibold">Luck +{run.greenScarfBonus}</span>}
                   {c === "point-card" && <span className="text-[11px] text-yellow-300 font-semibold">{tr("Symbols Multiplier")} +{run.rerolls || 0}</span>}
                   {c === "leftovers" && <span className="text-[11px] text-orange-300 font-semibold">{LEFTOVERS_ROUNDS - (run.leftoversRounds || 0)} {tr("rounds left")}</span>}
                   {c === "burn-drive" && <span className="text-[11px] text-orange-400 font-semibold">{DRIVE_EVERY_PULLS - ((run.stats?.pullsUsed || 0) % DRIVE_EVERY_PULLS)} {tr("pulls left")}</span>}

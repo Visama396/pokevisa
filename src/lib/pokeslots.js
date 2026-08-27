@@ -438,10 +438,10 @@ export const BOLD_MINT_TICKETS = 5;
 export const ADAMANT_MINT_FREE_PATTERNS = 2;
 // Sassy Mint: N+ patterns in one pull double every symbol until round end.
 export const SASSY_MINT_PATTERNS = 5;
-// Electric Seed: a scored pattern with base mult >= 4 feeds a round-scoped
-// +base-mult stack on every pattern; Psychic Seed needs >= 5 and doubles.
-export const ELECTRIC_SEED_MIN_MULT = 4;
-export const PSYCHIC_SEED_MIN_MULT = 5;
+// Electric Seed: a scored pattern with 4+ cells feeds a round-scoped
+// +base-mult stack on every pattern; Psychic Seed needs 5+ cells and doubles.
+export const ELECTRIC_SEED_MIN_CELLS = 4;
+export const PSYCHIC_SEED_MIN_CELLS = 5;
 // Green Scarf feeds +STEP on every pattern with base mult >= MIN it sees
 // while firing; Pink grows +STEP per shop reroll of the current quota;
 // Yellow starts each quota at STEP x rounds skipped on the previous quota.
