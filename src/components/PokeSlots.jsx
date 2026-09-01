@@ -1352,7 +1352,11 @@ export default function PokeSlots() {
   const makePayment = (amount, { deadline } = {}) => {
     const cur = runRef.current;
     const quota = currentQuota(cur);
-    const paid = Math.max(0, Math.min(amount, cur.coins, cur.debt));
+    // Deposit is capped by the coins held, never by the remaining lifetime
+    // debt: quotas outgrow the START_DEBT floor (cycle 7 = 66666 > 50000), so
+    // the debt can hit 0 mid-cycle while quota is still owed — the payment
+    // must still clear it.
+    const paid = Math.max(0, Math.min(amount, cur.coins));
     // Payments accumulate toward the CURRENT quota (quotaPaid): several small
     // deposits clear a quota exactly like one big payment. They also grow the
     // lifetime deposit total (deposited), which never resets — it is the base
@@ -1373,7 +1377,7 @@ export default function PokeSlots() {
       endRun(false);
       return;
     }
-    let debt = cur.debt - paid;
+    let debt = Math.max(0, cur.debt - paid);
     // A save zeroes the wallet instead of subtracting the payment.
     let next = { ...cur, coins: focusSave ? 0 : cur.coins - paid, debt, charms: draft.charms, permLevels: draft.permLevels, quotaPaid, deposited };
 

@@ -404,16 +404,20 @@ export function quotaClearBonus(state) {
 //     priciest mode that still leaves some coins in hand (7-pull if it
 //     fits strictly, else 3-pull, else nothing to reserve). Depositing
 //     your last coin would lock you out of spinning until the deadline.
+// The ceiling is NOT clamped by the lifetime debt: quotas outgrow the
+// START_DEBT floor (cycle 7 = 66666 > 50000), so a player can run their
+// whole debt down to 0 mid-cycle while still owing quota — deposits must
+// keep working to finish it.
 export function atmMaxDeposit(state) {
   const coins = state.coins;
   const remaining = Math.max(0, currentQuota(state) - (state.quotaPaid || 0));
-  if (coins >= remaining) return Math.min(remaining, state.debt);
+  if (coins >= remaining) return remaining;
   const costs = Object.keys(ROUND_MODES)
     .map(Number)
     .map((mode) => roundCost(state, mode))
     .sort((a, b) => b - a);
   const reserve = costs.find((cost) => cost < coins) || 0;
-  return Math.min(coins - reserve, state.debt, remaining);
+  return Math.min(coins - reserve, remaining);
 }
 
 // ---------------------------------------------------------------------------
