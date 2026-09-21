@@ -10,5 +10,7 @@ export function randomEntryNumber(dateStr) {
     hash = Math.imul(hash, 0x01000193);
   }
 
-  return hash % 1025;
+  // Math.imul keeps a signed 32-bit hash that runs negative for some dates,
+  // so return a non-negative index (and stay in range 0..1024).
+  return Math.abs(hash) % 1025;
 }
