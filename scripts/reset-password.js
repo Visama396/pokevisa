@@ -10,15 +10,6 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + "pokevisa_salt");
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 async function main() {
   const username = process.argv[2]?.trim().toLowerCase();
   const newPassword = process.argv[3];
@@ -35,7 +26,7 @@ async function main() {
 
   const { data: account, error: lookupError } = await supabase
     .from("accounts")
-    .select("id, username, display_name")
+    .select("id, username, display_name, auth_id")
     .eq("username", username)
     .maybeSingle();
 
@@ -49,12 +40,16 @@ async function main() {
     process.exit(1);
   }
 
-  const passwordHash = await hashPassword(newPassword);
+  if (!account.auth_id) {
+    console.error(`Account "${username}" is not linked to Supabase Auth`);
+    process.exit(1);
+  }
 
-  const { error: updateError } = await supabase
-    .from("accounts")
-    .update({ password_hash: passwordHash })
-    .eq("id", account.id);
+  // Passwords live in Supabase Auth now (accounts.password_hash is gone).
+  const { error: updateError } = await supabase.auth.admin.updateUserById(
+    account.auth_id,
+    { password: newPassword },
+  );
 
   if (updateError) {
     console.error("Failed to update password:", updateError.message);

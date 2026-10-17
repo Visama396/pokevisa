@@ -1,12 +1,35 @@
 import { supabase } from "./supabase";
 
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + "pokevisa_salt");
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+// Username is used as a fake email so Supabase Auth works without requiring a
+// real email address (same trick as viplay/laregion).
+const fakeEmail = (username) => `${username}@app.local`;
+
+// The app keys everything on accounts.id, so we derive it from the verified
+// auth.uid() instead of trusting a client-stored account object.
+export async function getCurrentAccount() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("accounts")
+    .select("id, username, display_name")
+    .eq("auth_id", user.id)
+    .maybeSingle();
+
+  return data || null;
+}
+
+// Ensure the accounts row for the authenticated auth.uid() exists and is
+// linked (creates it on first register/login).
+async function linkAccount(username, displayName) {
+  const { data, error } = await supabase.rpc("ensure_account_link", {
+    p_username: username,
+    p_display_name: displayName,
+  });
+  if (error || !data) return null;
+  return { id: data.id, username: data.username, display_name: data.display_name };
 }
 
 export async function register(username, password, displayName) {
@@ -31,37 +54,56 @@ export async function register(username, password, displayName) {
     return { error: "Username already taken" };
   }
 
-  const passwordHash = await hashPassword(password);
-  const { data: account, error } = await supabase
-    .from("accounts")
-    .insert({
-      username: cleanName,
-      password_hash: passwordHash,
-      display_name: displayName?.trim() || cleanName,
-    })
-    .select("id, username, display_name")
-    .single();
+  const { data, error } = await supabase.auth.signUp({
+    email: fakeEmail(cleanName),
+    password,
+    options: {
+      data: { username: cleanName, display_name: displayName?.trim() || cleanName },
+    },
+  });
 
   if (error) return { error: error.message };
+  if (!data.user) return { error: "Could not create account" };
 
-  return { account };
+  const account = await linkAccount(cleanName, displayName?.trim() || cleanName);
+  return account ? { account } : { error: "Could not create profile" };
+}
+
+// Supabase hides details behind generic messages, so map the known ones to
+// actionable text (tell "wrong password" apart from "email not confirmed").
+function friendlyAuthError(message) {
+  if (!message) return "Invalid username or password";
+  if (/email not confirmed/i.test(message)) {
+    return "Account email not confirmed. Supabase Auth requires confirmation for this project.";
+  }
+  if (/invalid login credentials/i.test(message)) {
+    return "Invalid username or password";
+  }
+  return message;
 }
 
 export async function login(username, password) {
   const cleanName = username.trim().toLowerCase();
-  const passwordHash = await hashPassword(password);
 
-  const { data: account, error } = await supabase
-    .from("accounts")
-    .select("id, username, display_name")
-    .eq("username", cleanName)
-    .eq("password_hash", passwordHash)
-    .maybeSingle();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: fakeEmail(cleanName),
+    password,
+  });
 
-  if (error) return { error: error.message };
-  if (!account) return { error: "Invalid username or password" };
+  if (error || !data.user) return { error: friendlyAuthError(error?.message) };
 
-  return { account };
+  // Preserve the stored display name: ensure_account_link overwrites
+  // display_name when p_display_name is non-empty, so only link (which passes
+  // the username as fallback) when no accounts row exists yet.
+  const existing = await getCurrentAccount();
+  if (existing) return { account: existing };
+
+  const account = await linkAccount(cleanName, cleanName);
+  return account ? { account } : { error: "Could not load profile" };
+}
+
+export async function logout() {
+  await supabase.auth.signOut();
 }
 
 export async function getProfile(accountId) {
@@ -136,18 +178,10 @@ export async function saveDungeonProgress(accountId, dungeonData) {
   return error;
 }
 
-export async function changePassword(accountId, currentPassword, newPassword) {
-  const currentHash = await hashPassword(currentPassword);
-  const newHash = await hashPassword(newPassword);
-
-  const { data, error } = await supabase.rpc("change_password", {
-    p_account_id: accountId,
-    p_current_password_hash: currentHash,
-    p_new_password_hash: newHash,
-  });
+export async function changePassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
 
   if (error) return { error: error.message };
-  if (!data) return { error: "Current password is incorrect" };
 
   return { success: true };
 }

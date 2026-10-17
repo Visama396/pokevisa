@@ -327,10 +327,7 @@ export default function DungeonLobby({ accountId, accountName, team, onTeamUpdat
       </div>
 
       {showChangePassword && (
-        <ChangePasswordDialog
-          accountId={accountId}
-          onClose={() => setShowChangePassword(false)}
-        />
+        <ChangePasswordDialog onClose={() => setShowChangePassword(false)} />
       )}
     </div>
   );

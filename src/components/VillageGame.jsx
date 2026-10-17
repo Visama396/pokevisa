@@ -2804,7 +2804,7 @@ export default function VillageGame({
       )}
 
       {activeNPC && activeNPC.id === "password" && (
-        <ChangePasswordDialog accountId={accountId} onClose={closeNPC} />
+        <ChangePasswordDialog onClose={closeNPC} />
       )}
 
       {activeNPC && activeNPC.id === "adventure" && (

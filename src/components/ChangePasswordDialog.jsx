@@ -3,8 +3,7 @@ import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { changePassword } from "../lib/auth";
 
-export default function ChangePasswordDialog({ accountId, onClose }) {
-  const [currentPassword, setCurrentPassword] = useState("");
+export default function ChangePasswordDialog({ onClose }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -29,7 +28,7 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
     setLoading(true);
 
     try {
-      const result = await changePassword(accountId, currentPassword, newPassword);
+      const result = await changePassword(newPassword);
       if (result.error) {
         setError(result.error);
       } else {
@@ -64,17 +63,6 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
         <h2 className="text-lg font-semibold text-slate-200">{t("Change Password", language)}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="text-xs text-slate-400 block mb-1">{t("Current Password", language)}</label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 py-2 px-4 text-sm text-slate-200 placeholder-slate-500 outline-none transition-colors focus:border-slate-500"
-            />
-          </div>
-
           <div>
             <label className="text-xs text-slate-400 block mb-1">{t("New Password", language)}</label>
             <input
@@ -111,7 +99,7 @@ export default function ChangePasswordDialog({ accountId, onClose }) {
             </button>
             <button
               type="submit"
-              disabled={loading || !currentPassword || !newPassword || !confirmPassword}
+              disabled={loading || !newPassword || !confirmPassword}
               className="flex-1 rounded-xl bg-yellow-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-yellow-500 transition-colors disabled:opacity-50"
             >
               {loading ? t("Saving...", language) : t("Save", language)}

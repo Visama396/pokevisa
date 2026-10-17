@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
-import { getSlotsProgress, saveSlotsProgress } from "../lib/auth";
+import { getSlotsProgress, saveSlotsProgress, getCurrentAccount, logout } from "../lib/auth";
 import HomeButton from "./HomeButton";
 import LanguageSelector from "./LanguageSelector";
 import AuthScreen from "./AuthScreen";
@@ -408,10 +408,10 @@ export default function PokeSlots() {
   };
 
   // ------------------------------------------------------------------
-  // Cloud saves. Logged-in accounts (same "pokevisa_account" session the
-  // Dungeon flow uses) get their run persisted to pokeslots_progress so the
-  // run resumes after closing the tab; guests play unsaved. One row per
-  // account: `state` = live run JSON (null between runs), `records` = bests.
+  // Cloud saves. Logged-in accounts (same Supabase session the Dungeon flow
+  // uses) get their run persisted to pokeslots_progress so the run resumes
+  // after closing the tab; guests play unsaved. One row per account: `state` =
+  // live run JSON (null between runs), `records` = bests.
   // ------------------------------------------------------------------
   const accountIdRef = useRef(null);
   const [accountId, setAccountId] = useState(null);
@@ -462,26 +462,29 @@ export default function PokeSlots() {
   }, []);
 
   useEffect(() => {
-    let acc = null;
-    try {
-      acc = JSON.parse(localStorage.getItem("pokevisa_account"));
-    } catch {}
-    if (!acc?.id) {
-      setReady(true);
-      return;
-    }
-    accountIdRef.current = acc.id;
-    setAccountId(acc.id);
-    setAccountName(acc.display_name);
-    loadProgress(acc.id);
+    let cancelled = false;
+    (async () => {
+      let acc = null;
+      try {
+        acc = await getCurrentAccount();
+      } catch {}
+      if (cancelled || !acc?.id) {
+        setReady(true);
+        return;
+      }
+      accountIdRef.current = acc.id;
+      setAccountId(acc.id);
+      setAccountName(acc.display_name);
+      loadProgress(acc.id);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadProgress]);
 
-  // Login from the header: store the session under the same localStorage key
-  // the Dungeon flow uses, then hydrate the account's saved run.
+  // Login from the header: supabase-js persists the session itself, so we only
+  // hydrate the account's saved run here.
   const handleAuth = (acc) => {
-    try {
-      localStorage.setItem("pokevisa_account", JSON.stringify(acc));
-    } catch {}
     accountIdRef.current = acc.id;
     setAccountId(acc.id);
     setAccountName(acc.display_name);
@@ -491,10 +494,8 @@ export default function PokeSlots() {
 
   // Logout: the cloud copy stays on the account; the local session continues
   // as a fresh guest run that isn't saved.
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem("pokevisa_account");
-    } catch {}
+  const handleLogout = async () => {
+    await logout();
     accountIdRef.current = null;
     setAccountId(null);
     setAccountName(null);

@@ -3,7 +3,7 @@ import AuthScreen from "./AuthScreen";
 import StarterQuiz from "./StarterQuiz";
 import DungeonGame from "./DungeonGame";
 import VillageGame from "./VillageGame";
-import { getProfile, getTeam, resetProfile } from "../lib/auth";
+import { getProfile, getTeam, resetProfile, getCurrentAccount, logout } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import { useIsMobile } from "../lib/useIsMobile";
 import { getLanguage, subscribe } from "../stores/language";
@@ -21,20 +21,26 @@ export default function Dungeon() {
 
   useEffect(() => subscribe(setLanguage), []);
 
-  // Restore session from localStorage
+  // Restore the Supabase session (if any) and resolve the linked account.
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("pokevisa_account");
-      if (saved) {
-        const acc = JSON.parse(saved);
-        setAccount(acc);
-        loadAccountData(acc.id);
-      } else {
-        setLoading(false);
+    let cancelled = false;
+    (async () => {
+      try {
+        const acc = await getCurrentAccount();
+        if (cancelled) return;
+        if (acc) {
+          setAccount(acc);
+          loadAccountData(acc.id);
+        } else {
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
       }
-    } catch {
-      setLoading(false);
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function loadAccountData(accountId) {
@@ -60,17 +66,16 @@ export default function Dungeon() {
 
   function handleAuth(acc) {
     setAccount(acc);
-    localStorage.setItem("pokevisa_account", JSON.stringify(acc));
     loadAccountData(acc.id);
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    await logout();
     setAccount(null);
     setProfile(null);
     setTeam([]);
     setSession(null);
     setInDungeon(false);
-    localStorage.removeItem("pokevisa_account");
   }
 
   function handleQuizComplete() {
