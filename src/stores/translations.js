@@ -275,6 +275,26 @@ const ui = {
     en: "Try a different search term", es: "Prueba con otro término", fr: "Essayez un autre terme", de: "Versuche einen anderen Begriff", it: "Prova con un altro termine",
     ja: "別の検索語をお試しください", ko: "다른 검색어를 시도해보세요", "zh-hans": "请尝试其他搜索词", "zh-hant": "請嘗試其他搜尋詞",
   },
+  "All types": {
+    en: "All types", es: "Todos los tipos", fr: "Tous les types", de: "Alle Typen", it: "Tutti i tipi",
+    ja: "すべてのタイプ", ko: "모든 타입", "zh-hans": "所有属性", "zh-hant": "所有屬性",
+  },
+  "Types": {
+    en: "Types", es: "Tipos", fr: "Types", de: "Typen", it: "Tipi",
+    ja: "タイプ", ko: "타입", "zh-hans": "属性", "zh-hant": "屬性",
+  },
+  "Filter by type": {
+    en: "Filter by type", es: "Filtrar por tipo", fr: "Filtrer par type", de: "Nach Typ filtern", it: "Filtra per tipo",
+    ja: "タイプで絞り込む", ko: "타입으로 필터", "zh-hans": "按属性筛选", "zh-hant": "按屬性篩選",
+  },
+  "Clear type filter": {
+    en: "Clear type filter", es: "Quitar filtro de tipo", fr: "Effacer le filtre de type", de: "Typfilter entfernen", it: "Rimuovi filtro tipo",
+    ja: "タイプフィルターを解除", ko: "타입 필터 지우기", "zh-hans": "清除属性筛选", "zh-hant": "清除屬性篩選",
+  },
+  "Scroll or drag": {
+    en: "Scroll or drag", es: "Desplaza o arrastra", fr: "Défilez ou glissez", de: "Scrollen oder ziehen", it: "Scorri o trascina",
+    ja: "スクロールまたはドラッグ", ko: "스크롤 또는 드래그", "zh-hans": "滚动或拖动", "zh-hant": "捲動或拖曳",
+  },
   "Pokémon": {
     en: "Pokémon", es: "Pokémon", fr: "Pokémon", de: "Pokémon", it: "Pokémon",
     ja: "ポケモン", ko: "포켓몬", "zh-hans": "宝可梦", "zh-hant": "寶可夢",

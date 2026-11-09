@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import Balatro from "@/components/Balatro";
 import { useLanguage } from "../stores/language";
 import { t } from "../stores/translations";
 import { getStartersForTrait, getMovesAtLevel, cumulativeExp } from "../lib/moves";
@@ -119,6 +120,31 @@ function calcTrait(answers) {
 
 const SPRITE_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 
+// Animated Balatro shader used as the full-screen backdrop for both the
+// personality quiz and the starter selection. Fixed behind the cards so the
+// dungeon quiz feels alive without distracting from the questions.
+function QuizBackground() {
+  return (
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+      <Balatro
+        color1="#1e3a8a"
+        color2="#6d28d9"
+        color3="#0b1120"
+        speed={0.7}
+        swirl={0.3}
+        contrast={3.4}
+        lighting={0.35}
+        pixelSize={1.5}
+        opacity={0.9}
+        mouseInteraction
+        mouseStrength={0.7}
+      />
+      {/* Dark veil keeps the quiz text readable over the animation */}
+      <div className="absolute inset-0 bg-slate-950/45" />
+    </div>
+  );
+}
+
 export default function StarterQuiz({ accountId, onComplete }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -189,7 +215,8 @@ export default function StarterQuiz({ accountId, onComplete }) {
   // Quiz phase
   if (!trait) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4">
+      <div className="relative isolate min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4">
+        <QuizBackground />
         <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-800/60 p-6 space-y-5">
           <div className="text-center space-y-1">
             <p className="text-xs text-slate-500">
@@ -225,7 +252,8 @@ export default function StarterQuiz({ accountId, onComplete }) {
 
   // Starter selection phase
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4">
+    <div className="relative isolate min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4">
+      <QuizBackground />
       <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-800/60 p-6 space-y-5">
         <div className="text-center space-y-2">
           <h2 className="text-lg font-bold text-slate-200">
